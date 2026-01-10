@@ -1,0 +1,135 @@
+.module-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1rem;
+  height: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.module-switcher {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.module-switcher-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  border-radius: 6px;
+}
+
+.module-switcher-button:focus-visible,
+.module-switcher-caret:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.module-switcher-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #0066cc;
+}
+
+.module-switcher-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.module-switcher-label {
+  line-height: 1;
+}
+
+.module-switcher-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.15rem;
+  padding: 0.4rem 0.55rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  color: #666;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.module-switcher-caret:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #0066cc;
+}
+
+.module-switcher-caret-icon {
+  transition: transform 0.2s ease;
+}
+
+.module-switcher-caret-icon.open {
+  transform: rotate(180deg);
+}
+
+.module-switcher-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  padding: 0.25rem 0;
+  z-index: 50;
+}
+
+.module-switcher-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  text-decoration: none;
+  color: #333;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.module-switcher-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #0066cc;
+}
+
+.module-switcher-item-icon {
+  font-size: 1rem;
+}
+
+.module-switcher-empty {
+  padding: 0.5rem 0.75rem;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .module-switcher-label {
+    display: none;
+  }
+
+  .module-switcher-button {
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .module-tabs {
+    display: none; /* Su mobile si usa il drawer */
+  }
+}

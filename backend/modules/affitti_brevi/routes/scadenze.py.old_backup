@@ -1,0 +1,482 @@
+"""
+Scadenze Routes - API endpoints for deadline and police communication management
+"""
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from typing import List, Optional
+from datetime import datetime, date
+from app.core.database import get_db
+from ..models import (
+    Scadenza,
+    TipoScadenza,
+    StatoScadenza,
+    ComunicazionePolizia,
+    StatoComunicazione,
+    Prenotazione
+)
+from ..schemas.scadenza import (
+    ScadenzaCreate,
+    ScadenzaUpdate,
+    ScadenzaResponse,
+    ScadenzaCompletaRequest,
+    ScadenzaBadgeInfo,
+)
+from ..schemas.comunicazione_polizia import (
+    ComunicazionePoliziaCreate,
+    ComunicazionePoliziaUpdate,
+    ComunicazionePoliziaResponse,
+    ComunicazioneInvioRequest,
+    ComunicazioneErroreRequest,
+)
+from ..services.scadenza_generator import ScadenzaGenerator
+from ..services.comunicazione_polizia_service import ComunicazionePoliziaService
+
+router = APIRouter(prefix="/scadenze", tags=["Scadenze"])
+
+
+# ==================== Scadenze Endpoints ====================
+
+@router.get("/", response_model=List[ScadenzaResponse])
+def get_scadenze(
+    skip: int = 0,
+    limit: int = 100,
+    tipo: Optional[TipoScadenza] = None,
+    stato: Optional[StatoScadenza] = None,
+    completata: Optional[bool] = None,
+    prenotazione_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Ottieni lista di tutte le scadenze con filtri opzionali
+
+    - **tipo**: Filtra per tipo di scadenza
+    - **stato**: Filtra per stato
+    - **completata**: Filtra per scadenze completate/non completate
+    - **prenotazione_id**: Filtra per prenotazione specifica
+    """
+    query = db.query(Scadenza)
+
+    if tipo:
+        query = query.filter(Scadenza.tipo_scadenza == tipo)
+    if stato:
+        query = query.filter(Scadenza.stato == stato)
+    if completata is not None:
+        query = query.filter(Scadenza.completata == completata)
+    if prenotazione_id:
+        query = query.filter(Scadenza.prenotazione_id == prenotazione_id)
+
+    scadenze = query.order_by(Scadenza.data_scadenza.desc()).offset(skip).limit(limit).all()
+    return scadenze
+
+
+@router.get("/upcoming", response_model=List[ScadenzaResponse])
+def get_upcoming_scadenze(
+    days: int = Query(7, ge=1, le=90),
+    tipo: Optional[TipoScadenza] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Ottieni scadenze in arrivo nei prossimi N giorni
+
+    - **days**: Numero di giorni da guardare avanti (default: 7)
+    - **tipo**: Filtra per tipo di scadenza (opzionale)
+    """
+    generator = ScadenzaGenerator(db)
+    scadenze = generator.get_upcoming_deadlines(days, tipo)
+    return scadenze
+
+
+@router.get("/overdue", response_model=List[ScadenzaResponse])
+def get_overdue_scadenze(
+    tipo: Optional[TipoScadenza] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Ottieni scadenze scadute
+
+    - **tipo**: Filtra per tipo di scadenza (opzionale)
+    """
+    generator = ScadenzaGenerator(db)
+    scadenze = generator.get_overdue_deadlines(tipo)
+    return scadenze
+
+
+@router.get("/badge/info", response_model=List[ScadenzaBadgeInfo])
+def get_badge_info(db: Session = Depends(get_db)):
+    """
+    Ottieni info per badge notifiche
+
+    Ritorna conteggi per tipo di scadenza per i prossimi 7 giorni.
+    """
+    from datetime import timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    seven_days = now + timedelta(days=7)
+
+    # Query with grouping
+    results = db.query(
+        Scadenza.tipo_scadenza,
+        func.count(Scadenza.id).label('count'),
+        func.sum(func.case((Scadenza.stato == StatoScadenza.SCADUTA, 1), else_=0)).label('count_scadute'),
+        func.sum(func.case((Scadenza.stato == StatoScadenza.IN_SCADENZA, 1), else_=0)).label('count_in_scadenza')
+    ).filter(
+        Scadenza.completata == False,
+        Scadenza.data_scadenza >= now,
+        Scadenza.data_scadenza <= seven_days
+    ).group_by(Scadenza.tipo_scadenza).all()
+
+    badge_info = []
+    for result in results:
+        badge_info.append(ScadenzaBadgeInfo(
+            tipo_scadenza=result.tipo_scadenza,
+            count=result.count,
+            count_scadute=result.count_scadute or 0,
+            count_in_scadenza=result.count_in_scadenza or 0
+        ))
+
+    return badge_info
+
+
+@router.get("/{scadenza_id}", response_model=ScadenzaResponse)
+def get_scadenza(scadenza_id: int, db: Session = Depends(get_db)):
+    """Ottieni dettagli di una scadenza specifica"""
+    scadenza = db.query(Scadenza).filter(Scadenza.id == scadenza_id).first()
+    if not scadenza:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Scadenza con ID {scadenza_id} non trovata"
+        )
+    return scadenza
+
+
+@router.post("/", response_model=ScadenzaResponse, status_code=status.HTTP_201_CREATED)
+def create_scadenza(scadenza: ScadenzaCreate, db: Session = Depends(get_db)):
+    """Crea una nuova scadenza"""
+    new_scadenza = Scadenza(**scadenza.model_dump())
+    new_scadenza.update_stato()
+
+    db.add(new_scadenza)
+    db.commit()
+    db.refresh(new_scadenza)
+    return new_scadenza
+
+
+@router.put("/{scadenza_id}", response_model=ScadenzaResponse)
+def update_scadenza(
+    scadenza_id: int,
+    scadenza: ScadenzaUpdate,
+    db: Session = Depends(get_db)
+):
+    """Aggiorna una scadenza esistente"""
+    db_scadenza = db.query(Scadenza).filter(Scadenza.id == scadenza_id).first()
+    if not db_scadenza:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Scadenza con ID {scadenza_id} non trovata"
+        )
+
+    # Update only provided fields
+    update_data = scadenza.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_scadenza, field, value)
+
+    db_scadenza.update_stato()
+    db.commit()
+    db.refresh(db_scadenza)
+    return db_scadenza
+
+
+@router.delete("/{scadenza_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_scadenza(scadenza_id: int, db: Session = Depends(get_db)):
+    """Elimina una scadenza"""
+    db_scadenza = db.query(Scadenza).filter(Scadenza.id == scadenza_id).first()
+    if not db_scadenza:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Scadenza con ID {scadenza_id} non trovata"
+        )
+
+    db.delete(db_scadenza)
+    db.commit()
+    return None
+
+
+@router.post("/{scadenza_id}/completa", response_model=ScadenzaResponse)
+def mark_scadenza_completed(
+    scadenza_id: int,
+    request: ScadenzaCompletaRequest,
+    db: Session = Depends(get_db)
+):
+    """Marca una scadenza come completata"""
+    db_scadenza = db.query(Scadenza).filter(Scadenza.id == scadenza_id).first()
+    if not db_scadenza:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Scadenza con ID {scadenza_id} non trovata"
+        )
+
+    db_scadenza.mark_completed(request.note_completamento)
+    db.commit()
+    db.refresh(db_scadenza)
+    return db_scadenza
+
+
+@router.post("/generate/police/{prenotazione_id}", response_model=ScadenzaResponse, status_code=status.HTTP_201_CREATED)
+def generate_police_deadline(prenotazione_id: int, db: Session = Depends(get_db)):
+    """
+    Genera scadenza comunicazione polizia per una prenotazione
+
+    Crea deadline 24h dopo check-in
+    """
+    generator = ScadenzaGenerator(db)
+    try:
+        scadenza = generator.generate_police_deadline_for_booking(prenotazione_id)
+        return scadenza
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/generate/istat", response_model=ScadenzaResponse, status_code=status.HTTP_201_CREATED)
+def generate_istat_deadline(
+    year: int = Query(..., ge=2020, le=2100),
+    month: int = Query(..., ge=1, le=12),
+    db: Session = Depends(get_db)
+):
+    """
+    Genera scadenza report ISTAT per un mese
+
+    Crea deadline ricorrente per il 1° del mese
+    """
+    generator = ScadenzaGenerator(db)
+    try:
+        scadenza = generator.generate_istat_monthly_deadline(year, month)
+        return scadenza
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/update-statuses", status_code=status.HTTP_200_OK)
+def update_scadenze_statuses(db: Session = Depends(get_db)):
+    """
+    Aggiorna lo stato di tutte le scadenze in base alla data corrente
+
+    Ritorna il numero di scadenze aggiornate
+    """
+    generator = ScadenzaGenerator(db)
+    updated = generator.update_deadline_statuses()
+    return {"updated": updated, "message": f"Aggiornate {updated} scadenze"}
+
+
+# ==================== Comunicazioni Polizia Endpoints ====================
+
+@router.get("/comunicazioni-polizia/", response_model=List[ComunicazionePoliziaResponse])
+def get_comunicazioni_polizia(
+    skip: int = 0,
+    limit: int = 100,
+    stato: Optional[StatoComunicazione] = None,
+    prenotazione_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Ottieni lista di tutte le comunicazioni polizia
+
+    - **stato**: Filtra per stato
+    - **prenotazione_id**: Filtra per prenotazione specifica
+    """
+    query = db.query(ComunicazionePolizia)
+
+    if stato:
+        query = query.filter(ComunicazionePolizia.stato == stato)
+    if prenotazione_id:
+        query = query.filter(ComunicazionePolizia.prenotazione_id == prenotazione_id)
+
+    comunicazioni = query.order_by(ComunicazionePolizia.created_at.desc()).offset(skip).limit(limit).all()
+    return comunicazioni
+
+
+@router.get("/comunicazioni-polizia/pending", response_model=List[ComunicazionePoliziaResponse])
+def get_pending_comunicazioni(db: Session = Depends(get_db)):
+    """Ottieni tutte le comunicazioni in attesa di invio"""
+    service = ComunicazionePoliziaService(db)
+    comunicazioni = service.get_pending_communications()
+    return comunicazioni
+
+
+@router.get("/comunicazioni-polizia/overdue", response_model=List[ComunicazionePoliziaResponse])
+def get_overdue_comunicazioni(db: Session = Depends(get_db)):
+    """Ottieni tutte le comunicazioni scadute (oltre 24h)"""
+    service = ComunicazionePoliziaService(db)
+    comunicazioni = service.get_overdue_communications()
+    return comunicazioni
+
+
+@router.get("/comunicazioni-polizia/{comunicazione_id}", response_model=ComunicazionePoliziaResponse)
+def get_comunicazione_polizia(comunicazione_id: int, db: Session = Depends(get_db)):
+    """Ottieni dettagli di una comunicazione specifica"""
+    comunicazione = db.query(ComunicazionePolizia).filter(
+        ComunicazionePolizia.id == comunicazione_id
+    ).first()
+
+    if not comunicazione:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Comunicazione con ID {comunicazione_id} non trovata"
+        )
+    return comunicazione
+
+
+@router.post("/comunicazioni-polizia/", response_model=ComunicazionePoliziaResponse, status_code=status.HTTP_201_CREATED)
+def create_comunicazione_polizia(
+    comunicazione: ComunicazionePoliziaCreate,
+    db: Session = Depends(get_db)
+):
+    """Crea una nuova comunicazione polizia per una prenotazione"""
+    service = ComunicazionePoliziaService(db)
+    try:
+        new_comunicazione = service.create_for_booking(comunicazione.prenotazione_id)
+        if comunicazione.codice_struttura:
+            new_comunicazione.codice_struttura = comunicazione.codice_struttura
+            db.commit()
+            db.refresh(new_comunicazione)
+        return new_comunicazione
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.put("/comunicazioni-polizia/{comunicazione_id}", response_model=ComunicazionePoliziaResponse)
+def update_comunicazione_polizia(
+    comunicazione_id: int,
+    comunicazione: ComunicazionePoliziaUpdate,
+    db: Session = Depends(get_db)
+):
+    """Aggiorna una comunicazione esistente"""
+    db_comunicazione = db.query(ComunicazionePolizia).filter(
+        ComunicazionePolizia.id == comunicazione_id
+    ).first()
+
+    if not db_comunicazione:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Comunicazione con ID {comunicazione_id} non trovata"
+        )
+
+    # Update only provided fields
+    update_data = comunicazione.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_comunicazione, field, value)
+
+    db.commit()
+    db.refresh(db_comunicazione)
+    return db_comunicazione
+
+
+@router.delete("/comunicazioni-polizia/{comunicazione_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_comunicazione_polizia(comunicazione_id: int, db: Session = Depends(get_db)):
+    """Elimina una comunicazione polizia"""
+    db_comunicazione = db.query(ComunicazionePolizia).filter(
+        ComunicazionePolizia.id == comunicazione_id
+    ).first()
+
+    if not db_comunicazione:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Comunicazione con ID {comunicazione_id} non trovata"
+        )
+
+    db.delete(db_comunicazione)
+    db.commit()
+    return None
+
+
+@router.post("/comunicazioni-polizia/{comunicazione_id}/invio", response_model=ComunicazionePoliziaResponse)
+def mark_comunicazione_sent(
+    comunicazione_id: int,
+    request: ComunicazioneInvioRequest,
+    db: Session = Depends(get_db)
+):
+    """Marca una comunicazione come inviata"""
+    service = ComunicazionePoliziaService(db)
+    try:
+        comunicazione = service.mark_sent(
+            comunicazione_id,
+            request.metodo_invio,
+            request.numero_ricevuta,
+            request.codice_struttura
+        )
+        return comunicazione
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/comunicazioni-polizia/{comunicazione_id}/conferma", response_model=ComunicazionePoliziaResponse)
+def mark_comunicazione_confirmed(comunicazione_id: int, db: Session = Depends(get_db)):
+    """Marca una comunicazione come confermata dal sistema polizia"""
+    service = ComunicazionePoliziaService(db)
+    try:
+        comunicazione = service.mark_confirmed(comunicazione_id)
+        return comunicazione
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/comunicazioni-polizia/{comunicazione_id}/errore", response_model=ComunicazionePoliziaResponse)
+def mark_comunicazione_error(
+    comunicazione_id: int,
+    request: ComunicazioneErroreRequest,
+    db: Session = Depends(get_db)
+):
+    """Marca una comunicazione come errore"""
+    service = ComunicazionePoliziaService(db)
+    try:
+        comunicazione = service.mark_error(comunicazione_id, request.errore_messaggio)
+        return comunicazione
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/comunicazioni-polizia/{comunicazione_id}/retry", response_model=ComunicazionePoliziaResponse)
+def retry_comunicazione(comunicazione_id: int, db: Session = Depends(get_db)):
+    """Resetta una comunicazione fallita per riprovare l'invio"""
+    service = ComunicazionePoliziaService(db)
+    try:
+        comunicazione = service.retry_failed_communication(comunicazione_id)
+        return comunicazione
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.get("/comunicazioni-polizia/prenotazione/{prenotazione_id}", response_model=Optional[ComunicazionePoliziaResponse])
+def get_comunicazione_by_booking(prenotazione_id: int, db: Session = Depends(get_db)):
+    """Ottieni la comunicazione polizia per una specifica prenotazione"""
+    service = ComunicazionePoliziaService(db)
+    comunicazione = service.get_by_booking(prenotazione_id)
+
+    if not comunicazione:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Nessuna comunicazione trovata per prenotazione {prenotazione_id}"
+        )
+
+    return comunicazione

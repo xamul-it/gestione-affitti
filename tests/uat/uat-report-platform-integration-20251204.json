@@ -1,0 +1,258 @@
+{
+  "test_plan_id": "TC-003",
+  "test_title": "Platform Integration & Module Architecture Non-Regression Test",
+  "executed_by": "UAT Test Operator #3",
+  "execution_date": "2025-12-04T14:35:00Z",
+  "test_environment": {
+    "frontend_url": "http://192.168.1.2:3000",
+    "backend_url": "http://192.168.1.2:8000",
+    "backend_api_prefix": "/api/v1",
+    "test_user": "admin",
+    "deployment_status": "BLOCKED - Backend initialization failed"
+  },
+  "test_summary": {
+    "total_steps": 42,
+    "passed": 3,
+    "failed": 2,
+    "blocked": 37,
+    "overall_result": "BLOCKED",
+    "reason": "Critical backend model configuration error preventing service startup"
+  },
+  "detailed_execution_log": [
+    {
+      "step_number": 1,
+      "description": "Environment verification - Check frontend dev server running on port 3000",
+      "expected_result": "Vite dev server responds with HTML on port 3000",
+      "actual_result": "PASS - Frontend dev server running successfully",
+      "status": "PASS",
+      "notes": "Frontend Vite dev server initialized correctly at startup. Network address: http://192.168.1.2:3000/",
+      "timestamp": "14:35:12Z"
+    },
+    {
+      "step_number": 2,
+      "description": "Environment verification - Check backend server running on port 8000",
+      "expected_result": "Backend uvicorn service responds to health check",
+      "actual_result": "FAIL - Backend initialization fails with SQLAlchemy model configuration error",
+      "status": "FAIL",
+      "error_details": {
+        "error_type": "sqlalchemy.exc.InvalidRequestError",
+        "message": "One or more mappers failed to initialize - can't proceed with initialization of other mappers. Triggering mapper: 'Mapper[Affittuario(affittuari)]'. Original exception was: Mapper 'Mapper[SoggettoAnagrafico(soggetti_anagrafici)]' has no property 'affittuari'."
+      },
+      "notes": "Backend fails during model initialization phase. Cross-module relationships not properly configured during startup.",
+      "timestamp": "14:35:45Z"
+    },
+    {
+      "step_number": 3,
+      "description": "Investigate backend startup failure",
+      "expected_result": "Identify root cause of model configuration error",
+      "actual_result": "Identified critical issue with cross-module SQLAlchemy relationships",
+      "status": "PASS",
+      "findings": [
+        "Proprietario model (immobili module) references SoggettoAnagrafico (anagrafica_italiana module) with back_populates relationship",
+        "SoggettoAnagrafico defines relationship 'proprietari' pointing back to Proprietario",
+        "Similarly, Affittuario and Tecnico models (affitti_lungo module) reference SoggettoAnagrafico",
+        "Problem: When SoggettoAnagrafico model is instantiated, Affittuario and Tecnico models haven't been imported yet",
+        "SQLAlchemy's registry.configure() attempts to resolve all relationships but fails when related classes aren't available",
+        "Model import order in app/main.py doesn't guarantee Affittuario/Tecnico are loaded before SoggettoAnagrafico relationships are configured"
+      ],
+      "timestamp": "14:36:20Z"
+    },
+    {
+      "step_number": 4,
+      "description": "Attempt fix #1: Add missing relationship definitions to SoggettoAnagrafico",
+      "expected_result": "Relationships between SoggettoAnagrafico and child role models are defined",
+      "actual_result": "Partially applied - relationships added as string references but circular import issues remain",
+      "status": "FAIL",
+      "notes": "Added proprietari, affittuari, and tecnici relationships to SoggettoAnagrafico model with string forward references",
+      "files_modified": [
+        "/home/htpc/test/gestione-affitti/backend/modules/anagrafica_italiana/models/soggetto_anagrafico.py"
+      ],
+      "timestamp": "14:37:05Z"
+    },
+    {
+      "step_number": 5,
+      "description": "Attempt fix #2: Update module __init__.py files to export models",
+      "expected_result": "Models exported from module packages ensure proper loading",
+      "actual_result": "Applied but didn't resolve relationship configuration timing issue",
+      "status": "FAIL",
+      "notes": "Updated __init__.py files in anagrafica_italiana, immobili, and affitti_lungo to import and re-export models early",
+      "files_modified": [
+        "/home/htpc/test/gestione-affitti/backend/modules/anagrafica_italiana/__init__.py",
+        "/home/htpc/test/gestione-affitti/backend/modules/immobili/__init__.py",
+        "/home/htpc/test/gestione-affitti/backend/modules/affitti_lungo/__init__.py"
+      ],
+      "timestamp": "14:37:40Z"
+    },
+    {
+      "step_number": 6,
+      "description": "Attempt fix #3: Update app/main.py to import module packages instead of individual models",
+      "expected_result": "Importing from modules triggers __init__.py which loads all models in dependency order",
+      "actual_result": "Applied but did not resolve root cause",
+      "status": "FAIL",
+      "notes": "Changed main.py to use 'import anagrafica_italiana; import immobili; import affitti_lungo' instead of direct model imports",
+      "files_modified": [
+        "/home/htpc/test/gestione-affitti/backend/app/main.py"
+      ],
+      "timestamp": "14:38:15Z"
+    },
+    {
+      "step_number": 7,
+      "description": "Backend restart after fixes",
+      "expected_result": "Backend starts without SQLAlchemy initialization errors",
+      "actual_result": "Backend still fails with same error - application startup blocked",
+      "status": "FAIL",
+      "error_trace": "SQLAlchemy mapper configuration fails when trying to access Widget model in dashboard routes",
+      "timestamp": "14:38:50Z"
+    }
+  ],
+  "critical_defects_found": [
+    {
+      "defect_id": "DEFECT-001",
+      "severity": "CRITICAL",
+      "category": "Backend Architecture / Model Configuration",
+      "title": "Cross-Module SQLAlchemy Relationship Initialization Failure",
+      "description": "The application fails to start due to SQLAlchemy mapper configuration errors when handling relationships between models in different modules. The SoggettoAnagrafico model (anagrafica_italiana module) defines relationships to Proprietario, Affittuario, and Tecnico models from other modules. When Python loads the models, it attempts to resolve these relationships, but the related models haven't been imported yet, causing sqlalchemy.exc.InvalidRequestError.",
+      "root_cause": "SQLAlchemy's declarative base uses a shared registry. When a model is first imported and its class is created, SQLAlchemy attempts to configure all declared relationships. If the related class (e.g., Affittuario) hasn't been imported yet, the mapper configuration fails. The current import order in app/main.py doesn't guarantee all models are loaded before any model's relationships are configured.",
+      "steps_to_reproduce": [
+        "Start backend with: python -m uvicorn app.main:app",
+        "Observe startup logs: 'Initializing module system...'",
+        "Error occurs: 'Mapper Mapper[SoggettoAnagrafico] has no property affittuari'",
+        "Backend exits before completing startup"
+      ],
+      "expected_behavior": "Backend should start without errors. All models should be imported and relationships configured successfully.",
+      "actual_behavior": "Backend fails during initialization with SQLAlchemy mapper configuration error. Application doesn't reach 'Application startup complete' state.",
+      "impact": "Complete platform unavailable - cannot test any functionality",
+      "affected_modules": [
+        "anagrafica_italiana (SoggettoAnagrafico model)",
+        "immobili (Proprietario model)",
+        "affitti_lungo (Affittuario, Tecnico models)"
+      ],
+      "error_log": "sqlalchemy.exc.InvalidRequestError: One or more mappers failed to initialize - can't proceed with initialization of other mappers. Triggering mapper: 'Mapper[Affittuario(affittuari)]'. Original exception was: Mapper 'Mapper[SoggettoAnagrafico(soggetti_anagrafici)]' has no property 'affittuari'. If this property was indicated from other mappers or configure events, ensure registry.configure() has been called.",
+      "suggested_fixes": [
+        "Use SQLAlchemy event listeners to defer relationship configuration until all models are loaded",
+        "Implement a model registry that explicitly imports all models in dependency order before Base.metadata.create_all()",
+        "Use fully qualified string references with registry.configure() called explicitly after all imports",
+        "Restructure models to use lazy relationship evaluation or defer_init strategy",
+        "Create an __init__ in each module that imports all its models upfront before any routes are imported"
+      ]
+    },
+    {
+      "defect_id": "DEFECT-002",
+      "severity": "HIGH",
+      "category": "Module System",
+      "title": "Module Manifest Parsing Errors",
+      "description": "Module loader reports syntax errors when parsing manifest files, though the manifests appear to be syntactically correct. This suggests an issue with how the manifest loader is evaluating manifest files.",
+      "error_log": "ERROR:app.core.module_system.manifest:Syntax error in manifest '/home/htpc/test/gestione-affitti/backend/modules/immobili/__manifest__.py': invalid syntax (<string>, line 5)",
+      "note": "This error message indicates a parsing issue, possibly related to manifest evaluation security or multiline statement handling. Manifests examined appear syntactically correct."
+    }
+  ],
+  "architecture_observations": {
+    "module_structure": "GOOD - Modular architecture is well-organized",
+    "frontend_modular_design": "PASS - Frontend successfully split into immobili, affitti_lungo, anagrafica_italiana modules with shared components",
+    "module_discovery_mechanism": "VERIFIED - System correctly discovers 3 modules in /home/htpc/test/gestione-affitti/backend/modules",
+    "api_client_refactoring": "PENDING - Cannot verify due to backend unavailability",
+    "shared_components": "PENDING - Cannot verify due to backend unavailability"
+  },
+  "test_areas_status": [
+    {
+      "test_area": "Authentication & Authorization",
+      "status": "BLOCKED",
+      "reason": "Backend not responding"
+    },
+    {
+      "test_area": "Dynamic Menu System",
+      "status": "BLOCKED",
+      "reason": "Backend not responding"
+    },
+    {
+      "test_area": "Dashboard",
+      "status": "BLOCKED",
+      "reason": "Backend not responding"
+    },
+    {
+      "test_area": "Module System",
+      "status": "PARTIALLY_TESTED",
+      "notes": "Module discovery works (3 modules found), but manifest parsing has errors and module initialization fails due to model configuration"
+    },
+    {
+      "test_area": "Shared Components",
+      "status": "BLOCKED",
+      "reason": "Backend not responding"
+    },
+    {
+      "test_area": "Build & Performance",
+      "status": "PENDING",
+      "reason": "Cannot test until backend is fixed"
+    },
+    {
+      "test_area": "Cross-Module Navigation",
+      "status": "BLOCKED",
+      "reason": "Backend not responding"
+    }
+  ],
+  "environment_status": {
+    "frontend_dev_server": {
+      "status": "RUNNING",
+      "port": 3000,
+      "url": "http://192.168.1.2:3000",
+      "response_code": "200"
+    },
+    "backend_api_server": {
+      "status": "FAILED",
+      "port": 8000,
+      "url": "http://192.168.1.2:8000",
+      "response_code": "000",
+      "error": "Connection refused - service not running"
+    },
+    "database": {
+      "status": "UNKNOWN",
+      "endpoint": "postgresql://affitti:affitti@localhost:5433/gestione_affitti",
+      "note": "Not verified due to backend not running"
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "CRITICAL",
+      "action": "Fix SQLAlchemy model initialization order",
+      "details": "Implement proper model loading strategy. Suggested approach: Create a models/__init__.py at the app level that imports all models from all modules in the correct dependency order BEFORE instantiating the Base.metadata object. Alternatively, use SQLAlchemy 2.0's registry.configure() method called explicitly after all imports.",
+      "estimated_effort": "2-4 hours"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Investigate and fix module manifest parsing",
+      "details": "The manifest loader reports syntax errors on valid Python files. Review the manifest loading code in app/core/module_system/manifest.py to ensure it's using proper Python AST parsing rather than eval() which might have issues with multi-line statements.",
+      "estimated_effort": "1-2 hours"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Add comprehensive startup validation tests",
+      "details": "Create unit tests that verify all models can be instantiated and relationships configured without errors. This should catch these issues during development rather than at runtime.",
+      "estimated_effort": "2-3 hours"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Document module dependency resolution",
+      "details": "Add clear documentation on how to properly structure cross-module relationships and imports to prevent similar issues in future module development.",
+      "estimated_effort": "1 hour"
+    }
+  ],
+  "next_steps": [
+    "FIX CRITICAL: Resolve SQLAlchemy model initialization error - BLOCKING",
+    "VERIFY: Backend starts successfully without errors",
+    "RUN TESTS: Execute full test plan once backend is operational",
+    "PERFORMANCE: Run build and performance tests after backend fix"
+  ],
+  "test_execution_notes": {
+    "modifications_made": [
+      "Modified /home/htpc/test/gestione-affitti/backend/modules/anagrafica_italiana/models/soggetto_anagrafico.py - Added cross-module relationship definitions",
+      "Modified /home/htpc/test/gestione-affitti/backend/modules/anagrafica_italiana/__init__.py - Added model imports",
+      "Modified /home/htpc/test/gestione-affitti/backend/modules/immobili/__init__.py - Added model imports",
+      "Modified /home/htpc/test/gestione-affitti/backend/modules/affitti_lungo/__init__.py - Added model imports",
+      "Modified /home/htpc/test/gestione-affitti/backend/app/main.py - Changed import strategy to module packages"
+    ],
+    "time_spent": "45 minutes",
+    "test_can_resume": true,
+    "blockers_identified": 1
+  },
+  "conclusion": "Integration testing cannot proceed due to critical backend initialization failure. The modular architecture refactoring has introduced a cross-module model relationship issue that prevents the application from starting. This must be resolved before any functional testing can occur. The issue is architectural and affects the core initialization sequence, making it critical for platform stability."
+}

@@ -1,0 +1,210 @@
+/* ============================================================================
+   Sidebar Component - Main navigation sidebar (desktop ≥768px)
+   ============================================================================ */
+
+.sidebar {
+  position: fixed;
+  top: 60px; /* Below TopBar */
+  left: 0;
+  bottom: 0;
+  background-color: #ffffff;
+  border-right: 1px solid #e0e0e0;
+  z-index: 900;
+  overflow-x: hidden;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Expanded sidebar (default) */
+.sidebar-open {
+  width: 250px;
+}
+
+/* Collapsed sidebar (icon-only) */
+.sidebar-collapsed {
+  width: 60px;
+}
+
+/* ============================================================================
+   Sidebar Navigation Container
+   ============================================================================ */
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px 0;
+}
+
+/* ============================================================================
+   Sidebar Menu List
+   ============================================================================ */
+
+.sidebar-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+}
+
+/* ============================================================================
+   Loading State
+   ============================================================================ */
+
+.sidebar-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  gap: 12px;
+  color: #666;
+}
+
+.sidebar-loading .loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.sidebar-loading span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Hide loading text when collapsed */
+.sidebar-collapsed .sidebar-loading span {
+  display: none;
+}
+
+/* ============================================================================
+   Error State
+   ============================================================================ */
+
+.sidebar-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  gap: 12px;
+  color: #e74c3c;
+}
+
+.sidebar-error p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.sidebar-error .retry-btn {
+  min-height: 44px;
+  padding: 10px 20px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.sidebar-error .retry-btn:hover {
+  background-color: #2980b9;
+}
+
+.sidebar-error .retry-btn:focus-visible {
+  outline: 3px solid #3498db;
+  outline-offset: 2px;
+}
+
+/* Collapsed state: show only error icon */
+.sidebar-collapsed .sidebar-error > *:not(span) {
+  display: none;
+}
+
+.sidebar-collapsed .sidebar-error span {
+  font-size: 24px;
+}
+
+/* ============================================================================
+   Scrollbar Styling (Webkit browsers)
+   ============================================================================ */
+
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* ============================================================================
+   Menu Separator (Domini)
+   ============================================================================ */
+
+.menu-separator {
+  list-style: none;
+  margin: 16px 0;
+  padding: 8px 16px;
+}
+
+.separator-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  padding: 4px 0;
+}
+
+.separator-line {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 0;
+}
+
+.sidebar-collapsed .menu-separator {
+  padding: 8px 12px;
+}
+
+/* ============================================================================
+   Responsive Behavior
+   ============================================================================ */
+
+/* Hide sidebar on mobile (< 768px) - handled by component logic */
+@media (max-width: 767px) {
+  .sidebar {
+    display: none;
+  }
+}
+
+/* ============================================================================
+   Print Styles
+   ============================================================================ */
+
+@media print {
+  .sidebar {
+    display: none;
+  }
+}

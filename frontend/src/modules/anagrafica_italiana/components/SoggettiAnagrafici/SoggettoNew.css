@@ -1,0 +1,67 @@
+.soggetto-new {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.soggetto-new-header h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  color: #1f2937;
+}
+
+.soggetto-new-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.soggetto-new-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.soggetto-new-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  text-decoration: none;
+  color: #111827;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.soggetto-new-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.soggetto-new-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b5563;
+}
+
+.soggetto-new-icon-svg {
+  display: block;
+}
+
+.soggetto-new-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.soggetto-new-desc {
+  font-size: 14px;
+  color: #6b7280;
+}

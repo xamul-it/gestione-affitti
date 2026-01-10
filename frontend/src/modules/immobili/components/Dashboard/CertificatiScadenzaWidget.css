@@ -1,0 +1,243 @@
+.certificati-scadenza-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+}
+
+/* Header */
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.widget-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.view-all-link {
+  color: #007bff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.view-all-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* Stats Summary */
+.stats-summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stat-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stat-badge.scaduto {
+  background-color: #fee;
+  color: #c00;
+  border: 1px solid #fcc;
+}
+
+.stat-badge.urgente {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.stat-badge.attenzione {
+  background-color: #fff9e6;
+  color: #996600;
+  border: 1px solid #ffe5a3;
+}
+
+.badge-value {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.badge-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Certificates List */
+.certificati-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.certificato-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 4px solid transparent;
+  background-color: #f8f9fa;
+  transition: all 0.2s;
+}
+
+.certificato-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateX(4px);
+}
+
+.certificato-item.scaduto {
+  border-left-color: #dc3545;
+  background-color: #fff5f5;
+}
+
+.certificato-item.urgente {
+  border-left-color: #ffc107;
+  background-color: #fffbf0;
+}
+
+.certificato-item.attenzione {
+  border-left-color: #f0ad4e;
+  background-color: #fffef7;
+}
+
+.certificato-icon {
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.certificato-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.certificato-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.certificato-subtitle {
+  font-size: 12px;
+  color: #666;
+}
+
+.certificato-date {
+  font-size: 11px;
+  color: #999;
+  font-weight: 500;
+}
+
+/* No Certificates */
+.no-certificates {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: #28a745;
+  flex: 1;
+}
+
+.no-certificates .icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #d4edda;
+  border-radius: 50%;
+  color: #28a745;
+}
+
+.no-certificates p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Quick Actions */
+.widget-actions {
+  margin-top: auto;
+}
+
+.btn {
+  display: inline-block;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-warning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.btn-warning:hover {
+  background-color: #e0a800;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.btn-block {
+  display: block;
+  width: 100%;
+}
+
+/* Loading & Error States */
+.widget-loading,
+.widget-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: #666;
+}
+
+.widget-error {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .certificati-list {
+    max-height: 200px;
+  }
+}

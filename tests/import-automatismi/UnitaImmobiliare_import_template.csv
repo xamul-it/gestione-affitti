@@ -1,0 +1,15 @@
+﻿codice,tipo,condominio_id,indirizzo,citta,cap,provincia,superficie_mq,locali,piano,classe_energetica,rendita_catastale,foglio,particella,subalterno,descrizione,note,created_at,updated_at
+example text,Appartamento,123,"MILANO (MI) VIALE UMBRIA, 49 Piano 5-S1 - 7 int. 23",Milano,example text,example text,72.00,123,example text,example text,615.87,393,457,2,Via Archimede 73/A,example text,01-01-24,01-01-24
+,Appartamento,,"MILANO (MI) VIALE UMBRIA, 52 Piano S2",Milano,,,,,,,821.16999999999996,481,60,21,"MILANO (MI) VIALE UMBRIA, 49 Piano 5-S1 - 7 int. 23",,,
+,Box pertinenza Cadore,,"MILANO (MI) VIA TITO LIVIO, 8 Piano S2",Milano,,,12,,,,117.75,483,65,54,"MILANO (MI) VIALE UMBRIA, 52 Piano S2",,,
+,Box prima casa,,"MILANO (MI) VIA TITO LIVIO, 8 Piano S1",Milano,,,15,,,,171.21000000000001,483,349,175,"MILANO (MI) VIA TITO LIVIO, 8 Piano S2",,,
+,Box pertinenza,,"BOLOGNA (BO) VIA EMILIA PONENTE, 2 Piano T",Milano,,,15,,,,171.21000000000001,483,349,,"MILANO (MI) VIA TITO LIVIO, 8 Piano S1",,,
+,Cavalcavia,,"BOLOGNA (BO) VIA EMILIA PONENTE, 354 Piano S1-1",Bologna,,,113,,,,548.58000000000004,99,592,2,"BOLOGNA (BO) VIA EMILIA PONENTE, 2 Piano T",,,
+,Appartamento,,"BOLOGNA (BO) VIA EMILIA PONENTE, 354 Piano T-1 - S1",Bologna,,,,,,,555.19000000000005,99,666,8,"BOLOGNA (BO) VIA EMILIA PONENTE, 354 Piano S1-1",,,
+,Casa,,"BOLOGNA (BO) VIA EMILIA PONENTE, 356 Piano 2-S1",Bologna,,,,,,,1119.4200000000001,99,666,6,"BOLOGNA (BO) VIA EMILIA PONENTE, 354 Piano T-1 - S1",,,
+,Appartamento,,"BOLOGNA (BO) VIA EMILIA PONENTE, 356 Piano 2-S1",Bologna,,,,,,,555.19000000000005,99,666,10,"BOLOGNA (BO) VIA EMILIA PONENTE, 356 Piano 2-S1",,,
+,Appartamento,,"BOLOGNA (BO) VIA EMILIA PONENTE, 358 Piano T",Bologna,,,,,,,499.67000000000002,99,666,9,"BOLOGNA (BO) VIA EMILIA PONENTE, 356 Piano 2-S1",,,
+,Toro,,"BOLOGNA (BO) VIA EMILIA PONENTE, 358 Piano T-1",Bologna,,,34,,,,165.06,99,666,13,"BOLOGNA (BO) VIA EMILIA PONENTE, 358 Piano T",,,
+,Casina,,"FORLI' (FO) VIA LUGHESE, 97 Piano T-1",Forlì,,,,,,,526.78999999999996,99,666,18,"BOLOGNA (BO) VIA EMILIA PONENTE, 358 Piano T-1",,,
+,Rudere,,Milano Cadore 45,Bologna,,,,,,,1860,40,154,,"FORLI' (FO) VIA LUGHESE, 97 Piano T-1",,,
+,Appartamento,,,Milano,,,,,,,754.02999999999997,480,293,26,Milano Cadore 45

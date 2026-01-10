@@ -1,0 +1,55 @@
+.spese-container {
+  padding: 20px 0;
+}
+
+.badge-manutenzione {
+  background-color: #cfe2ff;
+  color: #084298;
+}
+
+.badge-utenze {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.badge-tasse {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.badge-assicurazione {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.badge-amministrazione {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.badge-ristrutturazione {
+  background-color: #d3d3f4;
+  color: #2e2871;
+}
+
+.badge-altro {
+  background-color: #d6d8db;
+  color: #383d41;
+}
+
+.status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status.pagata {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status.non-pagata {
+  background-color: #fff3cd;
+  color: #856404;
+}

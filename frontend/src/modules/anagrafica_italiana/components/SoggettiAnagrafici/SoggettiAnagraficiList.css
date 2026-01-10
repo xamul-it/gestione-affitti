@@ -1,0 +1,253 @@
+.soggetti-list-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.soggetti-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.soggetti-list-header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #333;
+}
+
+.header-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  user-select: none;
+}
+
+.filter-checkbox input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 250px;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #0066cc;
+}
+
+.cf-badge,
+.piva-badge {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.info-note {
+  margin-top: 15px;
+  padding: 12px 16px;
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #1565c0;
+  text-align: left;
+}
+
+.soggetti-table-wrapper {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+.soggetti-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.soggetti-table thead {
+  background-color: #f5f5f5;
+}
+
+.soggetti-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 2px solid #e0e0e0;
+  white-space: nowrap;
+}
+
+.soggetti-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.soggetti-table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.soggetti-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.soggetti-table tbody tr.inactive {
+  opacity: 0.6;
+}
+
+.tipo-badge {
+  font-size: 20px;
+  display: inline-block;
+}
+
+.soggetto-name {
+  color: #0066cc;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.soggetto-name:hover {
+  text-decoration: underline;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.active {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.inactive {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: #0066cc;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #0052a3;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 16px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state p {
+  font-size: 18px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.soggetti-list-footer {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+  text-align: right;
+  color: #666;
+  font-size: 14px;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 16px;
+}
+
+.error {
+  color: #dc3545;
+  background: #ffebee;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .soggetti-list-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .soggetti-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .soggetti-table {
+    min-width: 800px;
+  }
+}

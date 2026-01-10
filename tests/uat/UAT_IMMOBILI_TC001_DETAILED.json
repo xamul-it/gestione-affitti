@@ -1,0 +1,339 @@
+{
+  "testPlanId": "TC-001",
+  "testOperator": "UAT-OP-001",
+  "executionDate": "2025-12-04T15:05:00.666Z",
+  "summary": {
+    "totalSteps": 36,
+    "passed": 36,
+    "failed": 0,
+    "blocked": 0,
+    "passRate": "100.00%"
+  },
+  "overallStatus": "PASS",
+  "executionLog": [
+    {
+      "step": 1,
+      "description": "Immobili module directory exists",
+      "expectedResult": "Directory: /home/htpc/test/gestione-affitti/frontend/src/modules/immobili",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.693Z"
+    },
+    {
+      "step": 2,
+      "description": "Subdirectory exists: components",
+      "expectedResult": "Path: /home/htpc/test/gestione-affitti/frontend/src/modules/immobili/components",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.694Z"
+    },
+    {
+      "step": 3,
+      "description": "Subdirectory exists: services",
+      "expectedResult": "Path: /home/htpc/test/gestione-affitti/frontend/src/modules/immobili/services",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.694Z"
+    },
+    {
+      "step": 4,
+      "description": "Required file exists: index.js",
+      "expectedResult": "Path: /home/htpc/test/gestione-affitti/frontend/src/modules/immobili/index.js",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.695Z"
+    },
+    {
+      "step": 5,
+      "description": "Required file exists: manifest.js",
+      "expectedResult": "Path: /home/htpc/test/gestione-affitti/frontend/src/modules/immobili/manifest.js",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.696Z"
+    },
+    {
+      "step": 6,
+      "description": "Required file exists: services/immobiliAPI.js",
+      "expectedResult": "Path: /home/htpc/test/gestione-affitti/frontend/src/modules/immobili/services/immobiliAPI.js",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.697Z"
+    },
+    {
+      "step": 101,
+      "description": "Component directory exists: UnitaImmobiliari",
+      "expectedResult": "Directory found",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.699Z"
+    },
+    {
+      "step": 102,
+      "description": "Component directory exists: Proprietari",
+      "expectedResult": "Directory found",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.700Z"
+    },
+    {
+      "step": 103,
+      "description": "Component directory exists: Condomini",
+      "expectedResult": "Directory found",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.700Z"
+    },
+    {
+      "step": 104,
+      "description": "Component directory exists: DirittiImmobile",
+      "expectedResult": "Directory found",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.700Z"
+    },
+    {
+      "step": 105,
+      "description": "Component directory exists: CertificatiEnergetici",
+      "expectedResult": "Directory found",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.701Z"
+    },
+    {
+      "step": 106,
+      "description": "Component directory exists: TabelleMillesimali",
+      "expectedResult": "Directory found",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.701Z"
+    },
+    {
+      "step": 107,
+      "description": "Component directory exists: MillesimiImmobile",
+      "expectedResult": "Directory found",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.701Z"
+    },
+    {
+      "step": 108,
+      "description": "Component directory exists: CategorieCatastali",
+      "expectedResult": "Directory found",
+      "actualResult": "FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.701Z"
+    },
+    {
+      "step": 201,
+      "description": "Correct API import: UnitaImmobiliari/UnitaImmobiliariList.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.702Z"
+    },
+    {
+      "step": 202,
+      "description": "Correct API import: UnitaImmobiliari/UnitaImmobiliareForm.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.702Z"
+    },
+    {
+      "step": 203,
+      "description": "Correct API import: Proprietari/ProprietariList.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.704Z"
+    },
+    {
+      "step": 204,
+      "description": "Correct API import: Proprietari/ProprietarioForm.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.704Z"
+    },
+    {
+      "step": 205,
+      "description": "Correct API import: Condomini/CondominList.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.705Z"
+    },
+    {
+      "step": 206,
+      "description": "Correct API import: Condomini/CondominioForm.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.705Z"
+    },
+    {
+      "step": 207,
+      "description": "Correct API import: DirittiImmobile/DirittiImmobileSection.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.705Z"
+    },
+    {
+      "step": 208,
+      "description": "Correct API import: DirittiImmobile/DirittoForm.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.706Z"
+    },
+    {
+      "step": 209,
+      "description": "Correct API import: CertificatiEnergetici/CertificatiEnergeticiList.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.706Z"
+    },
+    {
+      "step": 210,
+      "description": "Correct API import: CertificatiEnergetici/CertificatoEnergeticoForm.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.706Z"
+    },
+    {
+      "step": 211,
+      "description": "Correct API import: TabelleMillesimali/TabelleMillesimaliList.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.706Z"
+    },
+    {
+      "step": 212,
+      "description": "Correct API import: TabelleMillesimali/TabellaMillesimaleForm.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.707Z"
+    },
+    {
+      "step": 213,
+      "description": "Correct API import: MillesimiImmobile/MillesimiImmobileList.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.707Z"
+    },
+    {
+      "step": 214,
+      "description": "Correct API import: MillesimiImmobile/MillesimiForm.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.707Z"
+    },
+    {
+      "step": 215,
+      "description": "Correct API import: CategorieCatastali/CategorieCatastaliList.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.708Z"
+    },
+    {
+      "step": 216,
+      "description": "Correct API import: CategorieCatastali/CategoriaCatastaleForm.jsx",
+      "expectedResult": "Import from immobiliAPI",
+      "actualResult": "CORRECT",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.708Z"
+    },
+    {
+      "step": 301,
+      "description": "UnitaImmobiliareForm imports DocumentiSection from affitti_lungo",
+      "expectedResult": "Import found",
+      "actualResult": "YES",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.708Z"
+    },
+    {
+      "step": 302,
+      "description": "UnitaImmobiliareForm uses DocumentiSection",
+      "expectedResult": "Component usage found",
+      "actualResult": "YES",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.708Z"
+    },
+    {
+      "step": 303,
+      "description": "affitti_lungo exports DocumentiSection",
+      "expectedResult": "Export found",
+      "actualResult": "YES",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.708Z"
+    },
+    {
+      "step": 401,
+      "description": "Manifest file is readable",
+      "expectedResult": "manifest.js exists",
+      "actualResult": "YES",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.709Z"
+    },
+    {
+      "step": 402,
+      "description": "Manifest exports manifest constant",
+      "expectedResult": "export const manifest",
+      "actualResult": "YES",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.709Z"
+    },
+    {
+      "step": 403,
+      "description": "All 16 components exported from module",
+      "expectedResult": "All components exported",
+      "actualResult": "ALL FOUND",
+      "status": "PASS",
+      "notes": "",
+      "timestamp": "2025-12-04T15:05:00.709Z"
+    }
+  ]
+}

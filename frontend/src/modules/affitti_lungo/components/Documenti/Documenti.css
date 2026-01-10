@@ -1,0 +1,111 @@
+.documenti-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+}
+
+.documenti-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.documenti-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.documenti-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.documento-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  transition: box-shadow 0.2s;
+}
+
+.documento-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.documento-icon {
+  font-size: 2rem;
+}
+
+.documento-info {
+  flex: 1;
+}
+
+.documento-nome {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.documento-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #6c757d;
+  align-items: center;
+}
+
+.documento-size,
+.documento-date {
+  display: inline-block;
+}
+
+.documento-descrizione {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #495057;
+  font-style: italic;
+}
+
+.documento-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.badge-info {
+  background-color: #0dcaf0;
+  color: black;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.file-info {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: #e7f3ff;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.info-message {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
+}
+
+.no-data {
+  text-align: center;
+  color: #6c757d;
+  padding: 1rem;
+}
+
+.documento-upload-modal {
+  max-width: 500px;
+}

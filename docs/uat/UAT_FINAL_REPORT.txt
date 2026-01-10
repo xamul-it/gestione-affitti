@@ -1,0 +1,167 @@
+================================================================================
+GESTIONE AFFITTI - UAT TEST EXECUTION REPORT
+TC-003: Platform Integration & Module Architecture Non-Regression Test
+================================================================================
+
+Test Operator: UAT Test Operator #3
+Execution Date: 2025-12-04
+Status: BLOCKED
+
+================================================================================
+EXECUTIVE SUMMARY
+================================================================================
+
+Integration testing for the Gestione Affitti platform refactoring CANNOT PROCEED
+due to a CRITICAL SQLAlchemy model initialization issue that prevents the backend
+API from starting.
+
+Test Result: BLOCKED
+Severity: CRITICAL
+Impact: Complete platform unavailable - 0% functional testing possible
+Time Spent: 95 minutes investigation
+
+================================================================================
+CRITICAL ISSUE IDENTIFIED
+================================================================================
+
+DEFECT-001: SQLAlchemy Cross-Module Relationship Initialization Failure
+
+Issue:
+  Backend fails during startup when attempting to configure model relationships
+  across modules. SQLAlchemy tries to validate relationships before all related
+  model classes have been imported.
+
+Error:
+  sqlalchemy.exc.InvalidRequestError: One or more mappers failed to initialize
+  - Mapper 'Mapper[SoggettoAnagrafico]' has no property 'affittuari'
+
+Root Cause:
+  Modular refactoring split models across 3 modules:
+  - anagrafica_italiana (SoggettoAnagrafico model)
+  - immobili (Proprietario model)
+  - affitti_lungo (Affittuario, Tecnico models)
+  
+  Child models define back_populates relationships to SoggettoAnagrafico, but
+  parent model doesn't define reverse relationships when mapper initialization
+  occurs. This is a TIMING PROBLEM with import order and SQLAlchemy configuration.
+
+Platform Impact:
+  - Backend API completely unavailable
+  - Cannot test ANY functionality
+  - No authentication, no dashboard, no modules, no navigation
+  - 42 planned test steps BLOCKED
+
+Duration to Fix:
+  2-3 hours with recommended solution
+
+================================================================================
+TEST EXECUTION SUMMARY
+================================================================================
+
+Test Areas Status:
+  Authentication & Authorization      BLOCKED  (Backend not running)
+  Dynamic Menu System                 BLOCKED  (Backend not running)
+  Dashboard                           BLOCKED  (Backend not running)
+  Module System                       PARTIALLY_TESTED (Discovery works, init fails)
+  Shared Components                   BLOCKED  (Backend not running)
+  Build & Performance                 PENDING  (Cannot test)
+  Cross-Module Navigation             BLOCKED  (Backend not running)
+
+Frontend Status: ✓ PASS - Dev server running correctly on port 3000
+Backend Status:  ✗ FAIL - Cannot start due to SQLAlchemy error
+
+================================================================================
+RECOMMENDED SOLUTION
+================================================================================
+
+Create centralized model initialization module that imports all models in
+dependency order BEFORE routes are loaded:
+
+1. Create: app/models_init.py
+   - Import all models in dependency order (anagrafica → immobili → affitti)
+   - Call Base.registry.configure() explicitly after all imports
+   - Ensures SQLAlchemy has all classes available before configuration
+
+2. Update: app/main.py
+   - Import models_init FIRST, before any routes
+   - This forces all models to be configured before routes trigger additional imports
+
+3. Test: Verify backend starts without errors
+   - curl http://192.168.1.2:8000/api/v1/platform/health/
+
+Estimated Effort: 2-3 hours
+
+See files for more details:
+  - CRITICAL_FIX_REQUIRED.md (Step-by-step fix instructions)
+  - UAT_TEST_EXECUTION_SUMMARY.md (Full context and recommendations)
+  - uat-report-platform-final-20251204.json (Detailed technical analysis)
+
+================================================================================
+TEST COMPLETION STATUS
+================================================================================
+
+Planned vs. Executed:
+  Total Planned Steps:    42
+  Steps Executed:         7
+  Steps Passed:           3
+  Steps Failed:           2
+  Steps Blocked:          37
+
+Execution Phases:
+  Phase 1: Environment Setup              COMPLETE
+  Phase 2: Issue Investigation            COMPLETE
+  Phase 3: Fix Attempts (4 iterations)    COMPLETE (all unsuccessful)
+  Phase 4: Analysis & Reporting           COMPLETE
+
+================================================================================
+RECOMMENDATIONS
+================================================================================
+
+IMMEDIATE ACTIONS (Critical Path):
+  1. Implement recommended SQLAlchemy initialization fix (2-3 hours)
+  2. Test backend startup after fix (0.5 hours)
+  3. Investigate module manifest parsing errors (1-2 hours)
+  4. Rerun full TC-003 test suite once backend is operational (4-6 hours)
+
+LONGER TERM:
+  5. Add comprehensive startup integration tests
+  6. Document modular architecture best practices for cross-module relationships
+  7. Implement continuous integration checks for model initialization
+
+TOTAL EFFORT TO RESOLVE:
+  - Fix Implementation: 2-3 hours
+  - Full Test Execution: 4-6 hours
+  - Documentation: 2-3 hours
+  - TOTAL: 8-12 hours
+
+================================================================================
+FILES GENERATED
+================================================================================
+
+Test Reports:
+  /home/htpc/test/gestione-affitti/frontend/uat-report-platform-integration-20251204.json
+  /home/htpc/test/gestione-affitti/frontend/uat-report-platform-final-20251204.json
+
+Documentation:
+  /home/htpc/test/gestione-affitti/UAT_TEST_EXECUTION_SUMMARY.md
+  /home/htpc/test/gestione-affitti/CRITICAL_FIX_REQUIRED.md
+  /tmp/uat-report-platform-*.json
+  /tmp/UAT_FINAL_REPORT.txt (this file)
+
+================================================================================
+CONCLUSION
+================================================================================
+
+The modular refactoring has introduced a critical architectural issue with
+SQLAlchemy model initialization. While the issue is serious and completely
+blocks testing, it has clear solutions with manageable effort.
+
+Recommendation: Priority-fix the SQLAlchemy initialization issue immediately.
+Once resolved, comprehensive integration testing can proceed with full confidence
+in the modular architecture.
+
+Next UAT execution can resume after backend is operational.
+
+================================================================================
+Report Generated: 2025-12-04 16:15:00 UTC
+Test Operator: UAT Test Operator #3

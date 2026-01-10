@@ -1,0 +1,97 @@
+/* ScadenzaBadge Styles */
+
+.scadenza-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.scadenza-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Color variants */
+.scadenza-badge--red {
+  background-color: #fee;
+  color: #c00;
+  border: 2px solid #f88;
+}
+
+.scadenza-badge--yellow {
+  background-color: #ffe;
+  color: #c60;
+  border: 2px solid #fc6;
+}
+
+.scadenza-badge--green {
+  background-color: #efe;
+  color: #060;
+  border: 2px solid #8c8;
+}
+
+.scadenza-badge--loading {
+  background-color: #f5f5f5;
+  color: #999;
+  border: 2px solid #ddd;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Elements */
+.scadenza-badge__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.scadenza-badge__count {
+  font-size: 16px;
+  font-weight: 700;
+  min-width: 20px;
+  text-align: center;
+}
+
+.scadenza-badge__overdue {
+  background-color: #c00;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .scadenza-badge {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+
+  .scadenza-badge__icon {
+    font-size: 14px;
+  }
+
+  .scadenza-badge__count {
+    font-size: 14px;
+  }
+}

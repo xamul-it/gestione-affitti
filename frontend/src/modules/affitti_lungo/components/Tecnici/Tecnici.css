@@ -1,0 +1,26 @@
+/* Reuse existing styles from other components */
+@import '../../../immobili/components/UnitaImmobiliari/UnitaImmobiliari.css';
+
+.badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.badge-success {
+  background-color: #d1e7dd;
+  color: #0f5132;
+}
+
+.badge-danger {
+  background-color: #f8d7da;
+  color: #842029;
+}
+
+.filter-checkbox {
+  margin-right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

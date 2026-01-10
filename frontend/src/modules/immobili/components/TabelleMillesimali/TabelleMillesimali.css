@@ -1,0 +1,24 @@
+@import '../UnitaImmobiliari/UnitaImmobiliari.css';
+
+.tabelle-millesimali-container {
+  padding: 20px;
+}
+
+.filters {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.info-box {
+  padding: 10px;
+  background-color: #e7f3ff;
+  border-left: 4px solid #2196F3;
+  margin: 15px 0;
+}
+
+.info-box .warning {
+  color: #d32f2f;
+  font-weight: bold;
+}

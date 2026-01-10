@@ -1,0 +1,347 @@
+{
+  "testPlanId": "TC-002",
+  "title": "Affitti Lungo Module Non-Regression Test",
+  "executedBy": "UAT Operator #2",
+  "executionDate": "2025-12-04T14:54:50.888Z",
+  "startTime": 1764860090888,
+  "totalSteps": 32,
+  "passedSteps": 25,
+  "failedSteps": 7,
+  "blockedSteps": 0,
+  "detailedLog": [
+    {
+      "stepNumber": 1,
+      "description": "Component directory exists: Affittuari",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.896Z",
+      "notes": "3 files found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 2,
+      "description": "Component directory exists: Contratti",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.896Z",
+      "notes": "3 files found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 3,
+      "description": "Component directory exists: Incassi",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.896Z",
+      "notes": "3 files found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 4,
+      "description": "Component directory exists: Spese",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.896Z",
+      "notes": "3 files found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 5,
+      "description": "Component directory exists: Tecnici",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.897Z",
+      "notes": "3 files found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 6,
+      "description": "Component directory exists: Documenti",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.897Z",
+      "notes": "3 files found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 7,
+      "description": "File imports valid: Affittuari/AffittuariList.jsx ",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.900Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 8,
+      "description": "File imports valid: Affittuari/AffittuarioForm.jsx ",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.901Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 9,
+      "description": "File imports valid: Contratti/ContrattiList.jsx (cross-module)",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.902Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 10,
+      "description": "File imports valid: Contratti/ContrattoForm.jsx ",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.902Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 11,
+      "description": "File imports valid: Incassi/IncassiList.jsx ",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.903Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 12,
+      "description": "File imports valid: Incassi/IncassoForm.jsx ",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.904Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 13,
+      "description": "File imports valid: Spese/SpeseList.jsx (cross-module)",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.905Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 14,
+      "description": "File imports valid: Spese/SpesaForm.jsx ",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.905Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 15,
+      "description": "File imports valid: Tecnici/TecniciList.jsx ",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.905Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 16,
+      "description": "File imports valid: Tecnici/TecnicoForm.jsx ",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.905Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 17,
+      "description": "File imports valid: Documenti/DocumentiSection.jsx ",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.906Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 18,
+      "description": "File imports valid: Documenti/DocumentoUpload.jsx ",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.906Z",
+      "notes": "All required imports found",
+      "evidence": null
+    },
+    {
+      "stepNumber": 19,
+      "description": "API service file structure",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.908Z",
+      "notes": "All 6 API objects exported",
+      "evidence": null
+    },
+    {
+      "stepNumber": 20,
+      "description": "ContrattiList imports unitaImmobiliariAPI from immobili module",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.910Z",
+      "notes": "Cross-module import verified",
+      "evidence": null
+    },
+    {
+      "stepNumber": 21,
+      "description": "SpeseList imports unitaImmobiliariAPI from immobili module",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.914Z",
+      "notes": "Cross-module import verified",
+      "evidence": null
+    },
+    {
+      "stepNumber": 22,
+      "description": "CSS cross-import (Tecnici imports UnitaImmobiliari)",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.915Z",
+      "notes": "CSS import found in Tecnici.css",
+      "evidence": null
+    },
+    {
+      "stepNumber": 23,
+      "description": "Manifest file structure",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.916Z",
+      "notes": "All required fields present",
+      "evidence": null
+    },
+    {
+      "stepNumber": 24,
+      "description": "Manifest dependencies",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.916Z",
+      "notes": "Dependencies: immobili, anagrafica_italiana",
+      "evidence": null
+    },
+    {
+      "stepNumber": 25,
+      "description": "Module index exports manifest",
+      "status": "PASS",
+      "timestamp": "2025-12-04T14:54:50.916Z",
+      "notes": "",
+      "evidence": null
+    },
+    {
+      "stepNumber": 26,
+      "description": "API endpoint: Affittuari",
+      "status": "FAIL",
+      "timestamp": "2025-12-04T14:54:51.077Z",
+      "notes": "Status: undefined",
+      "evidence": null
+    },
+    {
+      "stepNumber": 27,
+      "description": "API endpoint: Contratti",
+      "status": "FAIL",
+      "timestamp": "2025-12-04T14:54:51.092Z",
+      "notes": "Status: undefined",
+      "evidence": null
+    },
+    {
+      "stepNumber": 28,
+      "description": "API endpoint: Incassi",
+      "status": "FAIL",
+      "timestamp": "2025-12-04T14:54:51.123Z",
+      "notes": "Status: undefined",
+      "evidence": null
+    },
+    {
+      "stepNumber": 29,
+      "description": "API endpoint: Spese",
+      "status": "FAIL",
+      "timestamp": "2025-12-04T14:54:51.133Z",
+      "notes": "Status: undefined",
+      "evidence": null
+    },
+    {
+      "stepNumber": 30,
+      "description": "API endpoint: Tecnici",
+      "status": "FAIL",
+      "timestamp": "2025-12-04T14:54:51.150Z",
+      "notes": "Status: undefined",
+      "evidence": null
+    },
+    {
+      "stepNumber": 31,
+      "description": "API endpoint: Documenti (requires params)",
+      "status": "FAIL",
+      "timestamp": "2025-12-04T14:54:51.154Z",
+      "notes": "Status: undefined",
+      "evidence": null
+    },
+    {
+      "stepNumber": 32,
+      "description": "API endpoint: UnitaImmobiliari (cross-module)",
+      "status": "FAIL",
+      "timestamp": "2025-12-04T14:54:51.165Z",
+      "notes": "Status: undefined",
+      "evidence": null
+    }
+  ],
+  "defects": [],
+  "crossModuleTests": [
+    {
+      "test": "ContrattiList imports unitaImmobiliariAPI from immobili module",
+      "result": "PASS",
+      "file": "components/Contratti/ContrattiList.jsx",
+      "import": "unitaImmobiliariAPI",
+      "source": "../../../../services/api"
+    },
+    {
+      "test": "SpeseList imports unitaImmobiliariAPI from immobili module",
+      "result": "PASS",
+      "file": "components/Spese/SpeseList.jsx",
+      "import": "unitaImmobiliariAPI",
+      "source": "../../../../services/api"
+    },
+    {
+      "test": "Tecnici.css imports UnitaImmobiliari.css",
+      "result": "PASS",
+      "source": "Tecnici.css",
+      "target": "UnitaImmobiliari.css",
+      "moduleFrom": "immobili"
+    }
+  ],
+  "structureValidation": [
+    {
+      "test": "All 6 component directories exist",
+      "result": "PASS",
+      "components": [
+        "Affittuari",
+        "Contratti",
+        "Incassi",
+        "Spese",
+        "Tecnici",
+        "Documenti"
+      ]
+    }
+  ],
+  "apiTests": [
+    {
+      "endpoint": "/affittuari/",
+      "name": "Affittuari",
+      "status": "FAIL"
+    },
+    {
+      "endpoint": "/contratti/",
+      "name": "Contratti",
+      "status": "FAIL"
+    },
+    {
+      "endpoint": "/incassi/",
+      "name": "Incassi",
+      "status": "FAIL"
+    },
+    {
+      "endpoint": "path: /spese/",
+      "name": "Spese",
+      "status": "FAIL"
+    },
+    {
+      "endpoint": "/tecnici/",
+      "name": "Tecnici",
+      "status": "FAIL"
+    },
+    {
+      "endpoint": "/documenti/",
+      "name": "Documenti (requires params)",
+      "status": "FAIL"
+    },
+    {
+      "endpoint": "/unita-immobiliari/",
+      "name": "UnitaImmobiliari (cross-module)",
+      "status": "FAIL"
+    }
+  ],
+  "endTime": 1764860091165,
+  "duration": "0.28",
+  "overallResult": "FAIL"
+}

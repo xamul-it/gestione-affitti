@@ -1,0 +1,111 @@
+.diritti-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: #f0f8ff;
+  border-radius: 0.5rem;
+  border: 1px solid #b0d4ff;
+}
+
+.diritti-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.diritti-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #1e40af;
+}
+
+.diritti-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.diritto-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  transition: box-shadow 0.2s;
+}
+
+.diritto-card:hover {
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.15);
+}
+
+.diritto-info {
+  flex: 1;
+}
+
+.diritto-nome {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #1e3a8a;
+  font-size: 1rem;
+}
+
+.diritto-cf {
+  font-weight: normal;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.diritto-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #6c757d;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.diritto-quota,
+.diritto-date {
+  display: inline-block;
+}
+
+.diritto-note {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #495057;
+  font-style: italic;
+}
+
+.diritto-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.diritto-form-modal {
+  max-width: 600px;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.info-message {
+  color: #1e40af;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
+  background-color: #dbeafe;
+  border-radius: 0.375rem;
+}
+
+.no-data {
+  text-align: center;
+  color: #6c757d;
+  padding: 1rem;
+}

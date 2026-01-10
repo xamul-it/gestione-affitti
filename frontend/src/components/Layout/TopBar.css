@@ -1,0 +1,571 @@
+/* ============================================================================
+   TopBar Component - Thin utility bar (60px)
+   ============================================================================ */
+
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.top-bar-container {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 16px;
+  gap: 16px;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+/* ============================================================================
+   Hamburger/Toggle Button
+   ============================================================================ */
+
+.top-bar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.top-bar-toggle:hover {
+  background-color: #f5f5f5;
+}
+
+.top-bar-toggle:focus-visible {
+  outline: 3px solid #3498db;
+  outline-offset: 2px;
+}
+
+.hamburger-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 20px;
+}
+
+.hamburger-icon span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background-color: #333;
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+/* Hamburger animation when sidebar is open (optional enhancement) */
+.top-bar-toggle[aria-expanded="true"] .hamburger-icon span:first-child {
+  transform: rotate(45deg) translateY(6px);
+}
+
+.top-bar-toggle[aria-expanded="true"] .hamburger-icon span:nth-child(2) {
+  opacity: 0;
+}
+
+.top-bar-toggle[aria-expanded="true"] .hamburger-icon span:last-child {
+  transform: rotate(-45deg) translateY(-6px);
+}
+
+/* ============================================================================
+   Logo
+   ============================================================================ */
+
+.top-bar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #333;
+  font-weight: 600;
+  font-size: 18px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.top-bar-logo:hover {
+  background-color: #f5f5f5;
+}
+
+.top-bar-logo:focus-visible {
+  outline: 3px solid #3498db;
+  outline-offset: 2px;
+}
+
+.logo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #1f2937;
+}
+
+.logo-text {
+  white-space: nowrap;
+}
+
+/* Hide logo text on very small screens */
+@media (max-width: 420px) {
+  .logo-text {
+    display: none;
+  }
+}
+
+/* ============================================================================
+   Search Bar
+   ============================================================================ */
+
+.top-bar-search {
+  flex: 1 1 320px;
+  max-width: 600px;
+  min-width: 160px;
+}
+
+/* ============================================================================
+   Active Tenant
+   ============================================================================ */
+
+/* ============================================================================
+   Top Bar Switchers (Modules style)
+   ============================================================================ */
+
+.topbar-switcher {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.topbar-switcher-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s ease;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: 6px;
+}
+
+.topbar-switcher-button:focus-visible,
+.topbar-switcher-caret:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.topbar-switcher-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #0066cc;
+}
+
+.topbar-switcher-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.topbar-switcher-label {
+  line-height: 1;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-switcher-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.1rem;
+  padding: 0.35rem 0.45rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  color: #666;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.topbar-switcher-caret:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #0066cc;
+}
+
+.topbar-switcher-caret-icon {
+  transition: transform 0.2s ease;
+}
+
+.topbar-switcher-caret-icon.open {
+  transform: rotate(180deg);
+}
+
+.topbar-switcher-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  padding: 0.25rem 0;
+  z-index: 1201;
+}
+
+.topbar-switcher-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  text-decoration: none;
+  color: #333;
+  font-size: 0.875rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.topbar-switcher-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #0066cc;
+}
+
+.topbar-switcher-item.active {
+  background: rgba(0, 102, 204, 0.08);
+  color: #0f3d78;
+  font-weight: 600;
+}
+
+.topbar-switcher-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.topbar-switcher-empty {
+  padding: 0.5rem 0.75rem;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 1024px) {
+  .topbar-switcher-label {
+    display: none;
+  }
+
+  .topbar-switcher-button {
+    padding: 0.45rem 0.65rem;
+  }
+}
+
+/* On mobile, search bar becomes icon button */
+@media (max-width: 576px) {
+  .top-bar-search {
+    flex: 0;
+    max-width: none;
+  }
+}
+
+/* ============================================================================
+   User Menu
+   ============================================================================ */
+
+.top-bar-user {
+  position: relative;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.user-menu-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  min-height: 44px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 14px;
+  color: #333;
+}
+
+.user-menu-button:hover {
+  background-color: #f5f5f5;
+}
+
+.user-menu-button:focus-visible {
+  outline: 3px solid #3498db;
+  outline-offset: 2px;
+}
+
+.user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #3498db;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.user-name {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-dropdown-arrow {
+  font-size: 10px;
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.user-dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+/* Hide user name on small screens */
+@media (max-width: 768px) {
+  .user-name {
+    display: none;
+  }
+}
+
+/* User Dropdown Menu (TODO: Implement dropdown behavior) */
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  min-width: 200px;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px 0;
+  z-index: 1100;
+}
+
+.user-dropdown[hidden] {
+  display: none;
+}
+
+.user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  text-decoration: none;
+  color: #333;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.dropdown-icon {
+  font-size: 16px;
+  width: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-dropdown-item-left {
+  justify-content: flex-start;
+}
+
+.user-dropdown-item:hover {
+  background-color: #f5f5f5;
+}
+
+.user-dropdown-item:focus-visible {
+  outline: 3px solid #3498db;
+  outline-offset: -3px;
+}
+
+.user-dropdown-divider {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid #e0e0e0;
+}
+
+.logout-button {
+  color: #e74c3c;
+  font-weight: 500;
+}
+
+.tenant-info {
+  cursor: default;
+  opacity: 0.8;
+}
+
+.tenant-info-content {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.tenant-info-label {
+  font-size: 11px;
+  color: #666;
+}
+
+.tenant-info-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ============================================================================
+   Login Button (when not authenticated)
+   ============================================================================ */
+
+.top-bar-login-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 20px;
+  min-height: 44px;
+  background-color: #3498db;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  margin-left: auto;
+}
+
+.top-bar-login-btn:hover {
+  background-color: #2980b9;
+}
+
+.top-bar-login-btn:focus-visible {
+  outline: 3px solid #3498db;
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   Debug Modal
+   ============================================================================ */
+
+.debug-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+}
+
+.debug-modal {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  width: min(680px, 92vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+}
+
+.debug-help {
+  margin: 6px 0 16px;
+  color: #556070;
+  font-size: 13px;
+}
+
+.debug-section {
+  margin-bottom: 16px;
+}
+
+.debug-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.debug-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.debug-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* ============================================================================
+   Responsive Adjustments
+   ============================================================================ */
+
+@media (max-width: 576px) {
+  .top-bar-container {
+    padding: 0 8px;
+    gap: 8px;
+  }
+
+  .top-bar-toggle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .top-bar-logo {
+    padding: 4px 8px;
+  }
+}
+
+/* ============================================================================
+   Scadenze Badge
+   ============================================================================ */
+
+.top-bar-scadenze {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .top-bar-scadenze {
+    margin-left: 0;
+  }
+}
+
+/* Debug menu now uses topbar-switcher styles */

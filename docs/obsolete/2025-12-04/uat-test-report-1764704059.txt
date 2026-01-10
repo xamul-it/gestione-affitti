@@ -1,0 +1,32 @@
+UAT TEST EXECUTION REPORT
+==========================
+Test Plan ID: UAT-MODULES-001
+Executed By: UAT Operator - API Tests
+Execution Date: 2025-12-02T19:34:19Z
+Test Duration: .44s
+
+TEST SUMMARY
+-----------
+Total Steps: 8
+Passed: 5
+Failed: 3
+Overall Result: FAIL
+
+ENVIRONMENT
+----------
+Frontend URL: http://192.168.1.2:3000
+Backend URL: http://192.168.1.2:8000
+API Base: http://192.168.1.2:8000/api/v1
+
+DEFECTS FOUND
+-------------
+1. [High] Modules endpoint error | Steps: curl /platform/modules | Expected vs Actual: Expected 200, got 404
+2. [High] Immobili endpoint error | Steps: curl /immobili | Expected vs Actual: Expected 200, got 404
+3. [High] User endpoint error | Steps: curl /users/me | Expected vs Actual: Expected 200, got 404
+
+OBSERVATIONS
+------------
+- Frontend HTML size: 636 bytes
+- Access token obtained: eyJhbGciOiJIUzI1NiIs...
+- Dashboard response length: 1240 bytes
+- Exactly 4 widgets found as expected

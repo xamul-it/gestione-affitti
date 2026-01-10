@@ -1,0 +1,72 @@
+"""
+Scadenza Schemas - Pydantic models for deadline tracking
+"""
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional
+from datetime import date, datetime
+from ..models.scadenza import TipoScadenza, StatoScadenza
+
+
+class ScadenzaBase(BaseModel):
+    """Base schema for deadline"""
+    tipo_scadenza: TipoScadenza = Field(..., description="Tipo di scadenza")
+    titolo: str = Field(..., max_length=200, description="Titolo della scadenza")
+    descrizione: Optional[str] = Field(None, description="Descrizione dettagliata")
+    data_scadenza: datetime = Field(..., description="Data e ora di scadenza")
+    prenotazione_id: Optional[int] = Field(None, description="Prenotazione associata (opzionale)")
+
+
+class ScadenzaCreate(ScadenzaBase):
+    """Schema for creating a new deadline"""
+    ricorrente: bool = Field(False, description="Scadenza ricorrente")
+    frequenza_giorni: Optional[int] = Field(None, ge=1, description="Giorni tra ricorrenze")
+
+
+class ScadenzaUpdate(BaseModel):
+    """Schema for updating an existing deadline"""
+    tipo_scadenza: Optional[TipoScadenza] = None
+    stato: Optional[StatoScadenza] = None
+    titolo: Optional[str] = Field(None, max_length=200)
+    descrizione: Optional[str] = None
+    data_scadenza: Optional[datetime] = None
+    prenotazione_id: Optional[int] = None
+    completata: Optional[bool] = None
+    note_completamento: Optional[str] = None
+    ricorrente: Optional[bool] = None
+    frequenza_giorni: Optional[int] = Field(None, ge=1)
+
+
+class ScadenzaResponse(ScadenzaBase):
+    """Schema for API responses"""
+    id: int
+    stato: StatoScadenza
+    completata: bool
+    data_completamento: Optional[datetime] = None
+    note_completamento: Optional[str] = None
+    reminder_inviato: bool
+    data_reminder: Optional[datetime] = None
+    ricorrente: bool
+    frequenza_giorni: Optional[int] = None
+    prossima_ricorrenza: Optional[date] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    # Computed properties
+    is_overdue: bool
+    is_approaching: bool
+    giorni_rimanenti: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ScadenzaCompletaRequest(BaseModel):
+    """Schema for marking deadline as completed"""
+    note_completamento: Optional[str] = Field(None, max_length=500, description="Note sul completamento")
+
+
+class ScadenzaBadgeInfo(BaseModel):
+    """Schema for badge notification info"""
+    tipo_scadenza: TipoScadenza
+    count: int = Field(..., description="Numero di scadenze")
+    count_scadute: int = Field(0, description="Numero di scadenze scadute")
+    count_in_scadenza: int = Field(0, description="Numero di scadenze in scadenza")

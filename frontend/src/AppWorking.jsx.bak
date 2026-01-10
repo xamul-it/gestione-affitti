@@ -1,0 +1,64 @@
+// Working App - All routes enabled
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Navbar from './components/Layout/Navbar';
+import Home from './pages/Home';
+import ImmobiliHome from './pages/ImmobiliHome';
+import UnitaImmobiliariList from './components/UnitaImmobiliari/UnitaImmobiliariList';
+import ImmobileDetail from './pages/ImmobileDetail';
+import AffittuariList from './components/Affittuari/AffittuariList';
+import AffittuarioDetail from './pages/AffittuarioDetail';
+import ContrattiList from './components/Contratti/ContrattiList';
+import ContrattoDetail from './pages/ContrattoDetail';
+import SpeseList from './components/Spese/SpeseList';
+import IncassiList from './components/Incassi/IncassiList';
+import TecniciList from './components/Tecnici/TecniciList';
+import CertificatiEnergeticiList from './components/CertificatiEnergetici/CertificatiEnergeticiList';
+import ProprietariList from './components/Proprietari/ProprietariList';
+import CondominList from './components/Condomini/CondominList';
+import TabelleMillesimaliList from './components/TabelleMillesimali/TabelleMillesimaliList';
+import MillesimiImmobileList from './components/MillesimiImmobile/MillesimiImmobileList';
+import CategorieCatastaliList from './components/CategorieCatastali/CategorieCatastaliList';
+
+function AppWorking() {
+  return (
+    <Router>
+      <div className="app">
+        <Navbar />
+        <div className="container" style={{ paddingTop: '20px' }}>
+          <Routes>
+            {/* Core routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/immobili" element={<ImmobiliHome />} />
+            <Route path="/unita-immobiliari" element={<UnitaImmobiliariList />} />
+            <Route path="/unita-immobiliari/:id" element={<ImmobileDetail />} />
+            <Route path="/affittuari" element={<AffittuariList />} />
+            <Route path="/affittuari/:id" element={<AffittuarioDetail />} />
+            <Route path="/contratti" element={<ContrattiList />} />
+            <Route path="/contratti/:id" element={<ContrattoDetail />} />
+            <Route path="/spese" element={<SpeseList />} />
+            <Route path="/incassi" element={<IncassiList />} />
+            <Route path="/tecnici" element={<TecniciList />} />
+            <Route path="/certificati-energetici" element={<CertificatiEnergeticiList />} />
+            <Route path="/proprietari" element={<ProprietariList />} />
+            <Route path="/condomini" element={<CondominList />} />
+            <Route path="/tabelle-millesimali" element={<TabelleMillesimaliList />} />
+            <Route path="/millesimi-immobile" element={<MillesimiImmobileList />} />
+
+            {/* Admin/Configuration routes */}
+            <Route path="/categorie-catastali" element={<CategorieCatastaliList />} />
+
+            {/* 404 fallback */}
+            <Route path="*" element={
+              <div style={{padding: '40px', textAlign: 'center'}}>
+                <h2>404 - Pagina non trovata</h2>
+                <p>La pagina che stai cercando non esiste.</p>
+              </div>
+            } />
+          </Routes>
+        </div>
+      </div>
+    </Router>
+  );
+}
+
+export default AppWorking;

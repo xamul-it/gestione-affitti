@@ -1,0 +1,6 @@
+indirizzo,citta,cap,provincia,superficie_mq,locali,piano,stato
+Via Roma 1,Milano,20100,MI,85.5,3,2,libero
+Via Verdi 23,Roma,00100,RM,120.0,4,3,occupato
+Corso Italia 45,Napoli,80100,NA,95.0,3,1,libero
+Via Garibaldi 12,Torino,10100,TO,110.5,4,4,libero
+Via Dante 8,Firenze,50100,FI,75.0,2,1,occupato

@@ -1,0 +1,331 @@
+/* ============================================================================
+   Drawer Component - Mobile navigation drawer (< 768px)
+   ============================================================================ */
+
+.drawer-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1100;
+  display: flex;
+}
+
+/* ============================================================================
+   Overlay (Dark background)
+   ============================================================================ */
+
+.drawer-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.3s ease-out;
+  cursor: pointer;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ============================================================================
+   Drawer Panel (Slide-in from left)
+   ============================================================================ */
+
+.drawer-panel {
+  position: relative;
+  width: 280px;
+  max-width: 85vw;
+  height: 100%;
+  background-color: #ffffff;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  animation: slideInLeft 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ============================================================================
+   Drawer Header
+   ============================================================================ */
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+  flex-shrink: 0;
+}
+
+.drawer-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.drawer-logo-icon {
+  font-size: 24px;
+}
+
+.drawer-logo-text {
+  white-space: nowrap;
+}
+
+/* Close Button */
+.drawer-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 24px;
+  color: #666;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.drawer-close-btn:hover {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.drawer-close-btn:focus-visible {
+  outline: 3px solid #3498db;
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   Drawer Navigation
+   ============================================================================ */
+
+.drawer-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 0;
+}
+
+.drawer-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ============================================================================
+   Loading State
+   ============================================================================ */
+
+.drawer-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  gap: 16px;
+  color: #666;
+}
+
+.drawer-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.drawer-loading span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ============================================================================
+   Error State
+   ============================================================================ */
+
+.drawer-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px;
+  gap: 16px;
+  color: #e74c3c;
+}
+
+.drawer-error p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.drawer-error .retry-btn {
+  min-height: 44px;
+  padding: 12px 24px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.drawer-error .retry-btn:hover {
+  background-color: #2980b9;
+}
+
+.drawer-error .retry-btn:focus-visible {
+  outline: 3px solid #3498db;
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   Drawer Footer
+   ============================================================================ */
+
+.drawer-footer {
+  flex-shrink: 0;
+  padding: 16px;
+  border-top: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+  text-align: center;
+}
+
+.drawer-version {
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+}
+
+/* ============================================================================
+   Scrollbar Styling (Webkit browsers)
+   ============================================================================ */
+
+.drawer-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.drawer-nav::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+.drawer-nav::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.drawer-nav::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* ============================================================================
+   Responsive Adjustments
+   ============================================================================ */
+
+/* Hide drawer on desktop (≥ 768px) - handled by component logic */
+@media (min-width: 768px) {
+  .drawer-container {
+    display: none;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 320px) {
+  .drawer-panel {
+    width: 260px;
+  }
+
+  .drawer-logo-text {
+    font-size: 16px;
+  }
+}
+
+/* ============================================================================
+   Accessibility Enhancements
+   ============================================================================ */
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .drawer-panel {
+    border-right: 2px solid currentColor;
+  }
+
+  .drawer-header,
+  .drawer-footer {
+    border-color: currentColor;
+  }
+}
+
+/* ============================================================================
+   Menu Separator (Domini)
+   ============================================================================ */
+
+.drawer-menu .menu-separator {
+  list-style: none;
+  margin: 16px 0;
+  padding: 8px 16px;
+}
+
+.drawer-menu .separator-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  padding: 4px 0;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .drawer-overlay,
+  .drawer-panel,
+  .drawer-close-btn {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   Print Styles
+   ============================================================================ */
+
+@media print {
+  .drawer-container {
+    display: none;
+  }
+}

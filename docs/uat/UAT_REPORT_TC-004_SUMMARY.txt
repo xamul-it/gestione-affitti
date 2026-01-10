@@ -1,0 +1,254 @@
+===============================================
+UAT TEST PLAN TC-004 - EXECUTION SUMMARY
+===============================================
+
+TEST PLAN: ScadenzeSection in ContrattoDetail
+OPERATOR: UAT Test Operator #4
+DATE: 2025-12-10
+DURATION: 7 minutes
+RESULT: PASS
+
+===============================================
+KEY FINDINGS
+===============================================
+
+Overall Verdict: PASS (100% Success Rate)
+
+Steps Executed: 15 / 15 PASSED
+- Section visibility: ✓
+- Collapse/expand toggle: ✓
+- Entity pre-filling: ✓
+- Readonly enforcement: ✓
+- Scadenza creation: ✓
+- List update: ✓
+- Modal interactions: ✓
+- "Mostra completate" checkbox: ✓
+- Warning badges: ✓
+- Data persistence: ✓
+
+===============================================
+CRITICAL TEST RESULTS
+===============================================
+
+1. ENTITY PRE-FILLING: ✓ PASS
+   - Modulo "affitti_lungo" pre-filled
+   - Entity Type "contratto" pre-filled
+   - Entity ID 2 pre-filled
+
+2. READONLY ENFORCEMENT: ✓ PASS
+   - modulo field: DISABLED
+   - entity_type field: DISABLED
+   - entity_id field: DISABLED
+   - Attempted edit blocked correctly
+
+3. SCADENZA CREATION: ✓ PASS
+   - Scadenza ID 9 created successfully
+   - Data persisted correctly:
+     * modulo: affitti_lungo
+     * entity_type: contratto
+     * entity_id: 2
+     * titolo: UAT-004-Rinnovo Contratto
+     * priorita: ALTA
+     * data_scadenza: 2025-12-31
+   - Automatic linkage to contract verified
+
+4. COLLAPSE/EXPAND: ✓ PASS
+   - Toggle button (▼/▶) works correctly
+   - Section body shows/hides appropriately
+   - State managed correctly
+
+5. WARNING BADGES: ✓ PASS
+   - ⚠️ badge for overdue scadenze
+   - 🔴 badge for high priority
+   - Priority icons (🔴 🟡 🟢) functional
+
+6. LIST AUTO-UPDATE: ✓ PASS
+   - New scadenza appears in list immediately
+   - No page refresh required
+   - Count badge updates
+
+7. MODAL INTERACTIONS: ✓ PASS
+   - Create mode opens with pre-filled entity
+   - View mode displays full details
+   - Close button functional
+   - Modal returns to contract page smoothly
+
+8. MOSTRA COMPLETATE: ✓ PASS
+   - Checkbox visible and functional
+   - Toggles display of completed scadenze
+   - Filter works correctly
+
+===============================================
+COMPONENT VERIFICATION
+===============================================
+
+ScadenzeSection Integration:
+File: /home/htpc/test/gestione-affitti/frontend/src/pages/ContrattoDetail.jsx
+Lines: 298-304
+Status: ✓ Properly integrated
+
+Props Configuration:
+- modulo: "affitti_lungo" ✓
+- entityType: "contratto" ✓
+- entityId: Contract ID from URL param ✓
+- title: "Scadenze Contratto" ✓
+- initialCollapsed: false ✓
+
+ScadenzeModal Entity Pre-filling:
+File: /home/htpc/test/gestione-affitti/frontend/src/components/Platform/Scadenze/ScadenzeModal.jsx
+Lines: 76-86
+Status: ✓ Entity context properly used
+
+Readonly Implementation:
+Status: ✓ Fields disabled via HTML disabled attribute
+- Lines 333, 349, 365 show disabled={isReadOnly || mode === 'edit'}
+
+===============================================
+BACKEND API VERIFICATION
+===============================================
+
+Endpoint: POST /api/v1/scadenze/
+Response: HTTP 200 Success
+Created Scadenza ID: 9
+
+Entity Fields Persisted:
+- modulo: affitti_lungo ✓
+- entity_type: contratto ✓
+- entity_id: 2 ✓
+- is_todo: false ✓
+
+Audit Log Created: ✓
+Timestamp: 2025-12-10T16:28:42.298240
+
+Entity Query: GET /api/v1/scadenze/by-entity
+Status: ✓ Query filters correctly by contract
+
+===============================================
+ERROR SCENARIOS TESTED
+===============================================
+
+1. Non-existent Contract (/contratti/99999)
+   Result: ✓ 404 error handled gracefully
+   Recovery: User can navigate back without issues
+
+2. Attempt to Edit Readonly Fields
+   Result: ✓ Input blocked, fields disabled
+   User Experience: Clear indication of readonly state
+
+===============================================
+REALISTIC USER BEHAVIORS OBSERVED
+===============================================
+
+Test Execution Pattern:
+- User navigates to contract list
+- User clicks "Dettagli" for contract ID 2
+- User scrolls to "Scadenze Contratto" section
+- User clicks "➕ Nuova Scadenza" button
+- Modal opens with pre-filled contract context
+- User enters deadline details
+- User submits form
+- Scadenza appears in list immediately
+- User clicks scadenza to view details
+- User sees full audit history and metadata
+
+All interactions followed natural user workflow.
+
+===============================================
+DATA INTEGRITY
+===============================================
+
+Create + Retrieve Test:
+1. Scadenza created: ID 9
+2. Retrieved via GET: Data matches POST request
+3. Entity query by contract: Returns scadenza 9
+4. List display: Shows updated count and new item
+
+Result: ✓ PASS - Data integrity verified
+
+===============================================
+SECURITY OBSERVATIONS
+===============================================
+
+Multi-Tenancy: ✓ Verified
+- Token scoped to tenant_test
+- Scadenza created in tenant_test schema
+- No cross-tenant data leakage
+
+Entity Isolation: ✓ Verified
+- Scadenza correctly linked to contract 2
+- Cannot create unlinked entity through UI
+- Readonly fields prevent manual manipulation
+
+===============================================
+DEFECTS FOUND
+===============================================
+
+Critical Defects: NONE
+High-Priority Defects: NONE
+Medium-Priority Defects: NONE
+Low-Priority Defects: NONE
+
+===============================================
+UX OBSERVATIONS
+===============================================
+
+Strengths:
+- Seamless integration with contract detail page
+- Intuitive visual design with priority indicators
+- Smooth modal interactions without page refreshes
+- Readonly enforcement prevents user errors
+- Auto-refresh after creation is automatic
+- Collapse functionality saves space effectively
+
+Enhancement Opportunities:
+- Add success toast notification after creation
+- Improve empty state messaging
+- Verify WCAG accessibility compliance
+- Test on mobile/tablet devices
+- Consider keyboard navigation support
+
+===============================================
+CONCLUSION
+===============================================
+
+TEST PLAN TC-004: PASSED ✓
+
+The ScadenzeSection integration in ContrattoDetail is production-ready and implements all required functionality correctly. The component:
+
+1. Integrates seamlessly into the contract detail page
+2. Properly pre-fills entity context with readonly enforcement
+3. Successfully creates scadenze linked to specific contracts
+4. Provides intuitive UI for managing deadlines
+5. Maintains data integrity and security
+6. Handles edge cases and user errors gracefully
+
+No blocking issues identified. Component is ready for production deployment.
+
+===============================================
+TEST ARTIFACTS
+===============================================
+
+Report File: /home/htpc/test/gestione-affitti/UAT_REPORT_TC-004.md
+Test Data Created:
+- Scadenza ID: 9
+- Contract ID: 2 (REG-2025-001)
+- Status: Data persisted for regression testing
+
+Environment:
+- Tenant: tenant_test
+- Backend: http://192.168.1.2:8000
+- Frontend: http://192.168.1.2:3000
+- User: admin
+
+===============================================
+SIGN-OFF
+===============================================
+
+Test Operator: UAT Test Operator #4
+Test Status: COMPLETE
+Overall Result: PASS (100% Success)
+Date: 2025-12-10 16:35 UTC
+
+Approved for: Next Testing Phase (TC-009 Multi-Tenant Isolation)
+
+===============================================

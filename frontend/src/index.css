@@ -1,0 +1,326 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: #f5f5f5;
+  color: #333;
+  line-height: 1.6;
+}
+
+/* ============================================================================
+   App Layout (Sidebar-Only Architecture)
+   ============================================================================ */
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  margin-top: 60px; /* TopBar height */
+  margin-left: 0;
+  transition: margin-left 0.3s ease;
+  background-color: #f5f5f5;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Desktop: Add left margin when sidebar is open */
+@media (min-width: 768px) {
+  .main-content {
+    margin-left: 250px; /* Sidebar expanded width */
+  }
+
+  /* Adjust margin when sidebar is collapsed */
+  .sidebar-collapsed ~ .main-content {
+    margin-left: 60px;
+  }
+}
+
+/* Mobile: No left margin (drawer is overlay) */
+@media (max-width: 767px) {
+  .main-content {
+    margin-left: 0;
+  }
+}
+
+.container {
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* UX Quick Fix #1: Minimum touch targets for accessibility (WCAG 2.5.5) */
+button, .btn, a.btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 12px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px; /* Increased from 14px for better readability */
+  transition: background-color 0.3s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+button.danger {
+  background-color: #dc3545;
+}
+
+button.danger:hover {
+  background-color: #c82333;
+}
+
+button.secondary {
+  background-color: #6c757d;
+}
+
+button.secondary:hover {
+  background-color: #5a6268;
+}
+
+/* UX Quick Fix #1 & #3: Touch targets + iOS zoom prevention */
+input, select, textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 12px;
+  margin: 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px; /* Prevents iOS zoom on focus */
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-top: 20px;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background-color: #007bff;
+  color: white;
+  font-weight: 600;
+}
+
+tr:hover {
+  background-color: #f8f9fa;
+}
+
+.card {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 2px !important;
+}
+
+.form-row label {
+  margin-bottom: 2px !important;
+}
+
+.btn-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #f5c6cb;
+}
+
+.success {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #c3e6cb;
+}
+
+/* ===================================================================
+   UX QUICK FIXES - December 4, 2025
+   See: /docs/ux/UX_QUICK_FIXES.md for details
+   =================================================================== */
+
+/* Quick Fix #2: Skip to content link (WCAG 2.4.1) */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #000;
+  color: #fff;
+  padding: 8px 16px;
+  text-decoration: none;
+  z-index: 10000;
+  font-weight: 600;
+  border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Quick Fix #4: Consistent focus indicators (WCAG 2.4.7) */
+*:focus {
+  outline: 3px solid #3498db;
+  outline-offset: 2px;
+}
+
+/* Remove focus for mouse users only (keeps keyboard focus visible) */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 3px solid #3498db;
+  outline-offset: 2px;
+}
+
+/* Special styling for buttons */
+button:focus-visible, .btn:focus-visible {
+  outline: 3px solid #3498db;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+/* Links in navigation */
+.navbar-link:focus-visible,
+.menu-link:focus-visible {
+  outline: 3px solid #3498db;
+  outline-offset: -3px;
+}
+
+/* Table action buttons - ensure minimum touch targets */
+table button, table .btn {
+  min-height: 44px;
+  padding: 10px 16px;
+}
+
+/* Enhanced loading state with consistent spinner */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  min-height: 200px;
+}
+
+.loading::before {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  color: #666;
+  font-size: 14px;
+}
+
+/* Enhanced error messages with better UX */
+.error {
+  background-color: #fff5f5;
+  color: #c53030;
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #c53030;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.error::before {
+  content: '⚠️';
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.error-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.error-message {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.error-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}

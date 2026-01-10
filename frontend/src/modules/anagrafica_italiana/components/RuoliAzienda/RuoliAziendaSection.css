@@ -1,0 +1,273 @@
+.ruoli-azienda-section {
+  margin: 30px 0;
+  padding: 25px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Section Header */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e0e0;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.section-title h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 5px 0;
+  color: #2c3e50;
+  font-size: 18px;
+}
+
+.section-subtitle {
+  margin: 0;
+  color: #666;
+  font-size: 13px;
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.checkbox-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+}
+
+.checkbox-filter input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.btn-add {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-add:hover {
+  transform: translateY(-1px);
+}
+
+/* Alert */
+.alert {
+  padding: 12px 15px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+.alert-error {
+  background-color: #fee;
+  color: #c33;
+  border: 1px solid #fcc;
+}
+
+/* States */
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.empty-state p {
+  margin: 0 0 20px 0;
+  font-size: 15px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+}
+
+/* Table */
+.ruoli-table-container {
+  overflow-x: auto;
+}
+
+.ruoli-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ruoli-table thead {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.ruoli-table th {
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: #2c3e50;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ruoli-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+}
+
+.ruoli-table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.ruoli-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.ruoli-table tbody tr.ruolo-scaduto {
+  opacity: 0.6;
+}
+
+/* Link Soggetto */
+.link-soggetto {
+  color: #667eea;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.link-soggetto:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+/* Ruolo Badge */
+.ruolo-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Date Range */
+.date-range {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+}
+
+.date-start,
+.date-end {
+  color: #666;
+}
+
+.no-dates {
+  color: #999;
+  font-style: italic;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-inactive {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  background: none;
+  border: 1px solid #ddd;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  transform: translateY(-1px);
+}
+
+.btn-edit:hover {
+  background-color: #e3f2fd;
+  border-color: #2196f3;
+}
+
+.btn-delete:hover {
+  background-color: #ffebee;
+  border-color: #f44336;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .section-actions {
+    justify-content: space-between;
+  }
+
+  .ruoli-table {
+    font-size: 13px;
+  }
+
+  .ruoli-table th,
+  .ruoli-table td {
+    padding: 8px 10px;
+  }
+
+  .date-range {
+    font-size: 11px;
+  }
+}

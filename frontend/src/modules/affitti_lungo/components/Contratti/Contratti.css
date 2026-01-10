@@ -1,0 +1,31 @@
+.contratti-container {
+  padding: 20px 0;
+}
+
+.badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badge-attivo {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.badge-scaduto {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.badge-disdetto {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.badge-terminato {
+  background-color: #d6d8db;
+  color: #383d41;
+}

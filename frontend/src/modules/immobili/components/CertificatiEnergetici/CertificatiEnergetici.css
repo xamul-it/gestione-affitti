@@ -1,0 +1,16 @@
+@import '../UnitaImmobiliari/UnitaImmobiliari.css';
+
+.classe-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: bold;
+  font-size: 0.875rem;
+}
+
+.classe-a4, .classe-a3 { background-color: #198754; color: white; }
+.classe-a2, .classe-a1 { background-color: #20c997; color: white; }
+.classe-b { background-color: #0dcaf0; color: black; }
+.classe-c { background-color: #ffc107; color: black; }
+.classe-d { background-color: #fd7e14; color: white; }
+.classe-e, .classe-f { background-color: #dc3545; color: white; }
+.classe-g { background-color: #6c757d; color: white; }
