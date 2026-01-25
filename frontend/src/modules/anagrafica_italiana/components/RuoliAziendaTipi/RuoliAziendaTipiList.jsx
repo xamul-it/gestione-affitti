@@ -1,71 +1,53 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { DataTable } from '../../../../core/components';
 import {
-  getRuoliAziendaTipi,
   deleteRuoloAziendaTipo,
-  mergeRuoliAziendaTipi
+  mergeRuoliAziendaTipi,
 } from '../../services/anagraficaAPI';
 import RuoloAziendaTipoForm from './RuoloAziendaTipoForm';
 import './RuoliAziendaTipi.css';
 
+const ruoliAziendaTipiTableConfig = {
+  endpoint: '/anagrafica/domini/ruoli-azienda-tipi/',
+  title: 'Ruoli Azienda',
+  searchPlaceholder: 'Cerca per nome...',
+  emptyTitle: 'Nessun ruolo trovato',
+  emptyMessage: 'Non ci sono ruoli azienda registrati.',
+  addButtonLabel: 'Nuovo Ruolo',
+  defaultParams: {
+    attivi_solo: false,
+  },
+  columns: [
+    { field: 'nome', label: 'Nome', filterable: true, sortable: true },
+    { field: 'descrizione', label: 'Descrizione' },
+    { field: 'attivo', label: 'Attivo' },
+    { field: 'created_at', label: 'Creato' },
+  ],
+  defaultSort: { field: 'nome', order: 'asc' },
+  rowActions: [
+    { id: 'edit', label: 'Modifica', action: 'edit', variant: 'secondary' },
+    { id: 'delete', label: 'Elimina', action: 'delete', variant: 'danger' },
+  ],
+};
+
+function RuoloAziendaTipoFormModal({ entity, onClose }) {
+  return (
+    <RuoloAziendaTipoForm
+      ruolo={entity}
+      onClose={onClose}
+    />
+  );
+}
+
 function RuoliAziendaTipiList() {
   const [ruoli, setRuoli] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [selectedRuolo, setSelectedRuolo] = useState(null);
-  const [showForm, setShowForm] = useState(false);
+  const tableRef = useRef(null);
   const [showOnlyActive, setShowOnlyActive] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Merge state
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSource, setMergeSource] = useState('');
   const [mergeTarget, setMergeTarget] = useState('');
 
-  useEffect(() => {
-    fetchRuoli();
-  }, [showOnlyActive, searchTerm]);
-
-  const fetchRuoli = async () => {
-    try {
-      setLoading(true);
-      const params = {
-        attivi_solo: showOnlyActive,
-        search: searchTerm || null
-      };
-      const data = await getRuoliAziendaTipi(params);
-      setRuoli(data);
-      setError(null);
-    } catch (err) {
-      setError('Errore nel caricamento dei ruoli azienda');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEdit = (ruolo) => {
-    setSelectedRuolo(ruolo);
-    setShowForm(true);
-  };
-
-  const handleDelete = async (id) => {
-    const ruolo = ruoli.find(r => r.id === id);
-    if (window.confirm(`Sei sicuro di voler eliminare il ruolo "${ruolo.nome}"?\n\nATTENZIONE: Non è possibile eliminare un ruolo se è utilizzato in associazioni esistenti. Usa la funzione di merge per unificare ruoli simili prima di eliminare.`)) {
-      try {
-        await deleteRuoloAziendaTipo(id);
-        fetchRuoli();
-      } catch (err) {
-        if (err.response && err.response.data && err.response.data.detail) {
-          alert(err.response.data.detail);
-        } else {
-          alert('Errore nell\'eliminazione del ruolo');
-        }
-        console.error(err);
-      }
-    }
-  };
-
-  const handleMerge = async () => {
+  const handleMerge = useCallback(async () => {
     if (!mergeSource || !mergeTarget) {
       alert('Seleziona sia il ruolo di origine che quello di destinazione');
       return;
@@ -76,8 +58,13 @@ function RuoliAziendaTipiList() {
       return;
     }
 
-    const sourceRuolo = ruoli.find(r => r.id === parseInt(mergeSource));
-    const targetRuolo = ruoli.find(r => r.id === parseInt(mergeTarget));
+    const sourceRuolo = ruoli.find(r => r.id === parseInt(mergeSource, 10));
+    const targetRuolo = ruoli.find(r => r.id === parseInt(mergeTarget, 10));
+
+    if (!sourceRuolo || !targetRuolo) {
+      alert('Ruoli non validi');
+      return;
+    }
 
     if (window.confirm(
       `Vuoi unificare "${sourceRuolo.nome}" in "${targetRuolo.nome}"?\n\n` +
@@ -86,7 +73,7 @@ function RuoliAziendaTipiList() {
       `Questa operazione non può essere annullata.`
     )) {
       try {
-        const result = await mergeRuoliAziendaTipi(parseInt(mergeSource), parseInt(mergeTarget));
+        const result = await mergeRuoliAziendaTipi(parseInt(mergeSource, 10), parseInt(mergeTarget, 10));
         alert(
           `Merge completato con successo!\n\n` +
           `"${result.source_nome}" è stato unificato in "${result.target_nome}".\n` +
@@ -95,9 +82,9 @@ function RuoliAziendaTipiList() {
         setShowMerge(false);
         setMergeSource('');
         setMergeTarget('');
-        fetchRuoli();
+        tableRef.current?.refresh();
       } catch (err) {
-        if (err.response && err.response.data && err.response.data.detail) {
+        if (err.response?.data?.detail) {
           alert(`Errore nel merge: ${err.response.data.detail}`);
         } else {
           alert('Errore nel merge dei ruoli');
@@ -105,48 +92,53 @@ function RuoliAziendaTipiList() {
         console.error(err);
       }
     }
-  };
+  }, [mergeSource, mergeTarget, ruoli]);
 
-  const handleCloseForm = () => {
-    setShowForm(false);
-    setSelectedRuolo(null);
-    fetchRuoli();
-  };
+  const renderToolbar = useCallback(({ table }) => (
+    <div className="filters">
+      <label className="filter-checkbox">
+        <input
+          type="checkbox"
+          checked={showOnlyActive}
+          onChange={(e) => {
+            const checked = e.target.checked;
+            setShowOnlyActive(checked);
+            table.setFilter('attivo', checked ? true : '');
+          }}
+        />
+        Mostra solo attivi
+      </label>
+      <button onClick={() => setShowMerge(!showMerge)} className="btn btn-secondary">
+        {showMerge ? 'Annulla Merge' : 'Unifica Ruoli'}
+      </button>
+    </div>
+  ), [showOnlyActive, showMerge]);
+
+  const columns = [
+    {
+      ...ruoliAziendaTipiTableConfig.columns[0],
+      render: (value) => <strong>{value}</strong>,
+    },
+    {
+      ...ruoliAziendaTipiTableConfig.columns[1],
+      render: (value) => value || '-',
+    },
+    {
+      ...ruoliAziendaTipiTableConfig.columns[2],
+      render: (value) => (
+        <span className={`badge ${value ? 'badge-success' : 'badge-secondary'}`}>
+          {value ? 'Sì' : 'No'}
+        </span>
+      ),
+    },
+    {
+      ...ruoliAziendaTipiTableConfig.columns[3],
+      render: (value) => value ? new Date(value).toLocaleDateString('it-IT') : '-',
+    },
+  ];
 
   return (
     <div className="container">
-      <div className="page-header">
-        <h1>Ruoli Azienda</h1>
-        <div className="header-actions">
-          <button onClick={() => setShowMerge(!showMerge)} className="btn btn-secondary">
-            {showMerge ? 'Annulla Merge' : 'Unifica Ruoli'}
-          </button>
-          <button onClick={() => setShowForm(true)} className="btn btn-primary">
-            + Nuovo Ruolo
-          </button>
-        </div>
-      </div>
-
-      <div className="filters">
-        <div className="search-box">
-          <input
-            type="text"
-            placeholder="Cerca per nome..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="form-control"
-          />
-        </div>
-        <label className="filter-checkbox">
-          <input
-            type="checkbox"
-            checked={showOnlyActive}
-            onChange={(e) => setShowOnlyActive(e.target.checked)}
-          />
-          Mostra solo attivi
-        </label>
-      </div>
-
       {showMerge && (
         <div className="merge-panel">
           <h3>Unifica Ruoli Duplicati</h3>
@@ -194,74 +186,39 @@ function RuoliAziendaTipiList() {
         </div>
       )}
 
-      {error && <div className="error">{error}</div>}
-
-      {loading ? (
-        <div className="loading">Caricamento...</div>
-      ) : (
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Descrizione</th>
-                <th>Attivo</th>
-                <th>Creato</th>
-                <th>Azioni</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ruoli.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="no-data">
-                    Nessun ruolo trovato
-                  </td>
-                </tr>
-              ) : (
-                ruoli.map((ruolo) => (
-                  <tr key={ruolo.id}>
-                    <td><strong>{ruolo.nome}</strong></td>
-                    <td>{ruolo.descrizione || '-'}</td>
-                    <td>
-                      <span className={`badge ${ruolo.attivo ? 'badge-success' : 'badge-secondary'}`}>
-                        {ruolo.attivo ? 'Sì' : 'No'}
-                      </span>
-                    </td>
-                    <td>
-                      {new Date(ruolo.created_at).toLocaleDateString('it-IT')}
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        <button
-                          onClick={() => handleEdit(ruolo)}
-                          className="btn btn-sm btn-secondary"
-                          title="Modifica"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => handleDelete(ruolo.id)}
-                          className="btn btn-sm btn-danger"
-                          title="Elimina"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {showForm && (
-        <RuoloAziendaTipoForm
-          ruolo={selectedRuolo}
-          onClose={handleCloseForm}
-        />
-      )}
+      <DataTable
+        config={{
+          ...ruoliAziendaTipiTableConfig,
+          columns,
+        }}
+        FormComponent={RuoloAziendaTipoFormModal}
+        toolbarContent={renderToolbar}
+        onDelete={async (ruolo) => {
+          if (!window.confirm(
+            `Sei sicuro di voler eliminare il ruolo "${ruolo.nome}"?\n\n` +
+            'ATTENZIONE: Non è possibile eliminare un ruolo se è utilizzato in associazioni esistenti. ' +
+            'Usa la funzione di merge per unificare ruoli simili prima di eliminare.'
+          )) {
+            return;
+          }
+          await deleteRuoloAziendaTipo(ruolo.id);
+          tableRef.current?.refresh();
+        }}
+        tableOptions={{
+          onDataChange: (data) => {
+            setRuoli(Array.isArray(data) ? data : []);
+          },
+        }}
+        onTableReady={(table) => {
+          tableRef.current = table;
+        }}
+        options={{
+          selectable: true,
+          showSearch: true,
+          showPagination: true,
+          pageSize: 50,
+        }}
+      />
     </div>
   );
 }

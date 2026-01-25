@@ -1,211 +1,152 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { getSoggettiAnagrafici, deleteSoggetto } from '../../services/anagraficaAPI';
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { DataTable } from '../../../../core/components';
+import ImportButton from '../../../../components/Platform/ImportButton';
+import ExportButton from '../../../../components/Platform/ExportButton';
 import '../SoggettiAnagrafici/SoggettiAnagraficiList.css';
 
-/**
- * PersoneFisicheList - Lista persone fisiche
- *
- * Vista ottimizzata per persone fisiche (individui con CF)
- * Mostra campi specifici: Nome, Cognome, Data Nascita, CF
- */
+const personeFisicheTableConfig = {
+  endpoint: '/anagrafica/soggetti-v2/',
+  title: 'Persone Fisiche',
+  searchPlaceholder: 'Cerca per nome, CF, email o telefono...',
+  emptyTitle: 'Nessuna persona fisica trovata',
+  emptyMessage: 'Non ci sono persone fisiche registrate.',
+  addButtonLabel: 'Nuova Persona Fisica',
+  defaultParams: {
+    limit: 1000,
+  },
+  defaultFilters: {
+    tipo_soggetto: (value) => value === 'PERSONA_FISICA',
+  },
+  columns: [
+    { field: 'nome_completo', label: 'Nome Completo', sortable: true },
+    { field: 'codice_fiscale', label: 'Codice Fiscale', filterable: true },
+    { field: 'data_nascita', label: 'Data Nascita' },
+    { field: 'luogo_nascita', label: 'Luogo Nascita', filterable: true },
+    { field: 'email', label: 'Email', filterable: true },
+    { field: 'telefono', label: 'Telefono', filterable: true },
+    { field: 'citta', label: 'Citta', filterable: true },
+    { field: 'partita_iva', label: 'P.IVA', filterable: true },
+    { field: 'attivo', label: 'Stato' },
+    { field: 'nome', label: 'Nome', filterable: true, visible: false },
+    { field: 'cognome', label: 'Cognome', filterable: true, visible: false },
+  ],
+  defaultSort: { field: 'cognome', order: 'asc' },
+  rowActions: [
+    { id: 'view', label: 'Dettagli', action: 'view', variant: 'secondary' },
+    { id: 'edit', label: 'Modifica', action: 'edit', variant: 'secondary' },
+    { id: 'delete', label: 'Elimina', action: 'delete', variant: 'danger' },
+  ],
+};
+
 function PersoneFisicheList() {
-  const [persone, setPersone] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const navigate = useNavigate();
   const [attiviSolo, setAttiviSolo] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    loadPersone();
-  }, [attiviSolo]);
+  const getNomeCompleto = useCallback((persona) => (
+    `${persona.nome || ''} ${persona.cognome || ''}`.trim() || '(Non specificato)'
+  ), []);
 
-  const loadPersone = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      // Carica solo PERSONA_FISICA
-      const data = await getSoggettiAnagrafici({
-        attivi_solo: attiviSolo,
-        limit: 1000
-      });
-      // Filtra solo persone fisiche
-      const personeFisiche = data.filter(s => s.tipo_soggetto === 'PERSONA_FISICA');
-      setPersone(personeFisiche);
-    } catch (err) {
-      console.error('Error loading persone fisiche:', err);
-      setError('Errore nel caricamento delle persone fisiche');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm('Sei sicuro di voler eliminare questa persona?')) {
-      return;
-    }
-
-    try {
-      await deleteSoggetto(id);
-      loadPersone();
-    } catch (err) {
-      console.error('Error deleting persona:', err);
-      alert('Errore nell\'eliminazione della persona');
-    }
-  };
-
-  const getNomeCompleto = (persona) => {
-    return `${persona.nome || ''} ${persona.cognome || ''}`.trim() || '(Non specificato)';
-  };
-
-  const formatDate = (dateString) => {
+  const formatDate = useCallback((dateString) => {
     if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('it-IT');
-  };
+    return new Date(dateString).toLocaleDateString('it-IT');
+  }, []);
 
-  // Filtra per ricerca
-  const filteredPersone = persone.filter(persona => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      getNomeCompleto(persona).toLowerCase().includes(searchLower) ||
-      (persona.codice_fiscale || '').toLowerCase().includes(searchLower) ||
-      (persona.email || '').toLowerCase().includes(searchLower) ||
-      (persona.telefono || '').toLowerCase().includes(searchLower)
-    );
-  });
+  const renderToolbar = useCallback(({ table }) => (
+    <label className="filter-checkbox">
+      <input
+        type="checkbox"
+        checked={attiviSolo}
+        onChange={(e) => {
+          const checked = e.target.checked;
+          setAttiviSolo(checked);
+          table.setFilter('attivo', checked ? true : '');
+        }}
+      />
+      <span>Solo attivi</span>
+    </label>
+  ), [attiviSolo]);
 
-  if (loading) {
-    return (
-      <div className="soggetti-list-container">
-        <div className="loading">Caricamento persone fisiche...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="soggetti-list-container">
-        <div className="error">{error}</div>
-      </div>
-    );
-  }
+  const columns = [
+    {
+      ...personeFisicheTableConfig.columns[0],
+      render: (_, row) => (
+        <span className="soggetto-name">
+          {getNomeCompleto(row)}
+        </span>
+      ),
+    },
+    {
+      ...personeFisicheTableConfig.columns[1],
+      render: (value) => <code className="cf-badge">{value || '-'}</code>,
+    },
+    {
+      ...personeFisicheTableConfig.columns[2],
+      render: (value) => formatDate(value),
+    },
+    {
+      ...personeFisicheTableConfig.columns[3],
+      render: (value) => value || '-',
+    },
+    {
+      ...personeFisicheTableConfig.columns[4],
+      render: (value) => value || '-',
+    },
+    {
+      ...personeFisicheTableConfig.columns[5],
+      render: (value, row) => value || row.cellulare || '-',
+    },
+    {
+      ...personeFisicheTableConfig.columns[6],
+      render: (value) => value || '-',
+    },
+    {
+      ...personeFisicheTableConfig.columns[7],
+      render: (value) => value ? <code className="piva-badge">{value}</code> : '-',
+    },
+    {
+      ...personeFisicheTableConfig.columns[8],
+      render: (value) => (
+        <span className={`status-badge ${value ? 'active' : 'inactive'}`}>
+          {value ? 'Attivo' : 'Inattivo'}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="soggetti-list-container">
-      <div className="soggetti-list-header">
-        <h1>👤 Persone Fisiche</h1>
-        <div className="header-actions">
-          <input
-            type="text"
-            placeholder="🔍 Cerca per nome, CF, email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-          <label className="filter-checkbox">
-            <input
-              type="checkbox"
-              checked={attiviSolo}
-              onChange={(e) => setAttiviSolo(e.target.checked)}
+      <DataTable
+        config={{
+          ...personeFisicheTableConfig,
+          columns,
+        }}
+        toolbarContent={renderToolbar}
+        customActions={({ table }) => (
+          <>
+            <ImportButton
+              moduleName="anagrafica_italiana"
+              entityName="SoggettoAnagrafico"
+              entityLabel="Persone Fisiche"
+              onImportComplete={() => table.refresh()}
             />
-            <span>Solo attivi</span>
-          </label>
-          <Link to="/anagrafiche/persone-fisiche/nuovo" className="btn btn-primary">
-            + Nuova Persona Fisica
-          </Link>
-        </div>
-      </div>
-
-      {filteredPersone.length === 0 ? (
-        <div className="empty-state">
-          <p>{searchTerm ? 'Nessuna persona trovata con i criteri di ricerca' : 'Nessuna persona fisica trovata'}</p>
-          {!searchTerm && (
-            <Link to="/anagrafiche/persone-fisiche/nuovo" className="btn btn-primary">
-              Crea la prima persona fisica
-            </Link>
-          )}
-        </div>
-      ) : (
-        <div className="soggetti-table-wrapper">
-          <table className="soggetti-table">
-            <thead>
-              <tr>
-                <th>Nome Completo</th>
-                <th>Codice Fiscale</th>
-                <th>Data Nascita</th>
-                <th>Luogo Nascita</th>
-                <th>Email</th>
-                <th>Telefono</th>
-                <th>Città</th>
-                <th>P.IVA</th>
-                <th>Stato</th>
-                <th>Azioni</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPersone.map((persona) => (
-                <tr key={persona.id} className={!persona.attivo ? 'inactive' : ''}>
-                  <td>
-                    <Link to={`/anagrafiche/persone-fisiche/${persona.id}`} className="soggetto-name">
-                      {getNomeCompleto(persona)}
-                    </Link>
-                  </td>
-                  <td>
-                    <code className="cf-badge">{persona.codice_fiscale || '-'}</code>
-                  </td>
-                  <td>{formatDate(persona.data_nascita)}</td>
-                  <td>{persona.luogo_nascita || '-'}</td>
-                  <td>{persona.email || '-'}</td>
-                  <td>{persona.telefono || persona.cellulare || '-'}</td>
-                  <td>{persona.citta || '-'}</td>
-                  <td>{persona.partita_iva ? <code className="piva-badge">{persona.partita_iva}</code> : '-'}</td>
-                  <td>
-                    <span className={`status-badge ${persona.attivo ? 'active' : 'inactive'}`}>
-                      {persona.attivo ? 'Attivo' : 'Inattivo'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <Link
-                        to={`/anagrafiche/persone-fisiche/${persona.id}`}
-                        className="btn btn-sm btn-secondary"
-                        title="Visualizza"
-                      >
-                        👁️
-                      </Link>
-                      <Link
-                        to={`/anagrafiche/persone-fisiche/${persona.id}/modifica`}
-                        className="btn btn-sm btn-secondary"
-                        title="Modifica"
-                      >
-                        ✏️
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(persona.id)}
-                        className="btn btn-sm btn-danger"
-                        title="Elimina"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <div className="soggetti-list-footer">
-        <p>
-          Totale persone fisiche: <strong>{filteredPersone.length}</strong>
-          {searchTerm && persone.length !== filteredPersone.length && (
-            <span> (filtrate da {persone.length})</span>
-          )}
-        </p>
-      </div>
+            <ExportButton
+              moduleName="anagrafica_italiana"
+              entityName="SoggettoAnagrafico"
+              entityLabel="Persone Fisiche"
+            />
+          </>
+        )}
+        onAdd={() => navigate('/anagrafiche/persone-fisiche/nuovo')}
+        onView={(row) => navigate(`/anagrafiche/persone-fisiche/${row.id}`)}
+        onEdit={(row) => navigate(`/anagrafiche/persone-fisiche/${row.id}/modifica`)}
+        options={{
+          selectable: true,
+          showSearch: true,
+          showPagination: true,
+          pageSize: 50,
+        }}
+      />
     </div>
   );
 }

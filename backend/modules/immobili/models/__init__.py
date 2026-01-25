@@ -25,6 +25,9 @@ from .millesimi_unita import MillesimiUnita
 # Land parcels - domain data in public schema
 from .tipologia_terreno import TipologiaTerreno
 
+# Land parcels - tenant override data
+from .tipologia_terreno_override import TipologiaTerrenoOverride
+
 # Land parcels - tenant data
 from .terreno import Terreno
 
@@ -47,4 +50,5 @@ __all__ = [
     # Land parcels
     "Terreno",
     "TipologiaTerreno",
+    "TipologiaTerrenoOverride",
 ]

@@ -8,13 +8,13 @@
 export const manifest = {
   // Module identification
   id: 'affitti_brevi',
-  name: 'Affitti Brevi',
+  displayName: 'Affitti Brevi',
   version: '1.0.0',
   description: 'Gestione affitti brevi con sincronizzazione iCal, calendario multi-piattaforma, calcolo tassa di soggiorno e scadenze legali',
 
   // Module metadata
   author: 'Gestione Affitti',
-  category: 'rentals',
+  category: 'Immobiliare',
   icon: 'calendar-alt',
 
   // Dependencies
@@ -95,26 +95,28 @@ export const manifest = {
     // },
   ],
 
-  // Widgets for dashboard (Phase 3+)
+  // Widgets for dashboard
   widgets: [
-    // {
-    //   id: 'affitti_brevi.prenotazioni_settimana',
-    //   title: 'Prenotazioni Prossima Settimana',
-    //   component: 'PrenotazioniSettimanaWidget',
-    //   defaultWidth: 6,
-    //   defaultHeight: 4,
-    //   category: 'alerts',
-    //   requiredPermission: 'affitti_brevi.view',
-    // },
-    // {
-    //   id: 'affitti_brevi.scadenze_polizia',
-    //   title: 'Scadenze Comunicazioni Polizia',
-    //   component: 'ScadenzePoliziaWidget',
-    //   defaultWidth: 6,
-    //   defaultHeight: 4,
-    //   category: 'alerts',
-    //   requiredPermission: 'affitti_brevi.view',
-    // },
+    {
+      id: 'affitti_brevi.scadenze',
+      title: 'Scadenze Affitti Brevi',
+      component: 'ScadenzeWidget',
+      description: 'Monitoraggio scadenze urgenti: comunicazioni polizia, ISTAT e adempimenti',
+      defaultWidth: 6,
+      defaultHeight: 4,
+      category: 'alerts',
+      requiredPermission: 'affitti_brevi.view',
+    },
+    {
+      id: 'affitti_brevi.calendario',
+      title: 'Calendario Prenotazioni',
+      component: 'CalendarioWidget',
+      description: 'Panoramica prenotazioni prossimi 7 giorni e conflitti da risolvere',
+      defaultWidth: 6,
+      defaultHeight: 4,
+      category: 'stats',
+      requiredPermission: 'affitti_brevi.view',
+    },
   ],
 
   // Permissions required for this module

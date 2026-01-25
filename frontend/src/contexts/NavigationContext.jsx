@@ -97,6 +97,7 @@ export function NavigationProvider({ children }) {
 
       const data = await response.json();
       setMenuItems(data);
+      window.dispatchEvent(new Event('menu-updated'));
     } catch (error) {
       console.error('Error loading menu:', error);
       setMenuError(error.message);

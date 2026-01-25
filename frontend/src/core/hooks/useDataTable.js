@@ -34,6 +34,7 @@ export function useDataTable(config, options = {}) {
     columns = [],
     defaultSort = { field: null, order: 'asc' },
     defaultFilters = {},
+    defaultParams = {},
     pageSize: defaultPageSize = 20,
     searchFields = [],
     localFiltering = true,
@@ -46,6 +47,22 @@ export function useDataTable(config, options = {}) {
     onDataChange,
     onError,
   } = options;
+
+  const getComparableValue = useCallback((value) => {
+    if (value === null || value === undefined) return value;
+    if (value instanceof Date) return value;
+    if (typeof value === 'object') {
+      const parts = [
+        value.codice,
+        value.nome,
+        value.label,
+        value.name,
+        value.value,
+      ].filter(Boolean);
+      return parts.join(' ').trim();
+    }
+    return value;
+  }, []);
 
   // CRUD operations
   const {
@@ -61,6 +78,7 @@ export function useDataTable(config, options = {}) {
   } = useEntityCRUD(endpoint, {
     autoFetch,
     onError,
+    defaultParams,
   });
 
   // Local state
@@ -103,12 +121,12 @@ export function useDataTable(config, options = {}) {
 
     return data.filter(item => {
       return fieldsToSearch.some(field => {
-        const value = getNestedValue(item, field);
+        const value = getComparableValue(getNestedValue(item, field));
         if (value === null || value === undefined) return false;
         return String(value).toLowerCase().includes(searchLower);
       });
     });
-  }, [columns, searchFields, localFiltering]);
+  }, [columns, searchFields, localFiltering, getComparableValue]);
 
   /**
    * Apply column filters
@@ -122,7 +140,11 @@ export function useDataTable(config, options = {}) {
           return true;
         }
 
-        const itemValue = getNestedValue(item, field);
+        if (typeof filterValue === 'function') {
+          return filterValue(getComparableValue(getNestedValue(item, field)), item);
+        }
+
+        const itemValue = getComparableValue(getNestedValue(item, field));
 
         // Handle different filter types
         if (Array.isArray(filterValue)) {
@@ -149,7 +171,7 @@ export function useDataTable(config, options = {}) {
         return itemValue === filterValue;
       });
     });
-  }, [localFiltering]);
+  }, [localFiltering, getComparableValue]);
 
   /**
    * Apply sorting

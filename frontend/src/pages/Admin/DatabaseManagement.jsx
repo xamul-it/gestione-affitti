@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigation } from '../../contexts/NavigationContext';
 import './DatabaseManagement.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -14,9 +15,11 @@ export default function DatabaseManagement() {
   const [tenantModules, setTenantModules] = useState([]);
   const [modulesLoading, setModulesLoading] = useState(false);
   const [modulesError, setModulesError] = useState(null);
+  const [moduleSeedTestFlags, setModuleSeedTestFlags] = useState({});
   const [configEditor, setConfigEditor] = useState(null);
   const [configValue, setConfigValue] = useState('');
   const [configSaving, setConfigSaving] = useState(false);
+  const { loadMenu } = useNavigation();
 
   // Form states
   const [newTenant, setNewTenant] = useState({
@@ -194,10 +197,11 @@ export default function DatabaseManagement() {
     setModulesError(null);
     setConfigEditor(null);
     setConfigValue('');
+    setModuleSeedTestFlags({});
     await loadTenantModules(tenant.id);
   };
 
-  const toggleTenantModule = async (tenantId, moduleId, enabled) => {
+  const toggleTenantModule = async (tenantId, moduleId, enabled, seedTestData = false) => {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) {
@@ -213,11 +217,13 @@ export default function DatabaseManagement() {
       } else {
         await axios.post(
           `${API_BASE_URL}/tenants/${tenantId}/modules/install`,
-          { module_id: moduleId },
+          { module_id: moduleId, seed_test_data: seedTestData },
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        setModuleSeedTestFlags(prev => ({ ...prev, [moduleId]: false }));
       }
       await loadTenantModules(tenantId);
+      await loadMenu();
     } catch (err) {
       alert(`Errore moduli: ${err.response?.data?.detail || 'Operazione fallita'}`);
     }
@@ -458,9 +464,27 @@ export default function DatabaseManagement() {
                       </div>
                     </div>
                     <div className="module-actions">
+                      {!module.enabled && (
+                        <label className="module-testdata-flag">
+                          <input
+                            type="checkbox"
+                            checked={!!moduleSeedTestFlags[module.module_id]}
+                            onChange={(e) => setModuleSeedTestFlags(prev => ({
+                              ...prev,
+                              [module.module_id]: e.target.checked,
+                            }))}
+                          />
+                          Dati di test
+                        </label>
+                      )}
                       <button
                         className={`btn btn-sm ${module.enabled ? 'btn-warning' : 'btn-primary'}`}
-                        onClick={() => toggleTenantModule(showModulesForTenant.id, module.module_id, module.enabled)}
+                        onClick={() => toggleTenantModule(
+                          showModulesForTenant.id,
+                          module.module_id,
+                          module.enabled,
+                          moduleSeedTestFlags[module.module_id]
+                        )}
                       >
                         {module.enabled ? 'Disattiva' : 'Attiva'}
                       </button>

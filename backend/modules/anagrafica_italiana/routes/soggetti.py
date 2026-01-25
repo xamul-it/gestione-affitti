@@ -6,13 +6,41 @@ Gestisce la tabella centralizzata dei soggetti anagrafici con informazioni sui r
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
-from app.core.database import get_db
+from sqlalchemy import or_, inspect
+from app.core.database import get_db, get_tenant_schema
 from ..models import SoggettoAnagrafico, TipoSoggetto
 from pydantic import BaseModel
 from datetime import date
 
 router = APIRouter(prefix="/anagrafica/soggetti", tags=["Soggetti Anagrafici"])
+
+
+def _get_role_tables(db: Session, tenant_schema: Optional[str]) -> dict:
+    if not tenant_schema:
+        return {"proprietari": False, "affittuari": False, "tecnici": False}
+    inspector = inspect(db.get_bind())
+    return {
+        "proprietari": inspector.has_table("immo_proprietari", schema=tenant_schema),
+        "affittuari": inspector.has_table("affittuari", schema=tenant_schema),
+        "tecnici": inspector.has_table("tecnici", schema=tenant_schema),
+    }
+
+
+def _build_ruoli_info(soggetto: SoggettoAnagrafico, tables: dict) -> "RuoliInfo":
+    proprietario = tables.get("proprietari") and len(soggetto.proprietari) > 0
+    affittuario = tables.get("affittuari") and len(soggetto.affittuari) > 0
+    tecnico = tables.get("tecnici") and len(soggetto.tecnici) > 0
+    tecnico_specializzazione = (
+        soggetto.tecnici[0].specializzazione.value
+        if tecnico and len(soggetto.tecnici) > 0
+        else None
+    )
+    return RuoliInfo(
+        proprietario=bool(proprietario),
+        affittuario=bool(affittuario),
+        tecnico=bool(tecnico),
+        tecnico_specializzazione=tecnico_specializzazione,
+    )
 
 
 # Schemas
@@ -84,7 +112,8 @@ def get_all_soggetti(
     skip: int = 0,
     limit: int = 100,
     attivo: Optional[bool] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """
     Ottiene tutti i soggetti anagrafici con informazioni sui ruoli.
@@ -102,13 +131,9 @@ def get_all_soggetti(
 
     # Arricchisci con informazioni sui ruoli
     result = []
+    role_tables = _get_role_tables(db, tenant_schema)
     for soggetto in soggetti:
-        ruoli = RuoliInfo(
-            proprietario=len(soggetto.proprietari) > 0 if hasattr(soggetto, 'proprietari') else False,
-            affittuario=len(soggetto.affittuari) > 0 if hasattr(soggetto, 'affittuari') else False,
-            tecnico=len(soggetto.tecnici) > 0 if hasattr(soggetto, 'tecnici') else False,
-            tecnico_specializzazione=soggetto.tecnici[0].specializzazione.value if hasattr(soggetto, 'tecnici') and len(soggetto.tecnici) > 0 else None
-        )
+        ruoli = _build_ruoli_info(soggetto, role_tables)
 
         soggetto_dict = {
             "id": soggetto.id,
@@ -141,7 +166,11 @@ def get_all_soggetti(
 
 
 @router.get("/{soggetto_id}", response_model=SoggettoAnagra_ficoResponse)
-def get_soggetto(soggetto_id: int, db: Session = Depends(get_db)):
+def get_soggetto(
+    soggetto_id: int,
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
+):
     """
     Ottiene un soggetto specifico con tutti i suoi ruoli.
 
@@ -154,13 +183,8 @@ def get_soggetto(soggetto_id: int, db: Session = Depends(get_db)):
     if not soggetto:
         raise HTTPException(status_code=404, detail="Soggetto non trovato")
 
-    # Informazioni sui ruoli
-    ruoli = RuoliInfo(
-        proprietario=len(soggetto.proprietari) > 0 if hasattr(soggetto, 'proprietari') else False,
-        affittuario=len(soggetto.affittuari) > 0 if hasattr(soggetto, 'affittuari') else False,
-        tecnico=len(soggetto.tecnici) > 0 if hasattr(soggetto, 'tecnici') else False,
-        tecnico_specializzazione=soggetto.tecnici[0].specializzazione.value if hasattr(soggetto, 'tecnici') and len(soggetto.tecnici) > 0 else None
-    )
+    role_tables = _get_role_tables(db, tenant_schema)
+    ruoli = _build_ruoli_info(soggetto, role_tables)
 
     return {
         "id": soggetto.id,
@@ -192,7 +216,8 @@ def get_soggetto(soggetto_id: int, db: Session = Depends(get_db)):
 def search_soggetti(
     q: str = Query(..., min_length=2, description="Testo da cercare (min 2 caratteri)"),
     limit: int = Query(20, le=100, description="Numero massimo di risultati"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """
     Ricerca soggetti per nome, cognome, ragione sociale o codice fiscale.
@@ -215,13 +240,9 @@ def search_soggetti(
 
     # Arricchisci con ruoli
     result = []
+    role_tables = _get_role_tables(db, tenant_schema)
     for soggetto in soggetti:
-        ruoli = RuoliInfo(
-            proprietario=len(soggetto.proprietari) > 0 if hasattr(soggetto, 'proprietari') else False,
-            affittuario=len(soggetto.affittuari) > 0 if hasattr(soggetto, 'affittuari') else False,
-            tecnico=len(soggetto.tecnici) > 0 if hasattr(soggetto, 'tecnici') else False,
-            tecnico_specializzazione=soggetto.tecnici[0].specializzazione.value if hasattr(soggetto, 'tecnici') and len(soggetto.tecnici) > 0 else None
-        )
+        ruoli = _build_ruoli_info(soggetto, role_tables)
 
         soggetto_dict = {
             "id": soggetto.id,
@@ -303,7 +324,8 @@ def create_soggetto(
 def update_soggetto(
     soggetto_id: int,
     soggetto_update: SoggettoAnagra_ficoUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """
     Aggiorna i dati anagrafici di un soggetto.
@@ -352,12 +374,8 @@ def update_soggetto(
     db.refresh(db_soggetto)
 
     # Restituisci con ruoli
-    ruoli = RuoliInfo(
-        proprietario=len(db_soggetto.proprietari) > 0 if hasattr(db_soggetto, 'proprietari') else False,
-        affittuario=len(db_soggetto.affittuari) > 0 if hasattr(db_soggetto, 'affittuari') else False,
-        tecnico=len(db_soggetto.tecnici) > 0 if hasattr(db_soggetto, 'tecnici') else False,
-        tecnico_specializzazione=db_soggetto.tecnici[0].specializzazione.value if hasattr(db_soggetto, 'tecnici') and len(db_soggetto.tecnici) > 0 else None
-    )
+    role_tables = _get_role_tables(db, tenant_schema)
+    ruoli = _build_ruoli_info(db_soggetto, role_tables)
 
     return {
         **db_soggetto.__dict__,
@@ -368,7 +386,11 @@ def update_soggetto(
 
 
 @router.delete("/{soggetto_id}", status_code=204)
-def delete_soggetto(soggetto_id: int, db: Session = Depends(get_db)):
+def delete_soggetto(
+    soggetto_id: int,
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
+):
     """
     Elimina un soggetto anagrafico.
 
@@ -383,10 +405,11 @@ def delete_soggetto(soggetto_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Soggetto non trovato")
 
     # Verifica se ha ruoli attivi
+    role_tables = _get_role_tables(db, tenant_schema)
     has_roles = (
-        (hasattr(db_soggetto, 'proprietari') and len(db_soggetto.proprietari) > 0) or
-        (hasattr(db_soggetto, 'affittuari') and len(db_soggetto.affittuari) > 0) or
-        (hasattr(db_soggetto, 'tecnici') and len(db_soggetto.tecnici) > 0)
+        (role_tables.get("proprietari") and len(db_soggetto.proprietari) > 0) or
+        (role_tables.get("affittuari") and len(db_soggetto.affittuari) > 0) or
+        (role_tables.get("tecnici") and len(db_soggetto.tecnici) > 0)
     )
 
     if has_roles:

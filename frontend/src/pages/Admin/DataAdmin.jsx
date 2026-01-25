@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { ChevronRight, Info, Settings } from 'lucide-react';
 import axios from 'axios';
+import { renderIcon } from '../../components/Navigation/iconRegistry.jsx';
 import './DataAdmin.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -56,7 +58,9 @@ function DataAdmin() {
       <div className="data-admin">
         <div className="data-admin-header">
           <h1>
-            <span className="header-icon">⚙️</span>
+            <span className="header-icon" aria-hidden="true">
+              <Settings size={26} strokeWidth={1.7} />
+            </span>
             Amministrazione Dati
           </h1>
           <p>Caricamento dati di dominio...</p>
@@ -74,7 +78,9 @@ function DataAdmin() {
       <div className="data-admin">
         <div className="data-admin-header">
           <h1>
-            <span className="header-icon">⚙️</span>
+            <span className="header-icon" aria-hidden="true">
+              <Settings size={26} strokeWidth={1.7} />
+            </span>
             Amministrazione Dati
           </h1>
         </div>
@@ -94,7 +100,9 @@ function DataAdmin() {
       <div className="data-admin">
         <div className="data-admin-header">
           <h1>
-            <span className="header-icon">⚙️</span>
+            <span className="header-icon" aria-hidden="true">
+              <Settings size={26} strokeWidth={1.7} />
+            </span>
             Amministrazione Dati
           </h1>
         </div>
@@ -109,7 +117,9 @@ function DataAdmin() {
     <div className="data-admin">
       <div className="data-admin-header">
         <h1>
-          <span className="header-icon">⚙️</span>
+          <span className="header-icon" aria-hidden="true">
+            <Settings size={26} strokeWidth={1.7} />
+          </span>
           Amministrazione Dati
         </h1>
         <p>Configura i dati di riferimento per tutti i moduli</p>
@@ -137,13 +147,15 @@ function DataAdmin() {
               to={item.path}
               className="config-card"
             >
-              <div className="config-icon">{item.icon || '📁'}</div>
+              <div className="config-icon" aria-hidden="true">
+                {renderIcon(item.icon || 'list', { size: 18, fallbackClassName: 'nav-emoji-icon' })}
+              </div>
               <div className="config-content">
                 <h3>{item.label}</h3>
                 <p>{item.description}</p>
               </div>
               <div className="config-arrow">
-                <i className="fas fa-arrow-right"></i>
+                <ChevronRight size={16} strokeWidth={1.7} aria-hidden="true" />
               </div>
             </Link>
           ))}
@@ -152,7 +164,9 @@ function DataAdmin() {
 
       {/* Info Box */}
       <div className="admin-info-box">
-        <div className="info-icon">ℹ️</div>
+        <div className="info-icon" aria-hidden="true">
+          <Info size={18} strokeWidth={1.7} />
+        </div>
         <div className="info-content">
           <h4>Nota</h4>
           <p>Le modifiche ai dati di riferimento influenzano tutti gli utenti del sistema. Procedere con cautela.</p>

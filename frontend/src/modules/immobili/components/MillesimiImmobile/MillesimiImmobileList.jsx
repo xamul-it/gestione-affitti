@@ -1,39 +1,84 @@
-import { useState, useEffect } from 'react';
-import { millesimiImmobileAPI, tabelleMillesimaliAPI, unitaImmobiliariAPI, condominAPI } from '../../services/immobiliAPI';
+import { useEffect, useState, useCallback } from 'react';
+import { DataTable } from '../../../../core/components';
+import { tabelleMillesimaliAPI, unitaImmobiliariAPI, condominAPI } from '../../services/immobiliAPI';
 import MillesimiForm from './MillesimiForm';
 import './MillesimiImmobile.css';
 
+const millesimiTableConfig = {
+  endpoint: '/millesimi-immobile/',
+  title: 'Gestione Millesimi Immobili',
+  searchPlaceholder: 'Cerca per immobile o tabella...',
+  emptyTitle: 'Nessun millesimo trovato',
+  emptyMessage: 'Seleziona condominio e tabella per visualizzare i millesimi.',
+  addButtonLabel: 'Aggiungi Millesimi',
+  columns: [
+    { field: 'immobile_id', label: 'Immobile' },
+    { field: 'millesimi', label: 'Millesimi' },
+    { field: 'piano', label: 'Piano' },
+    { field: 'numero_occupanti', label: 'Occupanti' },
+    { field: 'consumo', label: 'Consumo' },
+  ],
+  defaultSort: { field: 'millesimi', order: 'desc' },
+  rowActions: [
+    {
+      id: 'edit',
+      label: 'Modifica',
+      action: 'edit',
+      variant: 'secondary',
+    },
+    {
+      id: 'delete',
+      label: 'Elimina',
+      action: 'delete',
+      variant: 'danger',
+    },
+  ],
+};
+
+function MillesimiFormModal({ entity, onClose, tabellaId, immobili, tabella }) {
+  return (
+    <MillesimiForm
+      millesimo={entity}
+      tabellaId={tabellaId}
+      immobili={immobili}
+      tabella={tabella}
+      onClose={onClose}
+    />
+  );
+}
+
 function MillesimiImmobileList() {
-  const [millesimi, setMillesimi] = useState([]);
   const [tabelle, setTabelle] = useState([]);
   const [immobili, setImmobili] = useState([]);
   const [condomini, setCondomini] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [editingMillesimi, setEditingMillesimi] = useState(null);
   const [filtroTabella, setFiltroTabella] = useState('');
   const [filtroCondominio, setFiltroCondominio] = useState('');
 
   useEffect(() => {
-    fetchAll();
+    const fetchSupportData = async () => {
+      try {
+        const [condRes, immRes] = await Promise.all([
+          condominAPI.getAll(true),
+          unitaImmobiliariAPI.getAll(),
+        ]);
+        setCondomini(condRes.data || []);
+        setImmobili(immRes.data || []);
+      } catch (err) {
+        console.error('Errore caricamento dati:', err);
+      }
+    };
+    fetchSupportData();
   }, []);
 
-  const fetchAll = async () => {
+  const fetchTabelleByCondominio = useCallback(async (condominioId) => {
     try {
-      setLoading(true);
-      const [condRes, immRes] = await Promise.all([
-        condominAPI.getAll(true),
-        unitaImmobiliariAPI.getAll()
-      ]);
-      setCondomini(condRes.data);
-      setImmobili(immRes.data);
+      const response = await tabelleMillesimaliAPI.getByCondominio(condominioId);
+      setTabelle(response.data || []);
     } catch (err) {
-      console.error('Errore caricamento dati:', err);
-    } finally {
-      setLoading(false);
+      console.error('Errore caricamento tabelle:', err);
+      setTabelle([]);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (filtroCondominio) {
@@ -42,188 +87,128 @@ function MillesimiImmobileList() {
       setTabelle([]);
       setFiltroTabella('');
     }
-  }, [filtroCondominio]);
+  }, [filtroCondominio, fetchTabelleByCondominio]);
 
-  const fetchTabelleByCondominio = async (condominioId) => {
-    try {
-      const response = await tabelleMillesimaliAPI.getByCondominio(condominioId);
-      setTabelle(response.data);
-    } catch (err) {
-      console.error('Errore caricamento tabelle:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (filtroTabella) {
-      fetchMillesimiByTabella();
-    } else {
-      setMillesimi([]);
-    }
-  }, [filtroTabella]);
-
-  const fetchMillesimiByTabella = async () => {
-    try {
-      const response = await millesimiImmobileAPI.getByTabella(filtroTabella);
-      setMillesimi(response.data);
-      setError(null);
-    } catch (err) {
-      setError('Errore nel caricamento dei millesimi');
-      console.error(err);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Sei sicuro di voler eliminare questo record?')) {
-      try {
-        await millesimiImmobileAPI.delete(id);
-        fetchMillesimiByTabella();
-      } catch (err) {
-        setError('Errore nell\'eliminazione');
-        console.error(err);
-      }
-    }
-  };
-
-  const handleEdit = (millesimo) => {
-    setEditingMillesimi(millesimo);
-    setShowForm(true);
-  };
-
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingMillesimi(null);
-    if (filtroTabella) {
-      fetchMillesimiByTabella();
-    }
-  };
-
-  const getImmobileInfo = (immobileId) => {
+  const getImmobileInfo = useCallback((immobileId) => {
     const imm = immobili.find(i => i.id === immobileId);
     return imm ? `${imm.codice} - ${imm.indirizzo}` : '-';
-  };
+  }, [immobili]);
 
-  const getTabellaInfo = (tabellaId) => {
-    const tab = tabelle.find(t => t.id === tabellaId);
-    return tab ? tab.nome : '-';
-  };
-
-  if (loading) return <div className="loading">Caricamento...</div>;
-
-  return (
-    <div className="millesimi-immobile-container">
-      <div className="header">
-        <h1>Gestione Millesimi Immobili</h1>
-        {filtroTabella && (
-          <button onClick={() => setShowForm(true)}>Aggiungi Millesimi</button>
-        )}
-      </div>
-
-      <div className="filters">
-        <div className="form-row">
+  const renderToolbar = useCallback(({ table }) => (
+    <div className="filters">
+      <div className="form-row">
+        <div className="form-group">
+          <label>Condominio:</label>
+          <select
+            value={filtroCondominio}
+            onChange={(e) => {
+              const value = e.target.value;
+              setFiltroCondominio(value);
+              setFiltroTabella('');
+              table.setFilter('tabella_id', () => false);
+            }}
+          >
+            <option value="">Seleziona condominio</option>
+            {condomini.map((cond) => (
+              <option key={cond.id} value={cond.id}>
+                {cond.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        {filtroCondominio && (
           <div className="form-group">
-            <label>Condominio:</label>
+            <label>Tabella Millesimale:</label>
             <select
-              value={filtroCondominio}
-              onChange={(e) => setFiltroCondominio(e.target.value)}
+              value={filtroTabella}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFiltroTabella(value);
+                if (value) {
+                  table.setFilter('tabella_id', parseInt(value, 10));
+                } else {
+                  table.setFilter('tabella_id', () => false);
+                }
+              }}
             >
-              <option value="">Seleziona condominio</option>
-              {condomini.map((cond) => (
-                <option key={cond.id} value={cond.id}>
-                  {cond.nome}
+              <option value="">Seleziona tabella</option>
+              {tabelle.map((tab) => (
+                <option key={tab.id} value={tab.id}>
+                  {tab.nome}
                 </option>
               ))}
             </select>
           </div>
-          {filtroCondominio && (
-            <div className="form-group">
-              <label>Tabella Millesimale:</label>
-              <select
-                value={filtroTabella}
-                onChange={(e) => setFiltroTabella(e.target.value)}
-              >
-                <option value="">Seleziona tabella</option>
-                {tabelle.map((tab) => (
-                  <option key={tab.id} value={tab.id}>
-                    {tab.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
+        )}
+        {filtroTabella && (
+          <div className="info-box">
+            Totale millesimi: {table.processedData.reduce((sum, m) => sum + m.millesimi, 0).toFixed(3)}
+          </div>
+        )}
       </div>
+    </div>
+  ), [filtroCondominio, filtroTabella, condomini, tabelle]);
 
-      {error && <div className="error">{error}</div>}
+  const columns = [
+    {
+      ...millesimiTableConfig.columns[0],
+      render: (value) => getImmobileInfo(value),
+    },
+    {
+      ...millesimiTableConfig.columns[1],
+      render: (value) => <strong>{value}</strong>,
+    },
+    {
+      ...millesimiTableConfig.columns[2],
+      render: (value) => (value !== null && value !== undefined ? value : '-'),
+    },
+    {
+      ...millesimiTableConfig.columns[3],
+      render: (value) => value || '-',
+    },
+    {
+      ...millesimiTableConfig.columns[4],
+      render: (value, row) => (
+        value ? `${value} ${row.unita_misura_consumo || ''}` : '-'
+      ),
+    },
+  ];
 
-      {showForm && filtroTabella && (
-        <MillesimiForm
-          millesimo={editingMillesimi}
-          tabellaId={parseInt(filtroTabella)}
-          immobili={immobili.filter(i => i.condominio_id === parseInt(filtroCondominio))}
-          tabella={tabelle.find(t => t.id === parseInt(filtroTabella))}
-          onClose={handleFormClose}
-        />
-      )}
+  const tabellaId = filtroTabella ? parseInt(filtroTabella, 10) : null;
 
+  return (
+    <div className="millesimi-immobile-container">
+      <DataTable
+        config={{
+          ...millesimiTableConfig,
+          columns,
+          defaultFilters: { tabella_id: () => false },
+        }}
+        FormComponent={(props) => (
+          <MillesimiFormModal
+            {...props}
+            tabellaId={tabellaId}
+            immobili={immobili.filter(i => i.condominio_id === parseInt(filtroCondominio, 10))}
+            tabella={tabelle.find(t => t.id === tabellaId)}
+          />
+        )}
+        toolbarContent={renderToolbar}
+        addDisabled={!filtroTabella}
+        options={{
+          selectable: true,
+          showSearch: true,
+          showPagination: true,
+          pageSize: 20,
+        }}
+      />
       {!filtroCondominio && (
         <div className="card">
           <p>Seleziona un condominio per visualizzare e gestire i millesimi.</p>
         </div>
       )}
-
       {filtroCondominio && !filtroTabella && (
         <div className="card">
           <p>Seleziona una tabella millesimale per visualizzare e gestire i millesimi.</p>
-        </div>
-      )}
-
-      {filtroTabella && millesimi.length === 0 && (
-        <div className="card">
-          <p>Nessun immobile associato a questa tabella. Clicca su "Aggiungi Millesimi" per iniziare.</p>
-        </div>
-      )}
-
-      {filtroTabella && millesimi.length > 0 && (
-        <div>
-          <div className="info-box">
-            <strong>Totale millesimi: {millesimi.reduce((sum, m) => sum + m.millesimi, 0).toFixed(3)}</strong>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Immobile</th>
-                <th>Millesimi</th>
-                <th>Piano</th>
-                <th>Occupanti</th>
-                <th>Consumo</th>
-                <th>Azioni</th>
-              </tr>
-            </thead>
-            <tbody>
-              {millesimi.map((millesimo) => (
-                <tr key={millesimo.id}>
-                  <td>{getImmobileInfo(millesimo.immobile_id)}</td>
-                  <td><strong>{millesimo.millesimi}</strong></td>
-                  <td>{millesimo.piano !== null ? millesimo.piano : '-'}</td>
-                  <td>{millesimo.numero_occupanti || '-'}</td>
-                  <td>
-                    {millesimo.consumo ?
-                      `${millesimo.consumo} ${millesimo.unita_misura_consumo || ''}` : '-'}
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="secondary" onClick={() => handleEdit(millesimo)}>
-                        Modifica
-                      </button>
-                      <button className="danger" onClick={() => handleDelete(millesimo.id)}>
-                        Elimina
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       )}
     </div>

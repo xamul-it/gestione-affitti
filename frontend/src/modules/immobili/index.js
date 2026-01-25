@@ -61,6 +61,10 @@ export { default as TabellaMillesimaleForm } from './components/TabelleMillesima
 export { default as CategorieCatastaliList } from './components/CategorieCatastali/CategorieCatastaliList';
 export { default as CategoriaCatastaleForm } from './components/CategorieCatastali/CategoriaCatastaleForm';
 
+// TipologieTerreno
+export { default as TipologieTerrenoList } from './components/TipologieTerreno/TipologieTerrenoList';
+export { default as TipologiaTerrenoForm } from './components/TipologieTerreno/TipologiaTerrenoForm';
+
 // Dashboard Widgets
 export { default as ImmobiliStatsWidget } from './components/Dashboard/ImmobiliStatsWidget';
 export { default as CertificatiScadenzaWidget } from './components/Dashboard/CertificatiScadenzaWidget';

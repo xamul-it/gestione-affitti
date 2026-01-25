@@ -108,6 +108,15 @@ export const categorieCatastaliAPI = {
   delete: (id) => api.delete(`/categorie-catastali/${id}`),
 };
 
+// Tipologie Terreno API
+export const tipologieTerrenoAPI = {
+  getAll: (attiveSolo = false) => api.get('/tipologie-terreno/', { params: { attive_solo: attiveSolo } }),
+  getById: (id) => api.get(`/tipologie-terreno/${id}`),
+  create: (data) => api.post('/tipologie-terreno/', data),
+  update: (id, data) => api.put(`/tipologie-terreno/${id}`),
+  delete: (id) => api.delete(`/tipologie-terreno/${id}`),
+};
+
 // Terreni API
 export const terreniAPI = {
   getAll: (attiviSolo = false, tipologia = null, comune = null, provincia = null) =>
@@ -137,4 +146,5 @@ export default {
   certificatiEnergeticiAPI,
   categorieCatastaliAPI,
   terreniAPI,
+  tipologieTerrenoAPI,
 };

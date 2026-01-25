@@ -23,7 +23,8 @@ class RuoloDisponibile(Base):
     - Modulo condominio registra: amministratore, condomino
     - Modulo affitti_brevi registra: host, ospite
     """
-    __tablename__ = "ruoli_disponibili"
+    __tablename__ = "core_ruoli_disponibili"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -76,22 +77,18 @@ class SoggettoRuolo(Base):
     Il campo record_specializzazione_id punta al record nella tabella
     di specializzazione del modulo (es: id nella tabella 'proprietari').
     """
-    __tablename__ = "soggetti_ruoli"
+    __tablename__ = "core_soggetti_ruoli"
 
     id = Column(Integer, primary_key=True, index=True)
 
     # Foreign key al soggetto anagrafico
-    soggetto_id = Column(
-        Integer,
-        ForeignKey("soggetti_anagrafici.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True
-    )
+    # Riferimento a anag_soggetti_anagrafici nel modulo anagrafica_italiana
+    soggetto_id = Column(Integer, nullable=False, index=True)
 
     # Foreign key al ruolo disponibile
     ruolo_id = Column(
         Integer,
-        ForeignKey("ruoli_disponibili.id", ondelete="CASCADE"),
+        ForeignKey("core_ruoli_disponibili.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
@@ -122,7 +119,6 @@ class SoggettoRuolo(Base):
     )
 
     # Relationships
-    soggetto = relationship("SoggettoAnagrafico", back_populates="ruoli_assegnati")
     ruolo = relationship("RuoloDisponibile", back_populates="assegnazioni")
 
     def __repr__(self):

@@ -241,7 +241,7 @@ class AddressNormalizerService:
         Returns:
             CAP string or None if not found
         """
-        from immobili.models import ComuneItalia
+        from anagrafica_italiana.models import ComuneItalia
 
         citta_norm = self._normalize_for_lookup(citta)
 

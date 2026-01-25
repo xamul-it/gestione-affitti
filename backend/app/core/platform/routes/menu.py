@@ -91,12 +91,9 @@ def get_menu(
         else:
             enabled_module_ids = set()
     if enabled_module_ids is None:
-        enabled_modules = db.query(Module.technical_name).filter(
-            Module.enabled == True
-        ).all()
-        enabled_module_ids = {m[0] for m in enabled_modules}
+        enabled_module_ids = set()
 
-    logger.debug(f"Enabled modules: {enabled_module_ids}")
+    logger.debug(f"Visible modules: {enabled_module_ids}")
 
     # 2. Carica tutti menu items attivi dei moduli abilitati (+ piattaforma)
     all_items = db.query(MenuItem).filter(
@@ -316,7 +313,7 @@ def get_domain_data_menu(
         else:
             enabled_module_ids = set()
     if enabled_module_ids is None:
-        enabled_modules_query = db.query(Module).filter(Module.enabled == True).all()
+        enabled_modules_query = db.query(Module).filter(Module.registered == True).all()
     else:
         enabled_modules_query = db.query(Module).filter(
             Module.technical_name.in_(enabled_module_ids)

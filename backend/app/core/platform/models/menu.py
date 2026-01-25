@@ -13,7 +13,8 @@ from datetime import datetime
 
 class MenuItem(Base):
     """Voce di menu registrata da un modulo"""
-    __tablename__ = "platform_menu_items"
+    __tablename__ = "core_platform_menu_items"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(String(100), primary_key=True)  # es: "affitti.immobili"
     module_id = Column(String(100), nullable=False, index=True)  # es: "affitti_lungo"

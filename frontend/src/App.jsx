@@ -22,7 +22,8 @@ import {
   CondominList,
   TabelleMillesimaliList,
   MillesimiImmobileList,
-  CategorieCatastaliList
+  CategorieCatastaliList,
+  TipologieTerrenoList
 } from './modules/immobili';
 
 import ImmobileDetail from './pages/ImmobileDetail';
@@ -49,6 +50,8 @@ import {
   PersonaGiuridicaForm,
   PersonaGiuridicaDetail,
   ComuniList,
+  TipiDocumentoList,
+  StatiDocumentoList,
   RuoliAziendaTipiList,
   RuoliAziendaList
 } from './modules/anagrafica_italiana';
@@ -59,6 +62,9 @@ import ModulesAdmin from './pages/Admin/ModulesAdmin';
 import DataAdmin from './pages/Admin/DataAdmin';
 import DatabaseManagement from './pages/Admin/DatabaseManagement';
 import TenantModules from './pages/Tenant/TenantModules';
+import RolesPermissionsDebug from './pages/Admin/RolesPermissionsDebug';
+import TenantMaintenance from './pages/Admin/TenantMaintenance';
+import CoreCleanup from './pages/Admin/CoreCleanup';
 
 // Auth
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -77,6 +83,24 @@ import { getDynamicRouteComponents, registerModuleComponent } from './core/modul
 // Register module components
 import HelloPage from './modules/hello_module/HelloPage';
 registerModuleComponent('@modules/hello_module/HelloPage', HelloPage);
+
+// Affitti Brevi module components (dynamic routes)
+import {
+  CalendarioMultiPiattaforma,
+  PrenotazioniList,
+  CalendariList,
+  TassaConfigList
+} from './modules/affitti_brevi';
+registerModuleComponent('CalendarioMultiPiattaforma', CalendarioMultiPiattaforma);
+registerModuleComponent('PrenotazioniList', PrenotazioniList);
+registerModuleComponent('CalendariList', CalendariList);
+registerModuleComponent('TassaConfigList', TassaConfigList);
+
+registerModuleComponent('TipologieTerrenoList', TipologieTerrenoList);
+
+// Esempio Componenti module components
+import { ElementiEsempioList } from './modules/esempio_componenti';
+registerModuleComponent('ElementiEsempioList', ElementiEsempioList);
 
 // Layout wrapper component with new navigation system
 function AppLayout({ children }) {
@@ -144,6 +168,9 @@ function App() {
                 <Route path="/old-home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute requiredRole="Admin"><UsersManagement /></ProtectedRoute>} />
+                <Route path="/admin/roles-debug" element={<ProtectedRoute requiredRole="Admin"><RolesPermissionsDebug /></ProtectedRoute>} />
+                <Route path="/admin/tenant-maintenance" element={<ProtectedRoute requiredRole="Admin"><TenantMaintenance /></ProtectedRoute>} />
+                <Route path="/admin/core-cleanup" element={<ProtectedRoute requiredRole="Admin"><CoreCleanup /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
                 {/* Scadenze Test Page */}
@@ -168,6 +195,12 @@ function App() {
 
                 {/* Comuni route - Dati di riferimento */}
                 <Route path="/anagrafiche/comuni" element={<ProtectedRoute><ComuniList /></ProtectedRoute>} />
+
+                {/* Tipi Documento - Dati di dominio */}
+                <Route path="/anagrafiche/domini/tipi-documento" element={<ProtectedRoute><TipiDocumentoList /></ProtectedRoute>} />
+
+                {/* Stati Documento - Dati di dominio */}
+                <Route path="/anagrafiche/domini/stati-documento" element={<ProtectedRoute><StatiDocumentoList /></ProtectedRoute>} />
 
                 {/* Ruoli Azienda - Dati di dominio */}
                 <Route path="/anagrafiche/domini/ruoli-azienda" element={<ProtectedRoute><RuoliAziendaTipiList /></ProtectedRoute>} />
@@ -202,6 +235,9 @@ function App() {
                 <Route path="/admin/database" element={<ProtectedRoute requiredRole="Admin"><DatabaseManagement /></ProtectedRoute>} />
                 <Route path="/modules" element={<ProtectedRoute requiredRole="Admin"><ModulesAdmin /></ProtectedRoute>} />
                 <Route path="/tenant/modules" element={<ProtectedRoute requiredPermission="tenant.admin"><TenantModules /></ProtectedRoute>} />
+
+                {/* Esempio Componenti routes - Demo module */}
+                <Route path="/esempio/elementi" element={<ProtectedRoute><ElementiEsempioList /></ProtectedRoute>} />
 
                 {/* Dynamic module routes */}
                 {!modulesLoading && getDynamicRouteComponents()}

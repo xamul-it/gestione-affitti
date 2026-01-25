@@ -15,7 +15,8 @@ class Module(Base):
     Main registry of installed modules.
     Tracks module metadata, installation status, and configuration.
     """
-    __tablename__ = "modules"
+    __tablename__ = "core_modules"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -31,6 +32,8 @@ class Module(Base):
     # State management
     state = Column(String(20), default='installed')  # installed, enabled, disabled, broken
     enabled = Column(Boolean, default=False)
+    registered = Column(Boolean, default=False)
+    registered_at = Column(DateTime(timezone=True), nullable=True)
 
     # Licensing
     license = Column(String(50))
@@ -76,10 +79,11 @@ class ModuleDependency(Base):
     Tracks dependencies between modules.
     A module can depend on other modules with version constraints.
     """
-    __tablename__ = "module_dependencies"
+    __tablename__ = "core_module_dependencies"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    module_id = Column(Integer, ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
+    module_id = Column(Integer, ForeignKey("core_modules.id", ondelete="CASCADE"), nullable=False)
 
     # Dependency info
     depends_on = Column(String(100), nullable=False)  # technical_name of dependency
@@ -95,10 +99,11 @@ class ModulePermission(Base):
     Tracks permissions declared by modules and their grant status.
     Admin can grant or revoke permissions without uninstalling the module.
     """
-    __tablename__ = "module_permissions"
+    __tablename__ = "core_module_permissions"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    module_id = Column(Integer, ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
+    module_id = Column(Integer, ForeignKey("core_modules.id", ondelete="CASCADE"), nullable=False)
 
     # Permission details
     permission = Column(String(100), nullable=False)  # e.g., "database.read", "api.external"
@@ -117,10 +122,11 @@ class ModuleHook(Base):
     Tracks backend hooks registered by modules.
     Hooks allow modules to react to lifecycle events.
     """
-    __tablename__ = "module_hooks"
+    __tablename__ = "core_module_hooks"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    module_id = Column(Integer, ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
+    module_id = Column(Integer, ForeignKey("core_modules.id", ondelete="CASCADE"), nullable=False)
 
     # Hook details
     hook_name = Column(String(200), nullable=False)  # e.g., "contratto.before_create"
@@ -137,10 +143,11 @@ class ModuleExtension(Base):
     Tracks frontend extension points registered by modules.
     Extension points allow modules to inject UI components.
     """
-    __tablename__ = "module_extensions"
+    __tablename__ = "core_module_extensions"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    module_id = Column(Integer, ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
+    module_id = Column(Integer, ForeignKey("core_modules.id", ondelete="CASCADE"), nullable=False)
 
     # Extension point details
     extension_point = Column(String(200), nullable=False)  # e.g., "immobile.detail.tabs"
@@ -157,10 +164,11 @@ class ModuleEndpoint(Base):
     Tracks API endpoints registered by modules.
     Used for documentation and conflict detection.
     """
-    __tablename__ = "module_endpoints"
+    __tablename__ = "core_module_endpoints"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    module_id = Column(Integer, ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
+    module_id = Column(Integer, ForeignKey("core_modules.id", ondelete="CASCADE"), nullable=False)
 
     # Endpoint details
     path = Column(String(200), nullable=False)

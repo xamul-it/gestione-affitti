@@ -1,5 +1,8 @@
 """
 Terreno (Land) model for managing undeveloped land parcels.
+
+SCHEMA: TENANT
+PREFIX: immo_ (modulo immobili)
 """
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean, Numeric, ForeignKey
 from sqlalchemy.orm import relationship
@@ -15,9 +18,10 @@ class Terreno(Base):
     and classification according to Italian cadastral system.
 
     This table is created in tenant schemas (tenant-specific data).
-    The tipologia references public.tipologie_terreno (shared domain data).
+    The tipologia references public.immo_tipologie_terreno (shared domain data).
     """
-    __tablename__ = "terreni"
+    __tablename__ = "immo_terreni"
+    __table_args__ = {"extend_existing": True}
 
     # Primary key
     id = Column(Integer, primary_key=True, index=True)
@@ -27,10 +31,10 @@ class Terreno(Base):
     nome = Column(String(255), nullable=False)  # Nome descrittivo
     descrizione = Column(Text, nullable=True)  # Descrizione estesa
 
-    # Classification - FK to public.tipologie_terreno
+    # Classification - FK to public.immo_tipologie_terreno
     tipologia_id = Column(
         Integer,
-        ForeignKey("public.tipologie_terreno.id", ondelete="SET NULL"),
+        ForeignKey("public.immo_tipologie_terreno.id", ondelete="SET NULL"),
         nullable=True,
         index=True
     )

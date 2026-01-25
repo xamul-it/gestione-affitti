@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { immobiliAPI, contrattiAPI, speseAPI, incassiAPI } from '../services/api';
+import { renderIcon } from '../components/Navigation/iconRegistry.jsx';
 import './Home.css';
 
 function Home() {
@@ -57,7 +58,9 @@ function Home() {
       {/* Statistiche Principali */}
       <div className="stats-grid">
         <Link to="/immobili" className="stat-card blue">
-          <div className="stat-icon">🏢</div>
+          <div className="stat-icon">
+            {renderIcon('building', { size: 40 })}
+          </div>
           <div className="stat-content">
             <div className="stat-value">{stats.immobili}</div>
             <div className="stat-label">Immobili</div>
@@ -65,7 +68,9 @@ function Home() {
         </Link>
 
         <Link to="/contratti" className="stat-card green">
-          <div className="stat-icon">📄</div>
+          <div className="stat-icon">
+            {renderIcon('file-contract', { size: 40 })}
+          </div>
           <div className="stat-content">
             <div className="stat-value">{stats.contratti}</div>
             <div className="stat-label">Contratti Attivi</div>
@@ -73,7 +78,9 @@ function Home() {
         </Link>
 
         <Link to="/spese" className="stat-card orange">
-          <div className="stat-icon">💰</div>
+          <div className="stat-icon">
+            {renderIcon('receipt', { size: 40 })}
+          </div>
           <div className="stat-content">
             <div className="stat-value">{stats.spese}</div>
             <div className="stat-label">Spese Registrate</div>
@@ -81,7 +88,9 @@ function Home() {
         </Link>
 
         <Link to="/incassi" className="stat-card purple">
-          <div className="stat-icon">💵</div>
+          <div className="stat-icon">
+            {renderIcon('money-bill-wave', { size: 40 })}
+          </div>
           <div className="stat-content">
             <div className="stat-value">{stats.incassi}</div>
             <div className="stat-label">Incassi</div>
@@ -94,23 +103,33 @@ function Home() {
         <h2>Azioni Rapide</h2>
         <div className="actions-grid">
           <Link to="/dashboard" className="action-card">
-            <span className="action-icon">📊</span>
+            <span className="action-icon">
+              {renderIcon('chart-line', { size: 22 })}
+            </span>
             <span>Dashboard & Widget</span>
           </Link>
           <Link to="/immobili" className="action-card">
-            <span className="action-icon">➕</span>
+            <span className="action-icon">
+              {renderIcon('plus', { size: 22 })}
+            </span>
             <span>Nuovo Immobile</span>
           </Link>
           <Link to="/contratti" className="action-card">
-            <span className="action-icon">📝</span>
+            <span className="action-icon">
+              {renderIcon('file-contract', { size: 22 })}
+            </span>
             <span>Nuovo Contratto</span>
           </Link>
           <Link to="/spese" className="action-card">
-            <span className="action-icon">💸</span>
+            <span className="action-icon">
+              {renderIcon('receipt', { size: 22 })}
+            </span>
             <span>Registra Spesa</span>
           </Link>
           <Link to="/condomini" className="action-card">
-            <span className="action-icon">🏘️</span>
+            <span className="action-icon">
+              {renderIcon('building-2', { size: 22 })}
+            </span>
             <span>Gestione Condomini</span>
           </Link>
         </div>
@@ -121,7 +140,12 @@ function Home() {
         <h2>Moduli Disponibili</h2>
         <div className="features">
           <div className="feature-card">
-            <h3>📁 Anagrafica</h3>
+            <h3>
+              <span className="feature-icon" aria-hidden="true">
+                {renderIcon('id-card', { size: 18 })}
+              </span>
+              Anagrafica
+            </h3>
             <p>Gestione completa di immobili, condomini, proprietari e affittuari</p>
             <div className="feature-links">
               <Link to="/immobili">Immobili</Link>
@@ -131,7 +155,12 @@ function Home() {
           </div>
 
           <div className="feature-card">
-            <h3>💼 Gestione Affitti</h3>
+            <h3>
+              <span className="feature-icon" aria-hidden="true">
+                {renderIcon('briefcase', { size: 18 })}
+              </span>
+              Gestione Affitti
+            </h3>
             <p>Contratti, spese e incassi per affitti a lungo termine</p>
             <div className="feature-links">
               <Link to="/contratti">Contratti</Link>
@@ -141,7 +170,12 @@ function Home() {
           </div>
 
           <div className="feature-card">
-            <h3>📊 Condominio</h3>
+            <h3>
+              <span className="feature-icon" aria-hidden="true">
+                {renderIcon('chart-line', { size: 18 })}
+              </span>
+              Condominio
+            </h3>
             <p>Tabelle millesimali e ripartizione spese condominiali</p>
             <div className="feature-links">
               <Link to="/tabelle-millesimali">Tabelle</Link>
@@ -150,7 +184,12 @@ function Home() {
           </div>
 
           <div className="feature-card">
-            <h3>🔧 Utilità</h3>
+            <h3>
+              <span className="feature-icon" aria-hidden="true">
+                {renderIcon('wrench', { size: 18 })}
+              </span>
+              Utilità
+            </h3>
             <p>Tecnici, certificati energetici e documenti</p>
             <div className="feature-links">
               <Link to="/tecnici">Tecnici</Link>

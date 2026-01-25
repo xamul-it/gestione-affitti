@@ -48,6 +48,12 @@
   background: #2563eb;
 }
 
+.core-datatable__add-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #94a3b8;
+}
+
 /* Toolbar */
 .core-datatable__toolbar {
   display: flex;
@@ -56,6 +62,13 @@
   padding: 1rem 1.5rem;
   background: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
+}
+
+.core-datatable__toolbar-extra {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .core-datatable__search {
@@ -486,4 +499,44 @@
   height: 1rem;
   cursor: pointer;
   accent-color: #3b82f6;
+}
+
+/* Column Selector */
+.core-datatable__column-selector-wrapper {
+  position: relative;
+  margin-left: auto;
+}
+
+.core-datatable__columns-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.core-datatable__columns-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.core-datatable__columns-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.core-datatable__column-selector-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99;
 }

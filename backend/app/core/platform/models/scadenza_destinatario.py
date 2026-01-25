@@ -29,7 +29,7 @@ class ScadenzaDestinatario(Base):
         # TODO with no recipients = only creator notified
         # (no ScadenzaDestinatario records created)
     """
-    __tablename__ = "scadenza_destinatari"
+    __tablename__ = "core_scadenza_destinatari"
 
     # Primary key
     id = Column(Integer, primary_key=True, index=True)
@@ -37,13 +37,13 @@ class ScadenzaDestinatario(Base):
     # Foreign keys
     scadenza_id = Column(
         Integer,
-        ForeignKey('scadenze.id', ondelete='CASCADE'),
+        ForeignKey('core_scadenze.id', ondelete='CASCADE'),
         nullable=False,
         comment="Reference to parent scadenza"
     )
     user_id = Column(
         Integer,
-        ForeignKey('users.id', ondelete='CASCADE'),
+        ForeignKey('core_users.id', ondelete='CASCADE'),
         nullable=False,
         comment="Recipient user"
     )
@@ -76,9 +76,10 @@ class ScadenzaDestinatario(Base):
         # Prevent duplicate recipient entries
         UniqueConstraint('scadenza_id', 'user_id', name='uq_scadenza_user'),
         # Fast lookups
-        Index('idx_destinatari_scadenza', 'scadenza_id'),
-        Index('idx_destinatari_user', 'user_id'),
-        Index('idx_destinatari_notificato', 'notificato'),
+        Index('idx_core_destinatari_scadenza', 'scadenza_id'),
+        Index('idx_core_destinatari_user', 'user_id'),
+        Index('idx_core_destinatari_notificato', 'notificato'),
+        {"extend_existing": True}
     )
 
     def __repr__(self):

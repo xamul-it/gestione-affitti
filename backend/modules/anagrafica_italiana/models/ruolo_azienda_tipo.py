@@ -16,8 +16,8 @@ class RuoloAziendaTipo(Base):
     - Fornire auto-complete durante l'inserimento
     - Permettere normalizzazione/fusione di ruoli simili
     """
-    __tablename__ = "ruoli_azienda_tipi"
-    __table_args__ = {"schema": "public"}
+    __tablename__ = "anag_ruoli_azienda_tipi"
+    __table_args__ = {"schema": "public", "extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100), nullable=False, unique=True, index=True)

@@ -14,19 +14,20 @@ class RuoloAzienda(Base):
 
     Esempi di ruoli: Amministratore Delegato, Segretaria, Tecnico, Responsabile, etc.
     """
-    __tablename__ = "ruoli_azienda"
+    __tablename__ = "anag_ruoli_azienda"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
 
     # Persona fisica (dipendente, collaboratore, etc.)
-    persona_fisica_id = Column(Integer, ForeignKey('soggetti_anagrafici.id', ondelete='CASCADE'), nullable=False)
+    persona_fisica_id = Column(Integer, ForeignKey('anag_soggetti_anagrafici.id', ondelete='CASCADE'), nullable=False)
 
     # Azienda (persona giuridica)
-    persona_giuridica_id = Column(Integer, ForeignKey('soggetti_anagrafici.id', ondelete='CASCADE'), nullable=False)
+    persona_giuridica_id = Column(Integer, ForeignKey('anag_soggetti_anagrafici.id', ondelete='CASCADE'), nullable=False)
 
     # Ruolo: supporta due modalità (backward compatible)
     # 1. Nuovo sistema: FK a ruolo_azienda_tipo (normalizzato, con autocomplete)
-    ruolo_tipo_id = Column(Integer, ForeignKey('public.ruoli_azienda_tipi.id', ondelete='SET NULL'), nullable=True)
+    ruolo_tipo_id = Column(Integer, ForeignKey('public.anag_ruoli_azienda_tipi.id', ondelete='SET NULL'), nullable=True)
     # 2. Vecchio sistema: testo libero (per backward compatibility)
     ruolo = Column(String(100), nullable=True)  # Ora nullable, usato solo se ruolo_tipo_id è NULL
 

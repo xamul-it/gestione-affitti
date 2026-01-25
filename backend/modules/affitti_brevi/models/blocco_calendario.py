@@ -1,66 +1,73 @@
 """
 BloccoCalendario Model - Manual Calendar Block
 
-Allows manual blocking of dates for a property on a specific platform.
+Allows manual blocking of dates for a property on specific channels.
 Used for maintenance periods, personal use, or temporary closure.
+NOTE: According to analysis, internal technical closures are NOT in scope.
+This model is for visibility purposes only (shows as "X" in calendar).
 """
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Enum as SQLEnum, Text
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Boolean, Text, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
 from app.core.database import Base
 
-# Add modules directory to path for cross-module imports
-import sys
-import os
-modules_dir = os.path.join(os.path.dirname(__file__), '../../../modules')
-if modules_dir not in sys.path:
-    sys.path.insert(0, modules_dir)
-
 
 class TipoBlocco(str, enum.Enum):
     """Type of calendar block"""
-    MANUTENZIONE = "MANUTENZIONE"  # Maintenance
-    USO_PERSONALE = "USO_PERSONALE"  # Personal use
-    CHIUSURA_TEMPORANEA = "CHIUSURA_TEMPORANEA"  # Temporary closure
-    ALTRO = "ALTRO"  # Other
-
-
-class PortaleBlocco(str, enum.Enum):
-    """Platform to block (matches PortaleBooking from calendario_ical.py)"""
-    BOOKING_COM = "BOOKING_COM"
-    AIRBNB = "AIRBNB"
-    VRBO = "VRBO"
-    TUTTI = "TUTTI"  # Block on all platforms
-    ALTRO = "ALTRO"
+    USO_PERSONALE = "USO_PERSONALE"              # Personal use by owner
+    CHIUSURA_CANALE = "CHIUSURA_CANALE"          # Channel reported closure
+    ALTRO = "ALTRO"                              # Other
 
 
 class BloccoCalendario(Base):
     """
     Manual Calendar Block
 
-    Blocks dates for a property on a specific platform.
-    Prevents bookings during maintenance, personal use, or closure periods.
-    Visible in the multi-platform calendar view with strikethrough symbol.
+    Blocks dates for a property, visible in the unified calendar view.
+    Represented as "X" in the calendar (Chiuso/Non disponibile).
+
+    Can apply to:
+    - All channels (canale_id = null)
+    - A specific channel (canale_id set)
     """
-    __tablename__ = "blocchi_calendario"
+    __tablename__ = "ab_blocchi_calendario"
 
     id = Column(Integer, primary_key=True, index=True)
 
     # Property reference
-    immobile_id = Column(Integer, ForeignKey("unita_immobiliari.id"), nullable=False, index=True)
+    unita_immobiliare_id = Column(
+        Integer,
+        ForeignKey("immo_unita_immobiliari.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
 
-    # Platform scope
-    portale = Column(SQLEnum(PortaleBlocco), nullable=False,
-                    comment="Which platform to block (or TUTTI for all platforms)")
+    # Channel scope (null = all channels)
+    canale_id = Column(
+        Integer,
+        ForeignKey("ab_canali.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Specific channel (null = all channels)"
+    )
 
     # Date range
     data_inizio = Column(Date, nullable=False, index=True)
     data_fine = Column(Date, nullable=False, index=True)
 
     # Block type and reason
-    tipo_blocco = Column(SQLEnum(TipoBlocco), nullable=False)
+    tipo = Column(String(30), default=TipoBlocco.ALTRO.value, nullable=False)
     motivo = Column(Text, nullable=True, comment="Reason for blocking")
+
+    # Source tracking
+    da_canale = Column(Boolean, default=False, nullable=False,
+                      comment="True if imported from channel, False if manual")
+    codice_blocco_esterno = Column(String(100), nullable=True,
+                                  comment="External block ID from channel")
+
+    # Status
+    attivo = Column(Boolean, default=True, nullable=False)
 
     # Notes
     note = Column(Text, nullable=True)
@@ -70,15 +77,38 @@ class BloccoCalendario(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    unita_immobiliare = relationship("UnitaImmobiliare",
-                                    foreign_keys=[immobile_id])
+    unita_immobiliare = relationship(
+        "UnitaImmobiliare",
+        foreign_keys=[unita_immobiliare_id]
+    )
+    canale = relationship(
+        "Canale",
+        foreign_keys=[canale_id]
+    )
+
+    # Indexes
+    __table_args__ = (
+        Index('ix_ab_blocchi_immobile_date',
+              'unita_immobiliare_id', 'data_inizio', 'data_fine'),
+    )
 
     def __repr__(self):
-        return f"<BloccoCalendario(id={self.id}, immobile_id={self.immobile_id}, tipo={self.tipo_blocco.value}, {self.data_inizio} - {self.data_fine})>"
+        canale_str = f"canale={self.canale_id}" if self.canale_id else "tutti"
+        return f"<BloccoCalendario(id={self.id}, immobile={self.unita_immobiliare_id}, {canale_str}, {self.data_inizio}-{self.data_fine})>"
 
     @property
-    def giorni_bloccati(self):
+    def giorni_bloccati(self) -> int:
         """Calculate number of days blocked"""
         if self.data_inizio and self.data_fine:
             return (self.data_fine - self.data_inizio).days + 1
         return 0
+
+    def copre_data(self, data: 'Date') -> bool:
+        """Check if block covers a specific date"""
+        return self.data_inizio <= data <= self.data_fine
+
+    def copre_canale(self, canale_id: int) -> bool:
+        """Check if block applies to a specific channel"""
+        if self.canale_id is None:
+            return True  # Applies to all channels
+        return self.canale_id == canale_id

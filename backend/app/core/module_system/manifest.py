@@ -21,6 +21,11 @@ REQUIRED_FIELDS = [
     'name',
     'technical_name',
     'version',
+    'module_short_code',
+    'schema_target',
+    'migrations_path',
+    'seeds_path',
+    'endpoints',
 ]
 
 # Optional fields with defaults
@@ -131,6 +136,38 @@ def validate_manifest(manifest: Dict[str, Any]) -> None:
             f"Invalid technical_name '{technical_name}'. Must be alphanumeric with underscores/hyphens only"
         )
 
+    # Validate module_short_code format (4-6 alnum chars)
+    module_short_code = manifest['module_short_code']
+    if not isinstance(module_short_code, str):
+        raise ManifestValidationError("'module_short_code' must be a string")
+    if not module_short_code.isalnum():
+        raise ManifestValidationError("'module_short_code' must be alphanumeric")
+    if not (4 <= len(module_short_code) <= 6):
+        raise ManifestValidationError("'module_short_code' length must be 4-6 characters")
+
+    # Validate schema_target
+    schema_target = manifest['schema_target']
+    valid_schema_targets = {"public", "tenant", "public + tenant"}
+    if schema_target not in valid_schema_targets:
+        raise ManifestValidationError(
+            f"Invalid schema_target '{schema_target}'. Must be one of: {', '.join(sorted(valid_schema_targets))}"
+        )
+
+    # Validate migrations_path and seeds_path
+    for path_key in ['migrations_path', 'seeds_path']:
+        path_value = manifest.get(path_key)
+        if not isinstance(path_value, str) or not path_value.strip():
+            raise ManifestValidationError(f"'{path_key}' must be a non-empty string")
+
+    # Validate endpoints
+    endpoints = manifest.get('endpoints')
+    if not isinstance(endpoints, dict):
+        raise ManifestValidationError("'endpoints' must be a dictionary")
+    for endpoint_key in ['register', 'install']:
+        endpoint_value = endpoints.get(endpoint_key)
+        if not isinstance(endpoint_value, str) or not endpoint_value.strip():
+            raise ManifestValidationError(f"'endpoints.{endpoint_key}' must be a non-empty string")
+
     # Validate version format (basic check)
     version = manifest['version']
     if not any(c.isdigit() for c in version):
@@ -182,6 +219,8 @@ def get_manifest_summary(manifest: Dict[str, Any]) -> Dict[str, Any]:
         'name': manifest.get('name'),
         'technical_name': manifest.get('technical_name'),
         'version': manifest.get('version'),
+        'module_short_code': manifest.get('module_short_code'),
+        'schema_target': manifest.get('schema_target'),
         'author': manifest.get('author'),
         'category': manifest.get('category'),
         'license': manifest.get('license'),

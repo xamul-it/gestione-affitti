@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Users, Plus, Pencil, X, Trash2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI, rolesAPI } from '../services/api';
 import './UsersManagement.css';
@@ -6,9 +7,10 @@ import './UsersManagement.css';
 export default function UsersManagement() {
   console.log('🔥 UsersManagement component loaded - VERSION 2.0 UPDATED');
 
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isAdmin, hasPermission } = useAuth();
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [moduleRoles, setModuleRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -22,6 +24,7 @@ export default function UsersManagement() {
   });
 
   const token = localStorage.getItem('access_token');
+  const canManagePlatformRoles = isAdmin() || hasPermission('platform.admin');
 
   useEffect(() => {
     loadData();
@@ -30,12 +33,14 @@ export default function UsersManagement() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [usersRes, rolesRes] = await Promise.all([
+      const [usersRes, rolesRes, availableRolesRes] = await Promise.all([
         authAPI.getAllUsers(token),
-        rolesAPI.getAll(token)
+        rolesAPI.getAll(token),
+        rolesAPI.getAvailable(token)
       ]);
       setUsers(usersRes.data);
       setRoles(rolesRes.data);
+      setModuleRoles(availableRolesRes.data);
       setError('');
     } catch (err) {
       setError('Errore nel caricamento dei dati: ' + (err.response?.data?.detail || err.message));
@@ -122,27 +127,44 @@ export default function UsersManagement() {
   return (
     <div className="users-management">
       <div className="users-header">
-        <h1>👥 Gestione Utenti e Ruoli</h1>
-        <button className="btn-create" onClick={() => {
-          setShowCreateForm(true);
-          setEditingUser(null);
-          setFormData({ username: '', email: '', password: '', full_name: '', phone: '' });
-        }}>
-          ➕ Nuovo Utente
+        <div className="header-content">
+          <h1>
+            <span className="header-icon" aria-hidden="true">
+              <Users size={32} strokeWidth={1.7} />
+            </span>
+            Gestione Utenti e Ruoli
+          </h1>
+        </div>
+        <button
+          className="btn-create"
+          onClick={() => {
+            setShowCreateForm(true);
+            setEditingUser(null);
+            setFormData({ username: '', email: '', password: '', full_name: '', phone: '' });
+          }}
+        >
+          <span className="btn-icon" aria-hidden="true">
+            <Plus size={16} strokeWidth={1.7} />
+          </span>
+          Nuovo Utente
         </button>
       </div>
 
       {error && (
         <div className="error-message">
           {error}
-          <button onClick={() => setError('')}>✖</button>
+          <button onClick={() => setError('')} aria-label="Chiudi errore">
+            <X size={16} strokeWidth={1.7} />
+          </button>
         </div>
       )}
 
       {(showCreateForm || editingUser) && (
         <div className="user-form-card">
-          <h2>
-            <span aria-hidden="true">{editingUser ? '✏️' : '➕'}</span>
+          <h2 className="form-title">
+            <span className="form-icon" aria-hidden="true">
+              {editingUser ? <Pencil size={18} strokeWidth={1.7} /> : <Plus size={18} strokeWidth={1.7} />}
+            </span>
             {editingUser ? 'Modifica Utente' : 'Crea Nuovo Utente'}
           </h2>
           <form onSubmit={editingUser ? handleUpdate : handleCreate} aria-label={editingUser ? 'Modifica utente' : 'Crea nuovo utente'}>
@@ -263,7 +285,7 @@ export default function UsersManagement() {
                       {user.roles.map((role) => (
                         <span key={role.id} className="role-badge" role="group" aria-label={`Ruolo: ${role.name}`}>
                           {role.name}
-                          {!role.is_system && user.id !== currentUser?.id && (
+                          {canManagePlatformRoles && !role.is_system && user.id !== currentUser?.id && (
                             <button
                               className="role-remove"
                               onClick={() => handleRemoveRole(user.id, role.id)}
@@ -274,7 +296,7 @@ export default function UsersManagement() {
                           )}
                         </span>
                       ))}
-                      {user.id !== currentUser?.id && (
+                      {canManagePlatformRoles && user.id !== currentUser?.id && (
                         <select
                           className="role-select"
                           value=""
@@ -286,6 +308,11 @@ export default function UsersManagement() {
                             <option key={role.id} value={role.id}>{role.name}</option>
                           ))}
                         </select>
+                      )}
+                      {!canManagePlatformRoles && (
+                        <div className="roles-hint">
+                          Solo Admin o Platform Admin possono assegnare ruoli di piattaforma.
+                        </div>
                       )}
                     </div>
                   </td>
@@ -307,14 +334,14 @@ export default function UsersManagement() {
                             onClick={() => startEdit(user)}
                             aria-label={`Modifica utente ${user.username}`}
                           >
-                            <span aria-hidden="true">✏️</span>
+                            <Pencil size={16} strokeWidth={1.7} />
                           </button>
                           <button
                             className="btn-delete"
                             onClick={() => handleDelete(user.id)}
                             aria-label={`Elimina utente ${user.username}`}
                           >
-                            <span aria-hidden="true">🗑️</span>
+                            <Trash2 size={16} strokeWidth={1.7} />
                           </button>
                         </>
                       )}
@@ -332,8 +359,10 @@ export default function UsersManagement() {
 
       <div className="roles-info">
         <h3>
-          <span aria-hidden="true">📋</span>
-          Ruoli Disponibili
+          <span className="section-icon" aria-hidden="true">
+            <ShieldCheck size={18} strokeWidth={1.7} />
+          </span>
+          Ruoli Piattaforma
         </h3>
         {roles.length === 0 ? (
           <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>
@@ -346,6 +375,38 @@ export default function UsersManagement() {
                 <h4>{role.name}</h4>
                 <p>{role.description}</p>
                 {role.is_system && <span className="badge-system" aria-label="Ruolo di sistema">Sistema</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="roles-info module-roles">
+        <h3>Ruoli Moduli</h3>
+        {moduleRoles.length === 0 ? (
+          <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>
+            Nessun ruolo modulo disponibile
+          </p>
+        ) : (
+          <div className="module-roles-list">
+            {Object.entries(
+              moduleRoles.reduce((acc, role) => {
+                const moduleId = role.modulo_id || 'modulo_sconosciuto';
+                if (!acc[moduleId]) acc[moduleId] = [];
+                acc[moduleId].push(role);
+                return acc;
+              }, {})
+            ).map(([moduleId, rolesList]) => (
+              <div key={moduleId} className="module-roles-section">
+                <h4>{moduleId}</h4>
+                <div className="roles-grid">
+                  {rolesList.map(role => (
+                    <div key={role.id} className="role-card" role="article" aria-label={`Ruolo ${role.nome_display}`}>
+                      <h4>{role.nome_display}</h4>
+                      <p>{role.descrizione}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>

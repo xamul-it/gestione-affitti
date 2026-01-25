@@ -288,7 +288,9 @@ def seed_tenant_test():
         # 7. Crea configurazione tassa soggiorno
         print("\n💰 Creating tassa soggiorno config...")
         # Re-query comune from public schema
-        comune_venezia_id = db.execute(text("SELECT id FROM public.comuni_italia WHERE nome = 'Venezia' LIMIT 1")).scalar()
+        comune_venezia_id = db.execute(
+            text("SELECT id FROM public.anag_comuni_italia WHERE nome = 'Venezia' LIMIT 1")
+        ).scalar()
         existing_config = db.query(TassaSoggiornoConfig).filter_by(comune_id=comune_venezia_id).first() if comune_venezia_id else None
 
         if not existing_config and comune_venezia_id:

@@ -105,6 +105,13 @@ input, select, textarea {
   font-size: 16px; /* Prevents iOS zoom on focus */
 }
 
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-height: unset;
+  padding: 0;
+}
+
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: #007bff;

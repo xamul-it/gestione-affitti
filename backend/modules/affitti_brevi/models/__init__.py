@@ -1,44 +1,103 @@
 """
 Affitti Brevi Models
+
+Complete model set for short-term rental management:
+- Canale: Booking platform configuration
+- CalendarioCanale: Property-channel link with iCal sync
+- Prenotazione: Booking from channel
+- Soggiorno: Operational stay
+- OspiteSoggiorno: Guest data
+- TassaSoggiornoConfig/Scaglione: Tax configuration
+- TassaSoggiorno: Calculated tax per stay
+- Comunicazione: Mandatory communications (Police, ISTAT)
+- AttivitaSchedulata: Scheduled tasks
+- BloccoCalendario: Manual calendar blocks
 """
-from .calendario_ical import CalendarioIcal, PortaleBooking, StatoSincronizzazione
-from .prenotazione import Prenotazione, StatoPrenotazione, OriginePrenotazione
-from .ospite_prenotazione import OspitePrenotazione
-from .blocco_calendario import BloccoCalendario, TipoBlocco, PortaleBlocco
+
+# Channel configuration
+from .canale import Canale, DEFAULT_CANALI
+
+# Property-channel link
+from .calendario_canale import CalendarioCanale, StatoSincronizzazione
+
+# Bookings from channels
+from .prenotazione import Prenotazione, StatoPrenotazione
+
+# Operational stay
+from .soggiorno import Soggiorno, StatoSoggiorno, StatoCompliance
+
+# Guests
+from .ospite_soggiorno import OspiteSoggiorno, RuoloOspite, StatoDocumento
+
+# Tourist tax
 from .tassa_soggiorno_config import TassaSoggiornoConfig, TipoCalcoloTassa
 from .tassa_soggiorno_scaglione import TassaSoggiornoScaglione
-from .tassa_prenotazione import TassaPrenotazione
-from .comunicazione_polizia import ComunicazionePolizia, StatoComunicazione, MetodoInvio
+from .tassa_soggiorno import TassaSoggiorno, StatoPagamentoTassa
 
-# Use core Scadenza model + extension for affitti_brevi-specific metadata
-from app.core.platform.models.scadenza import Scadenza, StatoScadenza, PrioritaScadenza
-from .scadenza_ext import ScadenzaAffittiBrevi, TipoScadenzaAffittiBrevi
+# Communications
+from .comunicazione import (
+    Comunicazione,
+    TipoComunicazione,
+    StatoComunicazione,
+    MetodoInvio
+)
+
+# Scheduled activities
+from .attivita_schedulata import (
+    AttivitaSchedulata,
+    AttivitaSchedulataLog,
+    TipoAttivita,
+    StatoAttivita,
+    Periodicita
+)
+
+# Calendar blocks
+from .blocco_calendario import BloccoCalendario, TipoBlocco
 
 __all__ = [
-    # Models
-    "CalendarioIcal",
-    "Prenotazione",
-    "OspitePrenotazione",
-    "BloccoCalendario",
-    "TassaSoggiornoConfig",
-    "TassaSoggiornoScaglione",
-    "TassaPrenotazione",
-    "ComunicazionePolizia",
-    # Enums
-    "PortaleBooking",
+    # Channel
+    "Canale",
+    "DEFAULT_CANALI",
+
+    # Calendar-Channel
+    "CalendarioCanale",
     "StatoSincronizzazione",
+
+    # Prenotazione
+    "Prenotazione",
     "StatoPrenotazione",
-    "OriginePrenotazione",
-    "TipoBlocco",
-    "PortaleBlocco",
+
+    # Soggiorno
+    "Soggiorno",
+    "StatoSoggiorno",
+    "StatoCompliance",
+
+    # Ospiti
+    "OspiteSoggiorno",
+    "RuoloOspite",
+    "StatoDocumento",
+
+    # Tassa
+    "TassaSoggiornoConfig",
     "TipoCalcoloTassa",
+    "TassaSoggiornoScaglione",
+    "TassaSoggiorno",
+    "StatoPagamentoTassa",
+
+    # Comunicazioni
+    "Comunicazione",
+    "TipoComunicazione",
     "StatoComunicazione",
     "MetodoInvio",
-    # Core models (re-exported for convenience)
-    "Scadenza",
-    "StatoScadenza",
-    "PrioritaScadenza",
-    # Extension models
-    "ScadenzaAffittiBrevi",
-    "TipoScadenzaAffittiBrevi",
+
+    # Attività
+    "AttivitaSchedulata",
+    "AttivitaSchedulataLog",
+    "TipoAttivita",
+    "StatoAttivita",
+    "Periodicita",
+
+    # Blocchi
+    "BloccoCalendario",
+    "TipoBlocco",
 ]

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { renderIcon } from '../components/Navigation/iconRegistry.jsx';
+import { loadLocalModuleManifests } from '../core/modules/localManifests.js';
 import './ModuleSelector.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -15,9 +17,11 @@ function ModuleSelector() {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [localManifests, setLocalManifests] = useState({});
 
   useEffect(() => {
     loadEnabledModules();
+    loadLocalModuleManifests().then(setLocalManifests);
   }, []);
 
   const loadEnabledModules = async () => {
@@ -40,12 +44,11 @@ function ModuleSelector() {
     }
   };
 
-  // Mappatura icone per moduli
   const MODULE_ICONS = {
-    'anagrafica_italiana': '👥',
-    'immobili': '🏢',
-    'affitti_lungo': '📝',
-    'condominio': '🏘️',
+    'anagrafica_italiana': 'id-card',
+    'immobili': 'building',
+    'affitti_lungo': 'file-contract',
+    'condominio': 'building-2',
   };
 
   if (loading) {
@@ -94,24 +97,29 @@ function ModuleSelector() {
       </div>
 
       <div className="modules-grid">
-        {modules.map(module => (
-          <Link
-            key={module.technical_name}
-            to={`/modules/${module.technical_name}/dashboard`}
-            className="module-card"
-          >
-            <div className="module-icon">
-              {MODULE_ICONS[module.technical_name] || '📦'}
-            </div>
-            <div className="module-content">
-              <h3>{module.name}</h3>
-              <p className="module-version">v{module.version}</p>
-            </div>
-            <div className="module-arrow">
-              <i className="fas fa-arrow-right"></i>
-            </div>
-          </Link>
-        ))}
+        {modules.map(module => {
+          const local = localManifests[module.technical_name];
+          const displayName = local?.displayName || module.name;
+          const displayIcon = local?.icon || MODULE_ICONS[module.technical_name] || 'package';
+          return (
+            <Link
+              key={module.technical_name}
+              to={`/modules/${module.technical_name}/dashboard`}
+              className="module-card"
+            >
+              <div className="module-icon">
+                {renderIcon(displayIcon, { size: 28 })}
+              </div>
+              <div className="module-content">
+                <h3>{displayName}</h3>
+                <p className="module-version">v{module.version}</p>
+              </div>
+              <div className="module-arrow">
+                <i className="fas fa-arrow-right"></i>
+              </div>
+            </Link>
+          );
+        })}
       </div>
 
       {/* Quick Links */}
@@ -119,11 +127,15 @@ function ModuleSelector() {
         <h2>Link Rapidi</h2>
         <div className="quick-links-grid">
           <Link to="/search" className="quick-link">
-            <span className="quick-link-icon">🔍</span>
+            <span className="quick-link-icon" aria-hidden="true">
+              {renderIcon('search', { size: 18 })}
+            </span>
             <span>Ricerca Globale</span>
           </Link>
           <Link to="/profile" className="quick-link">
-            <span className="quick-link-icon">👤</span>
+            <span className="quick-link-icon" aria-hidden="true">
+              {renderIcon('user', { size: 18 })}
+            </span>
             <span>Il Mio Profilo</span>
           </Link>
         </div>

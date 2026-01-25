@@ -17,10 +17,11 @@ class CategoriaSpesa(str, enum.Enum):
 
 class Spesa(Base):
     __tablename__ = "spese"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    unita_immobiliare_id = Column(Integer, ForeignKey("unita_immobiliari.id"), nullable=False)
-    tabella_millesimale_id = Column(Integer, ForeignKey("tabelle_millesimali.id"), nullable=True)  # Se NULL, spesa diretta
+    unita_immobiliare_id = Column(Integer, ForeignKey("immo_unita_immobiliari.id"), nullable=False)
+    tabella_millesimale_id = Column(Integer, ForeignKey("immo_tabelle_millesimali.id"), nullable=True)  # Se NULL, spesa diretta
     data = Column(Date, nullable=False)
     importo = Column(Float, nullable=False)
     categoria = Column(Enum(CategoriaSpesa), nullable=False)

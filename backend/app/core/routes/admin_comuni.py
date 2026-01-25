@@ -12,12 +12,7 @@ from app.core.database import get_db
 from pydantic import BaseModel
 from typing import Optional, Literal
 
-# Import ComuniUpdaterService from immobili module
 import sys, os
-modules_dir = os.path.join(os.path.dirname(__file__), '../../../modules')
-if modules_dir not in sys.path:
-    sys.path.insert(0, modules_dir)
-from immobili.services.comuni_updater_service import ComuniUpdaterService
 
 router = APIRouter(prefix="/admin/comuni", tags=["Admin - Comuni"])
 
@@ -78,6 +73,11 @@ def update_comuni(
 
     **Warning:** Full sync with ~8,000 comuni takes ~10-15 seconds.
     """
+    # Import ComuniUpdaterService lazily to avoid loading module models at startup
+    modules_dir = os.path.join(os.path.dirname(__file__), '../../../modules')
+    if modules_dir not in sys.path:
+        sys.path.insert(0, modules_dir)
+    from immobili.services.comuni_updater_service import ComuniUpdaterService
     service = ComuniUpdaterService(db)
 
     # Safety check for full sync

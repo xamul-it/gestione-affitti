@@ -3,6 +3,9 @@ Categoria Catastale Model - Italian cadastral property categories.
 
 Stores the official Italian cadastral categories (A/1, A/2, C/6, etc.)
 used to classify properties for tax and regulatory purposes.
+
+SCHEMA: PUBLIC (domain data condiviso tra tutti i tenant)
+PREFIX: immo_ (modulo immobili)
 """
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, CheckConstraint
 from sqlalchemy.sql import func
@@ -27,7 +30,11 @@ class CategoriaCatastale(Base):
     - C/6: Garage/Box
     - C/1: Commercial shop
     """
-    __tablename__ = "categorie_catastali"
+    __tablename__ = "immo_categorie_catastali"
+    __table_args__ = (
+        CheckConstraint("gruppo IN ('A', 'B', 'C', 'D', 'E', 'F')", name="immo_check_gruppo_valid"),
+        {"schema": "public", "extend_existing": True}
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     codice = Column(String(10), nullable=False, unique=True, index=True)  # 'A/2', 'C/6', etc.
@@ -38,11 +45,6 @@ class CategoriaCatastale(Base):
     attiva = Column(Boolean, default=True, index=True)  # Soft delete flag
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-    # Constraints
-    __table_args__ = (
-        CheckConstraint("gruppo IN ('A', 'B', 'C', 'D', 'E', 'F')", name="check_gruppo_valid"),
-    )
 
     def __repr__(self):
         return f"<CategoriaCatastale(codice='{self.codice}', nome='{self.nome}')>"

@@ -10,10 +10,11 @@ class RipartizioneSpesa(Base):
     Ogni record rappresenta la quota di spesa attribuita a un singolo immobile.
     """
     __tablename__ = "ripartizioni_spese"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     spesa_id = Column(Integer, ForeignKey("spese.id"), nullable=False)
-    unita_immobiliare_id = Column(Integer, ForeignKey("unita_immobiliari.id"), nullable=False)
+    unita_immobiliare_id = Column(Integer, ForeignKey("immo_unita_immobiliari.id"), nullable=False)
 
     # Importi calcolati
     importo_ripartito = Column(Float, nullable=False)  # Quota di spesa attribuita a questo immobile

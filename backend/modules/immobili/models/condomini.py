@@ -1,3 +1,9 @@
+"""
+Condominio Model - Condominium building management.
+
+SCHEMA: TENANT
+PREFIX: immo_ (modulo immobili)
+"""
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -5,7 +11,13 @@ from app.core.database import Base
 
 
 class Condominio(Base):
-    __tablename__ = "condomini"
+    """
+    Condominium building entity.
+
+    Represents a multi-unit building with shared ownership areas.
+    """
+    __tablename__ = "immo_condomini"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(255), nullable=True)  # Optional - codice is the primary identifier

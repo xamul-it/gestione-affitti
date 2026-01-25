@@ -14,13 +14,15 @@ class Affittuario(Base):
     Un soggetto può essere contemporaneamente proprietario, affittuario, tecnico, etc.
     """
     __tablename__ = "affittuari"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
 
     # Foreign key al soggetto anagrafico (OBBLIGATORIO)
+    # Riferimento a anag_soggetti_anagrafici nel modulo anagrafica_italiana
     soggetto_id = Column(
         Integer,
-        ForeignKey("soggetti_anagrafici.id", ondelete="CASCADE"),
+        ForeignKey("anag_soggetti_anagrafici.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )

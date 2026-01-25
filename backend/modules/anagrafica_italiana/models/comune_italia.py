@@ -29,8 +29,7 @@ class ComuneItalia(Base):
     - Bologna: ISTAT='037006', CAP='40100', Provincia='BO'
     - Forlì: ISTAT='040012', CAP='47121', Provincia='FO'
     """
-    __tablename__ = "comuni_italia"
-    __table_args__ = {"schema": "public"}
+    __tablename__ = "anag_comuni_italia"
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100), nullable=False)  # Official name with accents
@@ -45,9 +44,9 @@ class ComuneItalia(Base):
     longitudine = Column(Numeric(10, 7), nullable=True)  # Geographic longitude
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Additional indexes for performance
     __table_args__ = (
-        Index("idx_comuni_nome_provincia", "nome_normalized", "provincia_sigla"),
+        Index("idx_anag_comuni_nome_provincia", "nome_normalized", "provincia_sigla"),
+        {"schema": "public", "extend_existing": True}
     )
 
     def __repr__(self):

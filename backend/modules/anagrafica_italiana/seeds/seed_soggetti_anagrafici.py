@@ -18,49 +18,13 @@ from typing import List, Dict, Tuple
 backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
+modules_dir = os.path.join(backend_dir, 'modules')
+if modules_dir not in sys.path:
+    sys.path.insert(0, modules_dir)
 
 from sqlalchemy.orm import Session
-from sqlalchemy import Column, Integer, String, Date, Boolean, DateTime, Enum as SQLEnum, ForeignKey
-from sqlalchemy.sql import func
-import enum
-
-from app.core.database import SessionLocal, Base
-
-
-# Define models directly to avoid circular imports
-class TipoSoggetto(str, enum.Enum):
-    """Tipologia di soggetto anagrafico"""
-    PERSONA_FISICA = "PERSONA_FISICA"
-    PERSONA_GIURIDICA = "PERSONA_GIURIDICA"
-
-
-class SoggettoAnagrafico(Base):
-    """Tabella anagrafica - definizione locale per seed"""
-    __tablename__ = "soggetti_anagrafici"
-    __table_args__ = {'extend_existing': True}
-
-    id = Column(Integer, primary_key=True, index=True)
-    tipo_soggetto = Column(SQLEnum(TipoSoggetto), nullable=False, index=True)
-    user_id = Column(Integer, nullable=True)
-    codice_fiscale = Column(String(16), unique=True, index=True, nullable=True)
-    partita_iva = Column(String(11), unique=True, index=True, nullable=True)
-    nome = Column(String(100), nullable=True)
-    cognome = Column(String(100), nullable=True)
-    data_nascita = Column(Date, nullable=True)
-    luogo_nascita = Column(String(100), nullable=True)
-    ragione_sociale = Column(String(200), nullable=True)
-    email = Column(String(255), nullable=True)
-    telefono = Column(String(20), nullable=True)
-    cellulare = Column(String(20), nullable=True)
-    pec = Column(String(255), nullable=True)
-    indirizzo = Column(String(255), nullable=True)
-    citta = Column(String(100), nullable=True)
-    cap = Column(String(10), nullable=True)
-    provincia = Column(String(2), nullable=True)
-    note = Column(String(1000), nullable=True)
-    attivo = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+from app.core.database import SessionLocal
+from anagrafica_italiana.models.soggetto_anagrafico import SoggettoAnagrafico, TipoSoggetto
 
 
 # =============================================================================

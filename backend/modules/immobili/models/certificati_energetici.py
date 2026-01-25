@@ -1,3 +1,9 @@
+"""
+CertificatoEnergetico Model - Energy performance certificate.
+
+SCHEMA: TENANT
+PREFIX: immo_ (modulo immobili)
+"""
 from sqlalchemy import Column, Integer, String, Date, Float, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -18,11 +24,19 @@ class ClasseEnergetica(str, enum.Enum):
 
 
 class CertificatoEnergetico(Base):
-    __tablename__ = "certificati_energetici"
+    """
+    Energy performance certificate (APE - Attestato di Prestazione Energetica).
+
+    Links to a property unit and a technician who certified it.
+    """
+    __tablename__ = "immo_certificati_energetici"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    unita_immobiliare_id = Column(Integer, ForeignKey("unita_immobiliari.id"), nullable=False)
-    tecnico_id = Column(Integer, ForeignKey("tecnici.id"), nullable=False)
+    unita_immobiliare_id = Column(Integer, ForeignKey("immo_unita_immobiliari.id"), nullable=False)
+    # Cross-module reference (affitti_lungo); keep as plain int to avoid FK errors
+    # when the tecnici table is not present in this tenant.
+    tecnico_id = Column(Integer, nullable=False)
 
     classe_energetica = Column(SQLEnum(ClasseEnergetica), nullable=False)
     indice_prestazione_energetica = Column(Float, nullable=True)  # kWh/m²anno
@@ -36,7 +50,11 @@ class CertificatoEnergetico(Base):
 
     # Relationships
     unita_immobiliare = relationship("UnitaImmobiliare", back_populates="certificati_energetici")
-    tecnico = relationship("Tecnico")
+    tecnico = relationship(
+        "Tecnico",
+        primaryjoin="CertificatoEnergetico.tecnico_id==Tecnico.id",
+        foreign_keys=[tecnico_id],
+    )
 
     def __repr__(self):
         return f"<CertificatoEnergetico UnitaImmobiliare:{self.unita_immobiliare_id} Classe:{self.classe_energetica.value}>"

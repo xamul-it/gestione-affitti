@@ -26,7 +26,8 @@ class TipoDocumento(Base):
     - PATENTE: Patente di Guida
     - PASSAPORTO: Passaporto
     """
-    __tablename__ = "tipi_documento"
+    __tablename__ = "anag_tipi_documento"
+    __table_args__ = {"schema": "public", "extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     codice = Column(String(50), nullable=False, unique=True, index=True)  # CARTA_IDENTITA, CODICE_FISCALE, etc.

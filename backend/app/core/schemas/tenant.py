@@ -91,6 +91,7 @@ class TenantModuleResponse(BaseModel):
 class InstallModuleRequest(BaseModel):
     """Schema for installing a module."""
     module_id: str = Field(..., min_length=1)
+    seed_test_data: bool = Field(default=False)
 
 
 class UninstallModuleRequest(BaseModel):

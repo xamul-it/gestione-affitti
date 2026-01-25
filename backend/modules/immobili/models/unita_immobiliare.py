@@ -1,3 +1,9 @@
+"""
+Unità Immobiliare Model - Real estate property unit.
+
+SCHEMA: TENANT
+PREFIX: immo_ (modulo immobili)
+"""
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Boolean, ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -5,12 +11,19 @@ from app.core.database import Base
 
 
 class UnitaImmobiliare(Base):
-    __tablename__ = "unita_immobiliari"
+    """
+    Real estate property unit.
+
+    Represents a single property unit (apartment, house, office, garage, etc.)
+    that can be part of a condominium or stand-alone.
+    """
+    __tablename__ = "immo_unita_immobiliari"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     codice = Column(String(50), unique=True, index=True, nullable=False)
     tipo = Column(String(50), nullable=False)  # Appartamento, Casa, Ufficio, Box, Negozio, etc.
-    condominio_id = Column(Integer, ForeignKey("condomini.id"), nullable=True)  # Opzionale per unità non condominiali
+    condominio_id = Column(Integer, ForeignKey("immo_condomini.id"), nullable=True)  # Opzionale per unità non condominiali
     indirizzo = Column(String(255), nullable=False)
     citta = Column(String(100), nullable=False)
     cap = Column(String(10))
@@ -26,10 +39,10 @@ class UnitaImmobiliare(Base):
     descrizione = Column(Text)
     note = Column(Text)
 
-    # New fields for import automatismi
+    # FK to public.immo_categorie_catastali (domain data)
     categoria_catastale_id = Column(
         Integer,
-        ForeignKey("categorie_catastali.id", ondelete="SET NULL"),
+        ForeignKey("public.immo_categorie_catastali.id", ondelete="SET NULL"),
         nullable=True,
         index=True
     )

@@ -8,13 +8,13 @@
 export const manifest = {
   // Module identification
   id: 'immobili',
-  name: 'Immobili',
+  displayName: 'Immobili',
   version: '1.0.0',
   description: 'Gestione immobili, proprietà, condomini e dati catastali',
 
   // Module metadata
   author: 'Gestione Affitti',
-  category: 'real-estate',
+  category: 'Immobiliare',
   icon: 'building',
 
   // Dependencies
@@ -57,6 +57,12 @@ export const manifest = {
       component: 'CategorieCatastaliList',
       label: 'Categorie Catastali',
       icon: 'list',
+    },
+    {
+      path: '/tipologie-terreno',
+      component: 'TipologieTerrenoList',
+      label: 'Tipologie Terreno',
+      icon: 'leaf',
     },
   ],
 
@@ -113,6 +119,13 @@ export const manifest = {
           label: 'Categorie Catastali',
           path: '/categorie-catastali',
           order: 2,
+          requiredPermission: 'categoria_catastale.view',
+        },
+        {
+          id: 'immobili.tipologie_terreno',
+          label: 'Tipologie Terreno',
+          path: '/tipologie-terreno',
+          order: 3,
           requiredPermission: 'categoria_catastale.view',
         },
       ],

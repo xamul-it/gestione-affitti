@@ -1,3 +1,9 @@
+"""
+MillesimiUnita Model - Unit millesimal values association.
+
+SCHEMA: TENANT
+PREFIX: immo_ (modulo immobili)
+"""
 from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -7,14 +13,15 @@ from app.core.database import Base
 class MillesimiUnita(Base):
     """
     Associazione tra un'unità immobiliare e una tabella millesimale con i relativi valori.
+
     Un'unità immobiliare può avere diversi valori millesimali per diverse tabelle
     (es. 45/1000 per spese generali, 60/1000 per ascensore, ecc.)
     """
-    __tablename__ = "millesimi_unita"
+    __tablename__ = "immo_millesimi_unita"
 
     id = Column(Integer, primary_key=True, index=True)
-    unita_immobiliare_id = Column(Integer, ForeignKey("unita_immobiliari.id"), nullable=False)
-    tabella_millesimale_id = Column(Integer, ForeignKey("tabelle_millesimali.id"), nullable=False)
+    unita_immobiliare_id = Column(Integer, ForeignKey("immo_unita_immobiliari.id"), nullable=False)
+    tabella_millesimale_id = Column(Integer, ForeignKey("immo_tabelle_millesimali.id"), nullable=False)
 
     # Valori per il calcolo
     millesimi = Column(Float, nullable=False)  # Valore millesimale (es. 45.5 su 1000)
@@ -35,7 +42,8 @@ class MillesimiUnita(Base):
 
     # Constraints: un'unità immobiliare può avere un solo valore per ogni tabella millesimale
     __table_args__ = (
-        UniqueConstraint('unita_immobiliare_id', 'tabella_millesimale_id', name='_unita_tabella_uc'),
+        UniqueConstraint('unita_immobiliare_id', 'tabella_millesimale_id', name='immo_unita_tabella_uc'),
+        {"extend_existing": True}
     )
 
     # Relationships

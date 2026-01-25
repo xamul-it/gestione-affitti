@@ -1,118 +1,73 @@
-import { useState, useEffect } from 'react';
-import { condominAPI } from '../../services/immobiliAPI';
+import { DataTable } from '../../../../core/components';
 import CondominioForm from './CondominioForm';
 import './Condomini.css';
 
+const condominiTableConfig = {
+  endpoint: '/condomini/',
+  title: 'Gestione Condomini',
+  searchPlaceholder: 'Cerca per codice, nome o citta...',
+  emptyTitle: 'Nessun condominio trovato',
+  emptyMessage: 'Non ci sono condomini registrati. Clicca su "Nuovo Condominio" per iniziare.',
+  addButtonLabel: 'Nuovo Condominio',
+  columns: [
+    { field: 'codice', label: 'Codice', sortable: true, filterable: true },
+    { field: 'nome', label: 'Nome', sortable: true, filterable: true },
+    { field: 'indirizzo', label: 'Indirizzo', sortable: true, filterable: true },
+    { field: 'citta', label: 'Citta', sortable: true, filterable: true },
+    {
+      field: 'amministratore_nome',
+      label: 'Amministratore',
+      render: (value) => value || '-',
+    },
+    {
+      field: 'attivo',
+      label: 'Stato',
+      render: (value) => (
+        <span className={`badge ${value ? 'success' : 'inactive'}`}>
+          {value ? 'Attivo' : 'Non attivo'}
+        </span>
+      ),
+    },
+  ],
+  defaultSort: { field: 'nome', order: 'asc' },
+  rowActions: [
+    {
+      id: 'edit',
+      label: 'Modifica',
+      action: 'edit',
+      variant: 'secondary',
+    },
+    {
+      id: 'delete',
+      label: 'Elimina',
+      action: 'delete',
+      variant: 'danger',
+    },
+  ],
+};
+
+function CondominioFormModal({ entity, onClose }) {
+  return (
+    <CondominioForm
+      condominio={entity}
+      onClose={onClose}
+    />
+  );
+}
+
 function CondominList() {
-  const [condomini, setCondomini] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [editingCondominio, setEditingCondominio] = useState(null);
-
-  useEffect(() => {
-    fetchCondomini();
-  }, []);
-
-  const fetchCondomini = async () => {
-    try {
-      setLoading(true);
-      const response = await condominAPI.getAll();
-      setCondomini(response.data);
-      setError(null);
-    } catch (err) {
-      setError('Errore nel caricamento dei condomini');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Sei sicuro di voler eliminare questo condominio?')) {
-      try {
-        await condominAPI.delete(id);
-        fetchCondomini();
-      } catch (err) {
-        setError('Errore nell\'eliminazione del condominio');
-        console.error(err);
-      }
-    }
-  };
-
-  const handleEdit = (condominio) => {
-    setEditingCondominio(condominio);
-    setShowForm(true);
-  };
-
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingCondominio(null);
-    fetchCondomini();
-  };
-
-  if (loading) return <div className="loading">Caricamento...</div>;
-  if (error) return <div className="error">{error}</div>;
-
   return (
     <div className="condomini-container">
-      <div className="header">
-        <h1>Gestione Condomini</h1>
-        <button onClick={() => setShowForm(true)}>Nuovo Condominio</button>
-      </div>
-
-      {showForm && (
-        <CondominioForm
-          condominio={editingCondominio}
-          onClose={handleFormClose}
-        />
-      )}
-
-      {condomini.length === 0 ? (
-        <div className="card">
-          <p>Nessun condominio presente. Clicca su "Nuovo Condominio" per iniziare.</p>
-        </div>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Codice</th>
-              <th>Nome</th>
-              <th>Indirizzo</th>
-              <th>Città</th>
-              <th>Amministratore</th>
-              <th>Stato</th>
-              <th>Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            {condomini.map((condominio) => (
-              <tr key={condominio.id}>
-                <td>{condominio.codice}</td>
-                <td>{condominio.nome}</td>
-                <td>{condominio.indirizzo}</td>
-                <td>{condominio.citta}</td>
-                <td>{condominio.amministratore_nome || '-'}</td>
-                <td>
-                  <span className={`badge ${condominio.attivo ? 'success' : 'inactive'}`}>
-                    {condominio.attivo ? 'Attivo' : 'Non attivo'}
-                  </span>
-                </td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="secondary" onClick={() => handleEdit(condominio)}>
-                      Modifica
-                    </button>
-                    <button className="danger" onClick={() => handleDelete(condominio.id)}>
-                      Elimina
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <DataTable
+        config={condominiTableConfig}
+        FormComponent={CondominioFormModal}
+        options={{
+          selectable: true,
+          showSearch: true,
+          showPagination: true,
+          pageSize: 20,
+        }}
+      />
     </div>
   );
 }

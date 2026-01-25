@@ -182,7 +182,7 @@ function ComunicazioniPoliziaList() {
           <select value={filterView} onChange={(e) => setFilterView(e.target.value)}>
             <option value="all">Tutte</option>
             <option value="pending">Da Inviare</option>
-            <option value="overdue">Scadute (>24h)</option>
+            <option value="overdue">Scadute (&gt;24h)</option>
           </select>
         </div>
       </div>

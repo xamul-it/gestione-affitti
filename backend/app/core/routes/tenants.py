@@ -373,7 +373,12 @@ def install_module(
     """
     try:
         ensure_tenant_admin_access(tenant_id, current_user, db)
-        TenantModuleService.install_module_for_tenant(tenant_id, request.module_id, db)
+        TenantModuleService.install_module_for_tenant(
+            tenant_id,
+            request.module_id,
+            db,
+            seed_test_data=request.seed_test_data,
+        )
         return {"status": "installed", "module_id": request.module_id}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -385,6 +390,7 @@ def install_module(
 def disable_module(
     tenant_id: int,
     module_id: str,
+    drop_tables: bool = False,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -392,8 +398,26 @@ def disable_module(
     Disable module (keep data) - PLATFORM ADMIN ONLY.
     """
     ensure_tenant_admin_access(tenant_id, current_user, db)
-    TenantModuleService.disable_module_for_tenant(tenant_id, module_id, db)
-    return {"status": "disabled", "module_id": module_id}
+    TenantModuleService.disable_module_for_tenant(tenant_id, module_id, db, drop_tables=drop_tables)
+    return {"status": "disabled", "module_id": module_id, "tables_dropped": drop_tables}
+
+
+@router.post("/{tenant_id}/clear-tables")
+def clear_tenant_tables(
+    tenant_id: int,
+    current_user: User = Depends(require_permission("platform.admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Drop all tables in the tenant schema (keeps schema).
+    PLATFORM ADMIN ONLY.
+    """
+    tenant = db.query(Tenant).get(tenant_id)
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    dropped = TenantService.clear_tenant_tables(tenant.schema_name, db)
+    return {"status": "cleared", "tenant_id": tenant_id, "tables_dropped": dropped}
 
 
 @router.delete("/{tenant_id}/modules/{module_id}")

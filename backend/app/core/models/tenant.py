@@ -14,8 +14,8 @@ class Tenant(Base):
     Tenant (logical database) in the platform.
     Each tenant has its own PostgreSQL schema for data isolation.
     """
-    __tablename__ = "tenants"
-    __table_args__ = {'schema': 'public'}
+    __tablename__ = "core_tenants"
+    __table_args__ = {'schema': 'public', 'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
     schema_name = Column(String(63), unique=True, nullable=False, index=True)
@@ -38,15 +38,15 @@ class UserTenant(Base):
     Association User ↔ Tenant (many-to-many with metadata).
     Tracks which users have access to which tenants and their default tenant.
     """
-    __tablename__ = "user_tenants"
+    __tablename__ = "core_user_tenants"
     __table_args__ = (
         UniqueConstraint('user_id', 'tenant_id', name='uq_user_tenant'),
-        {'schema': 'public'}
+        {'schema': 'public', 'extend_existing': True}
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    tenant_id = Column(Integer, ForeignKey("public.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("core_users.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id = Column(Integer, ForeignKey("public.core_tenants.id", ondelete="CASCADE"), nullable=False, index=True)
     is_default = Column(Boolean, default=False, nullable=False, index=True)
     access_granted_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     access_revoked_at = Column(DateTime, nullable=True)
@@ -64,14 +64,14 @@ class TenantModule(Base):
     Association Tenant ↔ Module.
     Tracks which modules are enabled for each tenant.
     """
-    __tablename__ = "tenant_modules"
+    __tablename__ = "core_tenant_modules"
     __table_args__ = (
         UniqueConstraint('tenant_id', 'module_id', name='uq_tenant_module'),
-        {'schema': 'public'}
+        {'schema': 'public', 'extend_existing': True}
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("public.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id = Column(Integer, ForeignKey("public.core_tenants.id", ondelete="CASCADE"), nullable=False, index=True)
     module_id = Column(String(50), nullable=False, index=True)  # e.g., "immobili", "affitti_lungo"
     enabled = Column(Boolean, default=True, nullable=False, index=True)
     installed_at = Column(DateTime, default=datetime.utcnow, nullable=False)

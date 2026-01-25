@@ -8,13 +8,13 @@
 export const manifest = {
   // Module identification
   id: 'affitti_lungo',
-  name: 'Affitti',
+  displayName: 'Affitti',
   version: '1.0.0',
   description: 'Gestione affitti residenziali a lungo termine, contratti, incassi e spese',
 
   // Module metadata
-  author: 'Gestione Affitti',
-  category: 'rentals',
+  author: 'Affitti',
+  category: 'Immobiliare',
   icon: 'file-contract',
 
   // Dependencies

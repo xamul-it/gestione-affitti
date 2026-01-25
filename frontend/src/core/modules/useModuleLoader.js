@@ -36,7 +36,7 @@ async function loadLocalModules() {
           modules.push({
             source: 'local',
             technical_name: manifest.id,
-            name: manifest.name,
+            name: manifest.displayName || manifest.name,
             version: manifest.version,
             enabled: manifest.enabled !== false,
             routes: manifest.routes || [],

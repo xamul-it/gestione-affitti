@@ -1,0 +1,81 @@
+.tenant-maintenance {
+  padding: 24px;
+}
+
+.tenant-maintenance-header h1 {
+  margin: 0 0 4px;
+}
+
+.tenant-maintenance-header p {
+  margin: 0 0 16px;
+  color: #6b7280;
+}
+
+.tenant-maintenance-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  max-width: 640px;
+}
+
+.tenant-maintenance-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.tenant-maintenance-row select {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.tenant-maintenance-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.tenant-maintenance-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+}
+
+.tenant-maintenance-result {
+  margin-top: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 12px;
+  border-radius: 8px;
+  color: #334155;
+}
+
+.tenant-maintenance-table-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tenant-maintenance-table-pill {
+  background: #e2e8f0;
+  color: #334155;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.tenant-maintenance-loading {
+  padding: 16px;
+}
+
+@media (max-width: 768px) {
+  .tenant-maintenance-actions {
+    justify-content: flex-start;
+  }
+}

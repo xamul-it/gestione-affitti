@@ -9,19 +9,19 @@ from app.core.database import Base
 
 # Association table for many-to-many relationship between users and roles
 user_roles = Table(
-    'user_roles',
+    'core_user_roles',
     Base.metadata,
-    Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
-    Column('role_id', Integer, ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('core_users.id', ondelete='CASCADE'), primary_key=True),
+    Column('role_id', Integer, ForeignKey('core_roles.id', ondelete='CASCADE'), primary_key=True),
     Column('assigned_at', DateTime(timezone=True), server_default=func.now()),
 )
 
 # Association table for many-to-many relationship between roles and permissions
 role_permissions = Table(
-    'role_permissions',
+    'core_role_permissions',
     Base.metadata,
-    Column('role_id', Integer, ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
-    Column('permission_id', Integer, ForeignKey('permissions.id', ondelete='CASCADE'), primary_key=True),
+    Column('role_id', Integer, ForeignKey('core_roles.id', ondelete='CASCADE'), primary_key=True),
+    Column('permission_id', Integer, ForeignKey('core_permissions.id', ondelete='CASCADE'), primary_key=True),
 )
 
 
@@ -30,7 +30,8 @@ class User(Base):
     User model for authentication.
     Supports multiple roles per user.
     """
-    __tablename__ = "users"
+    __tablename__ = "core_users"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -48,8 +49,8 @@ class User(Base):
     is_superuser = Column(Boolean, default=False, nullable=False)
 
     # Link to Anagrafica (optional - for business users)
-    soggetto_anagrafico_id = Column(Integer, ForeignKey('soggetti_anagrafici.id', ondelete='SET NULL'),
-                                     nullable=True, unique=True, index=True)
+    # Riferimento a anag_soggetti_anagrafici nel modulo anagrafica_italiana
+    soggetto_anagrafico_id = Column(Integer, nullable=True, unique=True, index=True)
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -95,7 +96,8 @@ class Role(Base):
     Role model for role-based access control (RBAC).
     Examples: Admin, Manager, Viewer
     """
-    __tablename__ = "roles"
+    __tablename__ = "core_roles"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -120,7 +122,8 @@ class Permission(Base):
     Permission model for granular access control.
     Examples: immobili.read, contratti.write, users.manage
     """
-    __tablename__ = "permissions"
+    __tablename__ = "core_permissions"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
 

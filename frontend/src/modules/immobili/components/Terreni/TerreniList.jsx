@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { DataTable } from '../../../../core/components';
 import { terreniAPI } from '../../services/immobiliAPI';
 import TerrenoForm from './TerrenoForm';
 import './Terreni.css';
@@ -12,181 +13,147 @@ const TIPOLOGIA_LABELS = {
   ALT: 'Altro',
 };
 
+const terreniTableConfig = {
+  endpoint: '/terreni/',
+  title: 'Gestione Terreni',
+  searchPlaceholder: 'Cerca per codice, nome o comune...',
+  emptyTitle: 'Nessun terreno trovato',
+  emptyMessage: 'Non ci sono terreni registrati. Clicca su "Nuovo Terreno" per iniziare.',
+  addButtonLabel: 'Nuovo Terreno',
+  columns: [
+    { field: 'codice', label: 'Codice', sortable: true, filterable: true },
+    { field: 'nome', label: 'Nome', sortable: true, filterable: true },
+    {
+      field: 'tipologia',
+      label: 'Tipologia',
+      render: (value) => {
+        const tipologiaCode = typeof value === 'string' ? value : value?.codice;
+        const tipologiaLabel = typeof value === 'string' ? value : value?.nome;
+        const badgeKey = tipologiaCode ? tipologiaCode.toLowerCase() : 'alt';
+        return (
+          <span className={`badge tipologia-${badgeKey}`}>
+            {TIPOLOGIA_LABELS[tipologiaCode] || tipologiaLabel || '-'}
+          </span>
+        );
+      },
+    },
+    { field: 'comune', label: 'Comune', sortable: true, filterable: true },
+    { field: 'provincia', label: 'Provincia', sortable: true, filterable: true },
+    {
+      field: 'superficie',
+      label: 'Superficie',
+      render: (value, row) => {
+        if (!value) return '-';
+        const unita = row.unita_misura_superficie || 'mq';
+        return `${value.toLocaleString('it-IT')} ${unita}`;
+      },
+    },
+    {
+      field: 'foglio',
+      label: 'Foglio/Particella',
+      render: (value, row) => (value && row.particella ? `${value}/${row.particella}` : '-'),
+    },
+    {
+      field: 'attivo',
+      label: 'Stato',
+      render: (value) => (
+        <span className={`badge ${value ? 'active' : 'inactive'}`}>
+          {value ? 'Attivo' : 'Inattivo'}
+        </span>
+      ),
+    },
+  ],
+  defaultSort: { field: 'nome', order: 'asc' },
+  rowActions: [
+    {
+      id: 'edit',
+      label: 'Modifica',
+      action: 'edit',
+      variant: 'secondary',
+    },
+    {
+      id: 'toggle',
+      label: (row) => (row.attivo ? 'Disattiva' : 'Ripristina'),
+      variant: (row) => (row.attivo ? 'danger' : 'success'),
+      onClick: async (row, table) => {
+        try {
+          if (row.attivo) {
+            const confirm = window.confirm('Sei sicuro di voler disattivare questo terreno?');
+            if (!confirm) return;
+            await terreniAPI.delete(row.id);
+          } else {
+            await terreniAPI.restore(row.id);
+          }
+          table.refresh();
+        } catch (err) {
+          console.error('Errore aggiornamento terreno:', err);
+        }
+      },
+    },
+  ],
+};
+
+function TerrenoFormModal({ entity, onClose }) {
+  return (
+    <TerrenoForm
+      terreno={entity}
+      onClose={onClose}
+    />
+  );
+}
+
 function TerreniList() {
-  const [terreni, setTerreni] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [editingTerreno, setEditingTerreno] = useState(null);
   const [filtroTipologia, setFiltroTipologia] = useState('');
   const [filtroAttivi, setFiltroAttivi] = useState(false);
 
-  useEffect(() => {
-    fetchTerreni();
-  }, [filtroTipologia, filtroAttivi]);
-
-  const fetchTerreni = async () => {
-    try {
-      setLoading(true);
-      const response = await terreniAPI.getAll(filtroAttivi, filtroTipologia || null);
-      setTerreni(response.data);
-      setError(null);
-    } catch (err) {
-      setError('Errore nel caricamento dei terreni');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Sei sicuro di voler disattivare questo terreno?')) {
-      try {
-        await terreniAPI.delete(id);
-        fetchTerreni();
-      } catch (err) {
-        setError('Errore nella disattivazione del terreno');
-        console.error(err);
-      }
-    }
-  };
-
-  const handleRestore = async (id) => {
-    try {
-      await terreniAPI.restore(id);
-      fetchTerreni();
-    } catch (err) {
-      setError('Errore nel ripristino del terreno');
-      console.error(err);
-    }
-  };
-
-  const handleEdit = (terreno) => {
-    setEditingTerreno(terreno);
-    setShowForm(true);
-  };
-
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingTerreno(null);
-    fetchTerreni();
-  };
-
-  const formatSuperficie = (superficie, unitaMisura) => {
-    if (!superficie) return '-';
-    const unita = unitaMisura || 'mq';
-    return `${superficie.toLocaleString('it-IT')} ${unita}`;
-  };
-
-  if (loading) return <div className="loading">Caricamento...</div>;
-  if (error) return <div className="error">{error}</div>;
+  const renderToolbar = useCallback(({ table }) => (
+    <div className="terreni-filters">
+      <div className="filter-group">
+        <label>Tipologia:</label>
+        <select
+          value={filtroTipologia}
+          onChange={(e) => {
+            const value = e.target.value;
+            setFiltroTipologia(value);
+            table.setFilter('tipologia', value || '');
+          }}
+        >
+          <option value="">Tutte</option>
+          <option value="AGR">Agricolo</option>
+          <option value="EDI">Edificabile</option>
+          <option value="BOS">Bosco/Forestale</option>
+          <option value="IND">Industriale</option>
+          <option value="ALT">Altro</option>
+        </select>
+      </div>
+      <label className="checkbox-label">
+        <input
+          type="checkbox"
+          checked={filtroAttivi}
+          onChange={(e) => {
+            const checked = e.target.checked;
+            setFiltroAttivi(checked);
+            table.setFilter('attivo', checked ? true : '');
+          }}
+        />
+        Solo attivi
+      </label>
+    </div>
+  ), [filtroTipologia, filtroAttivi]);
 
   return (
     <div className="terreni-container">
-      <div className="header">
-        <h1>Gestione Terreni</h1>
-        <div className="header-actions">
-          <button onClick={() => setShowForm(true)}>Nuovo Terreno</button>
-        </div>
-      </div>
-
-      <div className="filters-row">
-        <div className="filter-group">
-          <label>Tipologia:</label>
-          <select
-            value={filtroTipologia}
-            onChange={(e) => setFiltroTipologia(e.target.value)}
-          >
-            <option value="">Tutte</option>
-            <option value="AGR">Agricolo</option>
-            <option value="EDI">Edificabile</option>
-            <option value="BOS">Bosco/Forestale</option>
-            <option value="IND">Industriale</option>
-            <option value="ALT">Altro</option>
-          </select>
-        </div>
-        <div className="filter-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={filtroAttivi}
-              onChange={(e) => setFiltroAttivi(e.target.checked)}
-            />
-            Solo attivi
-          </label>
-        </div>
-      </div>
-
-      {showForm && (
-        <TerrenoForm
-          terreno={editingTerreno}
-          onClose={handleFormClose}
-        />
-      )}
-
-      {terreni.length === 0 ? (
-        <div className="card">
-          <p>Nessun terreno presente. Clicca su "Nuovo Terreno" per iniziare.</p>
-        </div>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Codice</th>
-              <th>Nome</th>
-              <th>Tipologia</th>
-              <th>Comune</th>
-              <th>Provincia</th>
-              <th>Superficie</th>
-              <th>Foglio/Particella</th>
-              <th>Stato</th>
-              <th>Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            {terreni.map((terreno) => (
-              <tr key={terreno.id} className={!terreno.attivo ? 'inactive-row' : ''}>
-                <td>{terreno.codice}</td>
-                <td>{terreno.nome}</td>
-                <td>
-                  <span className={`badge tipologia-${terreno.tipologia.toLowerCase()}`}>
-                    {TIPOLOGIA_LABELS[terreno.tipologia] || terreno.tipologia}
-                  </span>
-                </td>
-                <td>{terreno.comune}</td>
-                <td>{terreno.provincia}</td>
-                <td>{formatSuperficie(terreno.superficie, terreno.unita_misura_superficie)}</td>
-                <td>
-                  {terreno.foglio && terreno.particella
-                    ? `${terreno.foglio}/${terreno.particella}`
-                    : '-'}
-                </td>
-                <td>
-                  <span className={`badge ${terreno.attivo ? 'active' : 'inactive'}`}>
-                    {terreno.attivo ? 'Attivo' : 'Inattivo'}
-                  </span>
-                </td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="secondary" onClick={() => handleEdit(terreno)}>
-                      Modifica
-                    </button>
-                    {terreno.attivo ? (
-                      <button className="danger" onClick={() => handleDelete(terreno.id)}>
-                        Disattiva
-                      </button>
-                    ) : (
-                      <button className="success" onClick={() => handleRestore(terreno.id)}>
-                        Ripristina
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <DataTable
+        config={terreniTableConfig}
+        FormComponent={TerrenoFormModal}
+        toolbarContent={renderToolbar}
+        options={{
+          selectable: true,
+          showSearch: true,
+          showPagination: true,
+          pageSize: 20,
+        }}
+      />
     </div>
   );
 }

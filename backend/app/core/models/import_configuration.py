@@ -12,7 +12,8 @@ class ImportConfiguration(Base):
     Model for storing import configurations.
     Allows users to save field mappings for reuse.
     """
-    __tablename__ = "import_configurations"
+    __tablename__ = "core_import_configurations"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=False, index=True)

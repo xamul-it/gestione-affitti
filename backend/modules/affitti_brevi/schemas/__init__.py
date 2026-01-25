@@ -1,30 +1,59 @@
 """
 Affitti Brevi Schemas
+
+Pydantic models for API validation and serialization.
 """
-from .calendario_ical import (
-    CalendarioIcalBase,
-    CalendarioIcalCreate,
-    CalendarioIcalUpdate,
-    CalendarioIcalResponse,
+
+# Canale (Channel)
+from .canale import (
+    CanaleBase,
+    CanaleCreate,
+    CanaleUpdate,
+    CanaleResponse,
+    CanaleListResponse,
 )
+
+# Calendario (Calendar view)
+from .calendario import (
+    CalendarioCanaleBase,
+    CalendarioCanaleCreate,
+    CalendarioCanaleUpdate,
+    CalendarioCanaleResponse,
+    CalendarioOverviewRequest,
+    CalendarioOverviewResponse,
+    RisolviConflittoRequest,
+    SyncResult,
+    SyncAllResponse,
+)
+
+# Prenotazione (Booking)
 from .prenotazione import (
     PrenotazioneBase,
     PrenotazioneCreate,
     PrenotazioneUpdate,
     PrenotazioneResponse,
+    PrenotazioneListResponse,
+    PrenotazioneFilterParams,
 )
-from .ospite_prenotazione import (
-    OspitePrenotazioneBase,
-    OspitePrenotazioneCreate,
-    OspitePrenotazioneUpdate,
-    OspitePrenotazioneResponse,
+
+# Soggiorno (Stay) and Ospiti (Guests)
+from .soggiorno import (
+    OspiteBase,
+    OspiteCreate,
+    OspiteUpdate,
+    OspiteResponse,
+    SoggiornoBase,
+    SoggiornoCreate,
+    SoggiornoUpdate,
+    SoggiornoResponse,
+    SoggiornoListResponse,
+    SoggiornoFilterParams,
+    CheckinRequest,
+    VerificaCompletezzaResponse,
+    SelfServiceTokenResponse,
 )
-from .blocco_calendario import (
-    BloccoCalendarioBase,
-    BloccoCalendarioCreate,
-    BloccoCalendarioUpdate,
-    BloccoCalendarioResponse,
-)
+
+# Tassa Soggiorno (Tourist Tax)
 from .tassa_soggiorno import (
     TassaSoggiornoConfigBase,
     TassaSoggiornoConfigCreate,
@@ -36,49 +65,50 @@ from .tassa_soggiorno import (
     TassaSoggiornoScaglioneResponse,
     TassaSoggiornoConfigWithScaglioni,
 )
-from .tassa_prenotazione import (
-    TassaPrenotazioneBase,
-    TassaPrenotazioneCreate,
-    TassaPrenotazioneUpdate,
-    TassaPrenotazioneResponse,
-    TassaCalculationRequest,
-    TassaCalculationResponse,
-    TassaOverrideRequest,
-)
-from .scadenza import (
-    ScadenzaBase,
-    ScadenzaCreate,
-    ScadenzaUpdate,
-    ScadenzaResponse,
-    ScadenzaCompletaRequest,
-    ScadenzaBadgeInfo,
-)
-from .comunicazione_polizia import (
-    ComunicazionePoliziaBase,
-    ComunicazionePoliziaCreate,
-    ComunicazionePoliziaUpdate,
-    ComunicazionePoliziaResponse,
-    ComunicazioneInvioRequest,
-    ComunicazioneErroreRequest,
-)
 
 __all__ = [
-    "CalendarioIcalBase",
-    "CalendarioIcalCreate",
-    "CalendarioIcalUpdate",
-    "CalendarioIcalResponse",
+    # Canale
+    "CanaleBase",
+    "CanaleCreate",
+    "CanaleUpdate",
+    "CanaleResponse",
+    "CanaleListResponse",
+
+    # Calendario
+    "CalendarioCanaleBase",
+    "CalendarioCanaleCreate",
+    "CalendarioCanaleUpdate",
+    "CalendarioCanaleResponse",
+    "CalendarioOverviewRequest",
+    "CalendarioOverviewResponse",
+    "RisolviConflittoRequest",
+    "SyncResult",
+    "SyncAllResponse",
+
+    # Prenotazione
     "PrenotazioneBase",
     "PrenotazioneCreate",
     "PrenotazioneUpdate",
     "PrenotazioneResponse",
-    "OspitePrenotazioneBase",
-    "OspitePrenotazioneCreate",
-    "OspitePrenotazioneUpdate",
-    "OspitePrenotazioneResponse",
-    "BloccoCalendarioBase",
-    "BloccoCalendarioCreate",
-    "BloccoCalendarioUpdate",
-    "BloccoCalendarioResponse",
+    "PrenotazioneListResponse",
+    "PrenotazioneFilterParams",
+
+    # Soggiorno
+    "OspiteBase",
+    "OspiteCreate",
+    "OspiteUpdate",
+    "OspiteResponse",
+    "SoggiornoBase",
+    "SoggiornoCreate",
+    "SoggiornoUpdate",
+    "SoggiornoResponse",
+    "SoggiornoListResponse",
+    "SoggiornoFilterParams",
+    "CheckinRequest",
+    "VerificaCompletezzaResponse",
+    "SelfServiceTokenResponse",
+
+    # Tassa Soggiorno
     "TassaSoggiornoConfigBase",
     "TassaSoggiornoConfigCreate",
     "TassaSoggiornoConfigUpdate",
@@ -88,23 +118,4 @@ __all__ = [
     "TassaSoggiornoScaglioneUpdate",
     "TassaSoggiornoScaglioneResponse",
     "TassaSoggiornoConfigWithScaglioni",
-    "TassaPrenotazioneBase",
-    "TassaPrenotazioneCreate",
-    "TassaPrenotazioneUpdate",
-    "TassaPrenotazioneResponse",
-    "TassaCalculationRequest",
-    "TassaCalculationResponse",
-    "TassaOverrideRequest",
-    "ScadenzaBase",
-    "ScadenzaCreate",
-    "ScadenzaUpdate",
-    "ScadenzaResponse",
-    "ScadenzaCompletaRequest",
-    "ScadenzaBadgeInfo",
-    "ComunicazionePoliziaBase",
-    "ComunicazionePoliziaCreate",
-    "ComunicazionePoliziaUpdate",
-    "ComunicazionePoliziaResponse",
-    "ComunicazioneInvioRequest",
-    "ComunicazioneErroreRequest",
 ]

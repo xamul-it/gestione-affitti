@@ -3,10 +3,11 @@ Platform-level import/export API endpoints.
 
 Provides generic import/export functionality that works with any entity.
 """
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from pydantic import BaseModel
+import base64
 
 from app.core.database import get_db
 from app.core.platform_services.import_export_service import ImportExportService
@@ -196,6 +197,103 @@ async def export_data(
         }
 
 
+@router.get("/download")
+async def download_export(
+    module_name: str = Query(..., description="Module technical name (e.g., 'immobili')"),
+    entity_name: str = Query(..., description="Entity name (e.g., 'UnitaImmobiliare')"),
+    format: str = Query("csv", regex="^(csv|excel)$", description="Export format (csv or excel)"),
+    fields: Optional[str] = Query(None, description="Comma-separated field names to include"),
+    db: Session = Depends(get_db)
+):
+    """
+    Download exported data as a file.
+
+    Returns the export as a downloadable file with appropriate headers.
+    Supports CSV and Excel formats.
+
+    Example:
+        GET /api/v1/import-export/download?module_name=immobili&entity_name=UnitaImmobiliare&format=csv
+
+    Returns:
+        File download with Content-Disposition header
+    """
+    try:
+        model_class = _get_model_class(module_name, entity_name)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid module or entity: {str(e)}"
+        )
+
+    # Parse fields
+    field_list = fields.split(',') if fields else None
+
+    service = ImportExportService(db)
+
+    if format == "csv":
+        content = service.export_to_csv(model=model_class, fields=field_list)
+        filename = f"{entity_name}_export.csv"
+        media_type = "text/csv; charset=utf-8"
+        content_bytes = content.encode('utf-8')
+    else:  # excel
+        content_bytes = service.export_to_excel(model=model_class, fields=field_list)
+        filename = f"{entity_name}_export.xlsx"
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+    return Response(
+        content=content_bytes,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+    )
+
+
+@router.get("/download-template")
+async def download_template(
+    module_name: str = Query(..., description="Module technical name"),
+    entity_name: str = Query(..., description="Entity name"),
+    include_sample: bool = Query(False, description="Include a sample data row"),
+    db: Session = Depends(get_db)
+):
+    """
+    Download an import template as a CSV file.
+
+    Returns a CSV template with column headers for the specified entity.
+
+    Example:
+        GET /api/v1/import-export/download-template?module_name=immobili&entity_name=UnitaImmobiliare
+
+    Returns:
+        CSV file download
+    """
+    try:
+        model_class = _get_model_class(module_name, entity_name)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid module or entity: {str(e)}"
+        )
+
+    service = ImportExportService(db)
+    content = service.generate_import_template(
+        model=model_class,
+        include_sample_data=include_sample
+    )
+
+    filename = f"{entity_name}_import_template.csv"
+
+    return Response(
+        content=content.encode('utf-8'),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+    )
+
+
 @router.get("/template")
 async def get_import_template(
     module_name: str = Query(...),
@@ -236,12 +334,22 @@ def _get_model_class(module_name: str, entity_name: str):
     """
     Get SQLAlchemy model class from module and entity name.
 
-    Uses dynamic import to load the model.
+    Uses dynamic import to load the model from the modules directory.
+    Modules are located at backend/modules/{module_name}/ and added to sys.path.
     """
+    import sys
+    import os
+
+    # Ensure modules directory is in sys.path
+    modules_dir = os.path.join(os.path.dirname(__file__), "../../../modules")
+    modules_dir = os.path.abspath(modules_dir)
+    if modules_dir not in sys.path:
+        sys.path.insert(0, modules_dir)
+
     try:
-        # Import module models
+        # Import module models directly (modules are at root level in sys.path)
         models_module = __import__(
-            f"app.modules.{module_name}.models",
+            f"{module_name}.models",
             fromlist=[entity_name]
         )
 
@@ -256,12 +364,22 @@ def _get_create_schema(module_name: str, entity_name: str):
     """
     Get Pydantic Create schema for validation.
 
-    Looks for {EntityName}Create schema.
+    Looks for {EntityName}Create schema in the module's schemas directory.
+    Modules are located at backend/modules/{module_name}/ and added to sys.path.
     """
+    import sys
+    import os
+
+    # Ensure modules directory is in sys.path
+    modules_dir = os.path.join(os.path.dirname(__file__), "../../../modules")
+    modules_dir = os.path.abspath(modules_dir)
+    if modules_dir not in sys.path:
+        sys.path.insert(0, modules_dir)
+
     try:
-        # Import module schemas
+        # Import module schemas directly (modules are at root level in sys.path)
         schemas_module = __import__(
-            f"app.modules.{module_name}.schemas",
+            f"{module_name}.schemas",
             fromlist=[f"{entity_name}Create"]
         )
 

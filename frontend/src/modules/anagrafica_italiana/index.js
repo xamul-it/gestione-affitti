@@ -26,6 +26,8 @@ export { PersoneGiuridicheList, PersonaGiuridicaForm, PersonaGiuridicaDetail } f
 
 // Comuni Components
 export { ComuniList } from './components/Comuni';
+export { default as TipiDocumentoList } from './components/Domini/TipiDocumentoList';
+export { default as StatiDocumentoList } from './components/Domini/StatiDocumentoList';
 
 // Ruoli Azienda Tipi Components (Domain Data)
 export { default as RuoliAziendaTipiList } from './components/RuoliAziendaTipi/RuoliAziendaTipiList';

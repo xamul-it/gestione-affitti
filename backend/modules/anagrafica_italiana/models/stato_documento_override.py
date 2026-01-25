@@ -1,5 +1,5 @@
 """
-Stato Documento Override - Tenant-specific overlay for stati_documento.
+Stato Documento Override - Tenant-specific overlay for anag_stati_documento.
 """
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Index
 from sqlalchemy.sql import func
@@ -8,18 +8,19 @@ from app.core.database import Base
 
 class StatoDocumentoOverride(Base):
     """
-    Tenant-specific overrides for core stati_documento.
+    Tenant-specific overrides for core anag_stati_documento.
     """
-    __tablename__ = "stati_documento_overrides"
+    __tablename__ = "anag_stati_documento_overrides"
 
     __table_args__ = (
-        Index("ix_stati_documento_overrides_stato", "stato_documento_id", unique=True),
+        Index("ix_anag_stati_documento_overrides_stato", "stato_documento_id", unique=True),
+        {"extend_existing": True}
     )
 
     id = Column(Integer, primary_key=True, index=True)
     stato_documento_id = Column(
         Integer,
-        ForeignKey("public.stati_documento.id", ondelete="CASCADE"),
+        ForeignKey("public.anag_stati_documento.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

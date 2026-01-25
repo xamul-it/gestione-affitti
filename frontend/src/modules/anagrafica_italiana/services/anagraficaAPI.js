@@ -25,7 +25,7 @@ const getAuthHeader = () => {
 export const getSoggettiAnagrafici = async (params = {}) => {
   const { skip = 0, limit = 100, attivi_solo = false } = params;
 
-  const response = await axios.get(`${API_BASE_URL}/anagrafica/soggetti`, {
+  const response = await axios.get(`${API_BASE_URL}/anagrafica/soggetti-v2`, {
     headers: getAuthHeader(),
     params: { skip, limit, attivi_solo }
   });
@@ -37,7 +37,7 @@ export const getSoggettiAnagrafici = async (params = {}) => {
  * Get a single soggetto by ID
  */
 export const getSoggettoById = async (id) => {
-  const response = await axios.get(`${API_BASE_URL}/anagrafica/soggetti/${id}`, {
+  const response = await axios.get(`${API_BASE_URL}/anagrafica/soggetti-v2/${id}`, {
     headers: getAuthHeader()
   });
 
@@ -49,7 +49,7 @@ export const getSoggettoById = async (id) => {
  */
 export const createSoggetto = async (soggettoData) => {
   const response = await axios.post(
-    `${API_BASE_URL}/anagrafica/soggetti`,
+    `${API_BASE_URL}/anagrafica/soggetti-v2`,
     soggettoData,
     { headers: getAuthHeader() }
   );
@@ -62,7 +62,7 @@ export const createSoggetto = async (soggettoData) => {
  */
 export const updateSoggetto = async (id, soggettoData) => {
   const response = await axios.put(
-    `${API_BASE_URL}/anagrafica/soggetti/${id}`,
+    `${API_BASE_URL}/anagrafica/soggetti-v2/${id}`,
     soggettoData,
     { headers: getAuthHeader() }
   );
@@ -74,7 +74,7 @@ export const updateSoggetto = async (id, soggettoData) => {
  * Delete a soggetto
  */
 export const deleteSoggetto = async (id) => {
-  await axios.delete(`${API_BASE_URL}/anagrafica/soggetti/${id}`, {
+  await axios.delete(`${API_BASE_URL}/anagrafica/soggetti-v2/${id}`, {
     headers: getAuthHeader()
   });
 };
@@ -83,7 +83,7 @@ export const deleteSoggetto = async (id) => {
  * Get ruoli for a soggetto
  */
 export const getSoggettoRuoli = async (id) => {
-  const response = await axios.get(`${API_BASE_URL}/anagrafica/soggetti/${id}/ruoli`, {
+  const response = await axios.get(`${API_BASE_URL}/anagrafica/soggetti-v2/${id}/ruoli`, {
     headers: getAuthHeader()
   });
 
@@ -167,6 +167,36 @@ export const getTipoDocumentoById = async (id) => {
 export const getCategorieDocumento = async () => {
   const response = await axios.get(
     `${API_BASE_URL}/anagrafica/domini/categorie-documento`,
+    { headers: getAuthHeader() }
+  );
+
+  return response.data;
+};
+
+// ============================================================================
+// STATI DOCUMENTO
+// ============================================================================
+
+/**
+ * Get list of document states
+ */
+export const getStatiDocumento = async (params = {}) => {
+  const { skip = 0, limit = 100 } = params;
+
+  const response = await axios.get(`${API_BASE_URL}/anagrafica/domini/stati-documento`, {
+    headers: getAuthHeader(),
+    params: { skip, limit }
+  });
+
+  return response.data;
+};
+
+/**
+ * Get a single stato documento by ID
+ */
+export const getStatoDocumentoById = async (id) => {
+  const response = await axios.get(
+    `${API_BASE_URL}/anagrafica/domini/stati-documento/${id}`,
     { headers: getAuthHeader() }
   );
 
@@ -325,6 +355,8 @@ export default {
   getTipiDocumento,
   getTipoDocumentoById,
   getCategorieDocumento,
+  getStatiDocumento,
+  getStatoDocumentoById,
 
   // Ruoli Azienda Tipi
   getRuoliAziendaTipi,

@@ -32,7 +32,8 @@ class SoggettoAnagrafico(Base):
     - Aggiornamenti centralizzati (es. cambio telefono in un solo punto)
     - Facile estensione per nuovi ruoli da parte di moduli
     """
-    __tablename__ = "soggetti_anagrafici"
+    __tablename__ = "anag_soggetti_anagrafici"
+    __table_args__ = {'extend_existing': True}
 
     # Identificativi
     id = Column(Integer, primary_key=True, index=True)
@@ -41,8 +42,15 @@ class SoggettoAnagrafico(Base):
     # Link to platform User (nullable - not all soggetti have system access)
     # Se valorizzato, l'anagrafica può accedere al sistema come utente
     # L'email dell'anagrafica sarà usata come username
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, unique=True, index=True)
-    user = relationship("User", foreign_keys=[user_id], backref="soggetto_anagrafico")
+    # FK is enforced in tenant migration to public.core_users; keep model loose to avoid
+    # cross-module metadata resolution during module migrations.
+    user_id = Column(Integer, nullable=True, unique=True, index=True)
+    user = relationship(
+        "User",
+        primaryjoin="SoggettoAnagrafico.user_id==User.id",
+        foreign_keys=[user_id],
+        backref="soggetto_anagrafico",
+    )
 
     # Dati fiscali italiani (almeno uno deve essere valorizzato)
     codice_fiscale = Column(String(16), unique=True, index=True, nullable=True)
@@ -76,7 +84,11 @@ class SoggettoAnagrafico(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Sistema di ruoli dinamici
-    ruoli_assegnati = relationship("SoggettoRuolo", back_populates="soggetto")
+    ruoli_assegnati = relationship(
+        "SoggettoRuolo",
+        primaryjoin="SoggettoRuolo.soggetto_id==SoggettoAnagrafico.id",
+        foreign_keys="[SoggettoRuolo.soggetto_id]",
+    )
 
     # Ruoli azienda (associazioni persona-azienda)
     ruoli_in_aziende = relationship(

@@ -324,30 +324,62 @@ The platform implements **schema-based multi-tenancy** using PostgreSQL schemas 
 
 1. **Database Structure**
    - Each tenant has its own PostgreSQL schema (e.g., `tenant_test`, `tenant_produzione`)
-   - All tables are duplicated in each tenant schema
-   - The `public` schema contains shared data (user accounts, tenant metadata)
+   - Business data tables are duplicated in each tenant schema
+   - The `public` schema contains:
+     - **Platform data**: users, tenants, modules, permissions
+     - **Domain data**: tipi_documento, categorie_catastali, comuni_italia, etc.
+   - Tenant schemas contain:
+     - **Business data**: contratti, affittuari, unita_immobiliari, etc.
+     - **Override tables**: tipi_documento_overrides, comuni_italia_overrides, etc.
 
-2. **Tenant Context Management**
+2. **Domain Data vs Tenant Data Architecture**
+   ```
+   PUBLIC SCHEMA (managed by platform admin):
+   ├── tipi_documento          ← Domain data (document types)
+   ├── stati_documento         ← Domain data (document states)
+   ├── categorie_catastali     ← Domain data (cadastral categories)
+   ├── comuni_italia           ← Domain data (Italian municipalities)
+   ├── ruoli_azienda_tipi      ← Domain data (business role types)
+   ├── tipologie_terreno       ← Domain data (land types)
+   ├── users, tenants, modules ← Platform data
+   └── ...
+
+   TENANT SCHEMA (e.g., tenant_test):
+   ├── tipi_documento_overrides    ← Tenant customizations
+   ├── comuni_italia_overrides     ← Tenant customizations
+   ├── contratti, affittuari...    ← Business data
+   └── ...
+   ```
+
+3. **Override Tables Pattern**
+   - Override tables store tenant-specific customizations of domain data
+   - Each override table references the parent in public schema
+   - Fields: same as parent + `is_deleted` for soft-delete
+   - No `tenant_id` column needed (isolation via schema)
+
+4. **Tenant Context Management**
    - JWT tokens include a `tenant_schema` claim after tenant selection
    - `TenantMiddleware` (`app/core/middleware/tenant_middleware.py`) extracts tenant from JWT and stores it in `request.state.tenant_schema`
    - `get_tenant_schema(request: Request)` dependency extracts tenant from request state
    - `get_db()` depends on `get_tenant_schema` and automatically sets PostgreSQL `search_path` to tenant schema
    - Uses Starlette's `request.state` for request-scoped tenant storage (clean, FastAPI-native approach)
 
-3. **Tenant Switching Flow**
+5. **Tenant Switching Flow**
    ```
    User Login → GET /tenants/my-tenants → User Selects Tenant →
    POST /tenants/switch → New JWT with tenant_schema →
    All queries execute in tenant schema
    ```
 
-4. **Key Implementation Files**
+6. **Key Implementation Files**
    - `app/core/database.py` - `get_tenant_schema()` and `get_db()` dependencies with `search_path` setting
    - `app/core/middleware/tenant_middleware.py` - JWT extraction and `request.state.tenant_schema` setting
    - `app/core/routes/tenants.py` - Tenant switching API endpoints
+   - `app/core/seeds/domain_seeder.py` - Domain data seeding in public schema
+   - `app/core/services/tenant_module_service.py` - Module installation for tenants
    - `frontend/src/contexts/TenantContext.jsx` - Frontend tenant state management
 
-5. **Implementation Details**
+7. **Implementation Details**
    ```python
    # Middleware extracts tenant from JWT and stores in request.state
    class TenantMiddleware(BaseHTTPMiddleware):
@@ -369,6 +401,41 @@ The platform implements **schema-based multi-tenancy** using PostgreSQL schemas 
        yield db
    ```
 
+#### Alembic Multi-Schema Migrations
+
+Alembic supports multi-schema migrations via the `-x schema=XXX` argument:
+
+```bash
+# Migrate public schema (default)
+alembic upgrade head
+
+# Migrate all schemas (public + all tenants)
+alembic -x schema=all upgrade head
+
+# Migrate a specific tenant
+alembic -x schema=tenant_test upgrade head
+```
+
+Each migration can specify a `target_schema` variable:
+- `target_schema = "public"` - Only runs in public schema
+- `target_schema = "tenant"` - Only runs in tenant schemas
+- `target_schema = "both"` - Runs in all schemas (default)
+
+#### Domain Data Seeding
+
+Domain data is seeded in the PUBLIC schema at application startup:
+
+```python
+# In main.py
+from app.core.seeds import seed_all_domain_data
+seed_all_domain_data(db)  # Seeds tipi_documento, categorie_catastali, etc.
+```
+
+The seed system:
+- Explicitly sets `search_path = public`
+- Seeds all domain tables (tipi_documento, categorie_catastali, comuni_italia, etc.)
+- Is idempotent (checks for existing data before inserting)
+
 #### Creating New Tenants
 
 To add a new tenant schema:
@@ -380,10 +447,17 @@ CREATE SCHEMA tenant_newclient;
 -- Grant permissions
 GRANT USAGE ON SCHEMA tenant_newclient TO your_app_user;
 GRANT ALL ON ALL TABLES IN SCHEMA tenant_newclient TO your_app_user;
+```
 
--- Run migrations in the new schema
-SET search_path TO tenant_newclient, public;
--- Run your alembic migrations here
+Then run migrations for the new tenant:
+```bash
+alembic -x schema=tenant_newclient upgrade head
+```
+
+Or use the TenantModuleService to install modules programmatically:
+```python
+from app.core.services.tenant_module_service import TenantModuleService
+TenantModuleService.install_module_for_tenant(tenant_id, "immobili", db)
 ```
 
 #### Tenant Isolation Rules

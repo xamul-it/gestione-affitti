@@ -53,12 +53,55 @@ class SoggettoAnagra_ficoV2Response(BaseModel):
         from_attributes = True
 
 
+class SoggettoAnagra_ficoV2Create(BaseModel):
+    tipo_soggetto: TipoSoggetto
+    codice_fiscale: Optional[str] = None
+    partita_iva: Optional[str] = None
+    nome: Optional[str] = None
+    cognome: Optional[str] = None
+    data_nascita: Optional[date] = None
+    luogo_nascita: Optional[str] = None
+    ragione_sociale: Optional[str] = None
+    email: Optional[str] = None
+    telefono: Optional[str] = None
+    cellulare: Optional[str] = None
+    pec: Optional[str] = None
+    indirizzo: Optional[str] = None
+    citta: Optional[str] = None
+    cap: Optional[str] = None
+    provincia: Optional[str] = None
+    note: Optional[str] = None
+    attivo: bool = True
+
+
+class SoggettoAnagra_ficoV2Update(BaseModel):
+    tipo_soggetto: Optional[TipoSoggetto] = None
+    codice_fiscale: Optional[str] = None
+    partita_iva: Optional[str] = None
+    nome: Optional[str] = None
+    cognome: Optional[str] = None
+    data_nascita: Optional[date] = None
+    luogo_nascita: Optional[str] = None
+    ragione_sociale: Optional[str] = None
+    email: Optional[str] = None
+    telefono: Optional[str] = None
+    cellulare: Optional[str] = None
+    pec: Optional[str] = None
+    indirizzo: Optional[str] = None
+    citta: Optional[str] = None
+    cap: Optional[str] = None
+    provincia: Optional[str] = None
+    note: Optional[str] = None
+    attivo: Optional[bool] = None
+
+
 # Routes
-@router.get("/v2/", response_model=List[SoggettoAnagra_ficoV2Response])
+@router.get("/", response_model=List[SoggettoAnagra_ficoV2Response])
 def get_all_soggetti_v2(
     skip: int = 0,
     limit: int = 100,
     attivo: Optional[bool] = None,
+    attivi_solo: Optional[bool] = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -73,6 +116,9 @@ def get_all_soggetti_v2(
     query = db.query(SoggettoAnagrafico).options(
         joinedload(SoggettoAnagrafico.ruoli_assegnati).joinedload(SoggettoRuolo.ruolo)
     )
+
+    if attivi_solo:
+        attivo = True
 
     if attivo is not None:
         query = query.filter(SoggettoAnagrafico.attivo == attivo)
@@ -122,7 +168,7 @@ def get_all_soggetti_v2(
     return result
 
 
-@router.get("/v2/{soggetto_id}", response_model=SoggettoAnagra_ficoV2Response)
+@router.get("/{soggetto_id}", response_model=SoggettoAnagra_ficoV2Response)
 def get_soggetto_v2(soggetto_id: int, db: Session = Depends(get_db)):
     """
     Ottiene un soggetto specifico con tutti i suoi ruoli (sistema dinamico).
@@ -174,8 +220,30 @@ def get_soggetto_v2(soggetto_id: int, db: Session = Depends(get_db)):
         ruoli=ruoli
     )
 
+@router.get("/{soggetto_id}/ruoli", response_model=List[RuoloInfo])
+def get_soggetto_ruoli_v2(soggetto_id: int, db: Session = Depends(get_db)):
+    soggetto = db.query(SoggettoAnagrafico).options(
+        joinedload(SoggettoAnagrafico.ruoli_assegnati).joinedload(SoggettoRuolo.ruolo)
+    ).filter(
+        SoggettoAnagrafico.id == soggetto_id
+    ).first()
 
-@router.get("/v2/ruoli/disponibili", response_model=List[dict])
+    if not soggetto:
+        raise HTTPException(status_code=404, detail="Soggetto non trovato")
+
+    return [
+        RuoloInfo(
+            codice=assegnazione.ruolo.codice,
+            nome=assegnazione.ruolo.nome_display,
+            modulo=assegnazione.ruolo.modulo_id,
+            record_id=assegnazione.record_specializzazione_id
+        )
+        for assegnazione in soggetto.ruoli_assegnati
+        if assegnazione.attivo
+    ]
+
+
+@router.get("/ruoli/disponibili", response_model=List[dict])
 def get_ruoli_disponibili(db: Session = Depends(get_db)):
     """
     Ottiene tutti i ruoli disponibili nella piattaforma.
@@ -197,3 +265,153 @@ def get_ruoli_disponibili(db: Session = Depends(get_db)):
         }
         for ruolo in ruoli
     ]
+
+
+@router.post("/", response_model=SoggettoAnagra_ficoV2Response, status_code=201)
+def create_soggetto_v2(
+    soggetto: SoggettoAnagra_ficoV2Create,
+    db: Session = Depends(get_db)
+):
+    if soggetto.codice_fiscale:
+        existing = db.query(SoggettoAnagrafico).filter(
+            SoggettoAnagrafico.codice_fiscale == soggetto.codice_fiscale
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Codice fiscale {soggetto.codice_fiscale} già esistente"
+            )
+
+    if soggetto.partita_iva:
+        existing = db.query(SoggettoAnagrafico).filter(
+            SoggettoAnagrafico.partita_iva == soggetto.partita_iva
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Partita IVA {soggetto.partita_iva} già esistente"
+            )
+
+    db_soggetto = SoggettoAnagrafico(**soggetto.model_dump())
+    db.add(db_soggetto)
+    db.commit()
+    db.refresh(db_soggetto)
+
+    return SoggettoAnagra_ficoV2Response(
+        id=db_soggetto.id,
+        tipo_soggetto=db_soggetto.tipo_soggetto,
+        codice_fiscale=db_soggetto.codice_fiscale,
+        partita_iva=db_soggetto.partita_iva,
+        nome=db_soggetto.nome,
+        cognome=db_soggetto.cognome,
+        data_nascita=db_soggetto.data_nascita,
+        luogo_nascita=db_soggetto.luogo_nascita,
+        ragione_sociale=db_soggetto.ragione_sociale,
+        email=db_soggetto.email,
+        telefono=db_soggetto.telefono,
+        cellulare=db_soggetto.cellulare,
+        pec=db_soggetto.pec,
+        indirizzo=db_soggetto.indirizzo,
+        citta=db_soggetto.citta,
+        cap=db_soggetto.cap,
+        provincia=db_soggetto.provincia,
+        note=db_soggetto.note,
+        attivo=db_soggetto.attivo,
+        ruoli=[],
+    )
+
+
+@router.put("/{soggetto_id}", response_model=SoggettoAnagra_ficoV2Response)
+def update_soggetto_v2(
+    soggetto_id: int,
+    soggetto_update: SoggettoAnagra_ficoV2Update,
+    db: Session = Depends(get_db)
+):
+    db_soggetto = db.query(SoggettoAnagrafico).filter(
+        SoggettoAnagrafico.id == soggetto_id
+    ).first()
+
+    if not db_soggetto:
+        raise HTTPException(status_code=404, detail="Soggetto non trovato")
+
+    update_data = soggetto_update.model_dump(exclude_unset=True)
+
+    if "codice_fiscale" in update_data and update_data["codice_fiscale"]:
+        existing = db.query(SoggettoAnagrafico).filter(
+            SoggettoAnagrafico.codice_fiscale == update_data["codice_fiscale"],
+            SoggettoAnagrafico.id != soggetto_id
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Codice fiscale {update_data['codice_fiscale']} già esistente"
+            )
+
+    if "partita_iva" in update_data and update_data["partita_iva"]:
+        existing = db.query(SoggettoAnagrafico).filter(
+            SoggettoAnagrafico.partita_iva == update_data["partita_iva"],
+            SoggettoAnagrafico.id != soggetto_id
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Partita IVA {update_data['partita_iva']} già esistente"
+            )
+
+    for field, value in update_data.items():
+        setattr(db_soggetto, field, value)
+
+    db.commit()
+    db.refresh(db_soggetto)
+
+    ruoli = [
+        RuoloInfo(
+            codice=assegnazione.ruolo.codice,
+            nome=assegnazione.ruolo.nome_display,
+            modulo=assegnazione.ruolo.modulo_id,
+            record_id=assegnazione.record_specializzazione_id
+        )
+        for assegnazione in db_soggetto.ruoli_assegnati
+        if assegnazione.attivo
+    ]
+
+    return SoggettoAnagra_ficoV2Response(
+        id=db_soggetto.id,
+        tipo_soggetto=db_soggetto.tipo_soggetto,
+        codice_fiscale=db_soggetto.codice_fiscale,
+        partita_iva=db_soggetto.partita_iva,
+        nome=db_soggetto.nome,
+        cognome=db_soggetto.cognome,
+        data_nascita=db_soggetto.data_nascita,
+        luogo_nascita=db_soggetto.luogo_nascita,
+        ragione_sociale=db_soggetto.ragione_sociale,
+        email=db_soggetto.email,
+        telefono=db_soggetto.telefono,
+        cellulare=db_soggetto.cellulare,
+        pec=db_soggetto.pec,
+        indirizzo=db_soggetto.indirizzo,
+        citta=db_soggetto.citta,
+        cap=db_soggetto.cap,
+        provincia=db_soggetto.provincia,
+        note=db_soggetto.note,
+        attivo=db_soggetto.attivo,
+        ruoli=ruoli,
+    )
+
+
+@router.delete("/{soggetto_id}", status_code=204)
+def delete_soggetto_v2(
+    soggetto_id: int,
+    db: Session = Depends(get_db)
+):
+    db_soggetto = db.query(SoggettoAnagrafico).filter(
+        SoggettoAnagrafico.id == soggetto_id
+    ).first()
+
+    if not db_soggetto:
+        raise HTTPException(status_code=404, detail="Soggetto non trovato")
+
+    db.delete(db_soggetto)
+    db.commit()
+
+    return None

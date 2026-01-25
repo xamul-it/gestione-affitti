@@ -38,12 +38,13 @@ class RegimeFiscale(str, enum.Enum):
 
 class Contratto(Base):
     __tablename__ = "contratti"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     numero_contratto = Column(String(50), unique=True, index=True, nullable=False)
 
     # Riferimenti
-    unita_immobiliare_id = Column(Integer, ForeignKey("unita_immobiliari.id"), nullable=False, index=True)
+    unita_immobiliare_id = Column(Integer, ForeignKey("immo_unita_immobiliari.id"), nullable=False, index=True)
     affittuario_id = Column(Integer, ForeignKey("affittuari.id"), nullable=False, index=True)
 
     # Tipologia e uso

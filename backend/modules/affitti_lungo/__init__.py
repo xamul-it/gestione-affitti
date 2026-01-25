@@ -1,44 +1,51 @@
 # Import models FIRST to ensure they're loaded before routes
 from . import models
 
-from .routes import (
-    immobili_router,
-    affittuari_router,
-    contratti_router,
-    spese_router,
-    incassi_router,
-    tecnici_router,
-    certificati_energetici_router,
-    documenti_router,
-    proprietari_router,
-    diritti_immobile_router,
-    condomini_router,
-    tabelle_millesimali_router,
-    millesimi_immobile_router,
-    ripartizione_spesa_router,
-    search_router,
-    modules_api_router,
-)
 
-# Routers provided by this module (for auto-discovery)
-ROUTERS = [
-    immobili_router,
-    affittuari_router,
-    contratti_router,
-    spese_router,
-    incassi_router,
-    tecnici_router,
-    certificati_energetici_router,
-    documenti_router,
-    proprietari_router,
-    diritti_immobile_router,
-    condomini_router,
-    tabelle_millesimali_router,
-    millesimi_immobile_router,
-    ripartizione_spesa_router,
-    search_router,
-    modules_api_router,
-]
+def get_routers():
+    """
+    Lazily import routers to avoid circular imports at module import time.
+    """
+    from .routes import (
+        immobili_router,
+        affittuari_router,
+        contratti_router,
+        spese_router,
+        incassi_router,
+        tecnici_router,
+        certificati_energetici_router,
+        documenti_router,
+        proprietari_router,
+        diritti_immobile_router,
+        condomini_router,
+        tabelle_millesimali_router,
+        millesimi_immobile_router,
+        ripartizione_spesa_router,
+        search_router,
+        modules_api_router,
+    )
+    return [
+        immobili_router,
+        affittuari_router,
+        contratti_router,
+        spese_router,
+        incassi_router,
+        tecnici_router,
+        certificati_energetici_router,
+        documenti_router,
+        proprietari_router,
+        diritti_immobile_router,
+        condomini_router,
+        tabelle_millesimali_router,
+        millesimi_immobile_router,
+        ripartizione_spesa_router,
+        search_router,
+        modules_api_router,
+    ]
+
+
+# Routers provided by this module (lazy)
+ROUTERS = []
 
 # Menu items da registrare con la platform
 # Attualmente vuoto - le voci verranno aggiunte quando il modulo sarà attivo
@@ -174,6 +181,7 @@ __all__ = [
     "models",
     # Routers (list for auto-discovery)
     "ROUTERS",
+    "get_routers",
     # Individual routers (backward compatibility)
     "immobili_router",
     "affittuari_router",

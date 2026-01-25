@@ -9,13 +9,17 @@ It manages personal and company data according to Italian regulations
 manifest = {
     "name": "Anagrafica",
     "technical_name": "anagrafica_italiana",
-    "version": "1.0.0",
-    "description": "Gestione anagrafica soggetti italiani (persone fisiche e giuridiche)",
+    "version": "2026011506",
+    "module_short_code": "anag",
+    "schema_target": "public + tenant",
+    "migrations_path": "migrations/versions",
+    "seeds_path": "seeds",
+    "endpoints": {
+        "register": "seeds.seed_public:seed_public",
+        "install": "seeds.seed_tenant:seed_tenant",
+    },
     "author": "Gestione Affitti Team",
-    "icon": "users",
-
     # Module configuration
-    "category": "registry",
     "sequence": 10,
 
     # Dependencies - this module has no dependencies on other business modules
@@ -26,6 +30,15 @@ manifest = {
         "soggetto_anagrafico",
         "comune_italia",
         "tipo_documento",
+        "documento",
+    ],
+
+    # Public domain tables required for registration
+    "public_tables": [
+        "anag_comuni_italia",
+        "anag_tipi_documento",
+        "anag_stati_documento",
+        "anag_ruoli_azienda_tipi",
     ],
 
     # API routes
@@ -91,6 +104,24 @@ manifest = {
             "path": "/anagrafiche/comuni",
             "icon": "map-pin",
             "order_index": 80,
+            "required_permission": "soggetto.view",
+            "is_domain_data": True,
+        },
+        {
+            "id": "anagrafica.tipi_documento",
+            "label": "Tipi Documento",
+            "path": "/anagrafiche/domini/tipi-documento",
+            "icon": "file-text",
+            "order_index": 85,
+            "required_permission": "soggetto.view",
+            "is_domain_data": True,
+        },
+        {
+            "id": "anagrafica.stati_documento",
+            "label": "Stati Documento",
+            "path": "/anagrafiche/domini/stati-documento",
+            "icon": "check-circle",
+            "order_index": 87,
             "required_permission": "soggetto.view",
             "is_domain_data": True,
         },

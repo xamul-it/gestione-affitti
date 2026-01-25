@@ -1,14 +1,18 @@
 """
 Modules API - Expose module configuration to frontend.
 
-Provides endpoints for frontend to discover enabled modules and their configurations.
+Provides endpoints for frontend to discover available modules and their configurations.
 """
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from app.core.database import get_public_db, get_tenant_schema
 from app.core.module_system import ModuleRegistry
+from app.core.module_system.models import Module
+from app.core.module_system.validator import ensure_module_health, check_public_tables
+from app.core.module_system.manifest import parse_manifest, validate_manifest, ManifestValidationError
 from app.core.auth.dependencies import get_current_user, require_permission
 from app.core.auth.models import User
 from app.core.models.tenant import Tenant, TenantModule
@@ -16,10 +20,13 @@ from app.core.services.tenant_service import TenantService
 from app.core.services.tenant_module_service import TenantModuleService
 from app.core.platform.models.menu import MenuItem
 from app.core.platform.models.dashboard import Widget
+from app.core.services.role_registry import RoleRegistry
 import logging
 from pathlib import Path
-from alembic import command
-from alembic.config import Config
+import subprocess
+import inspect
+from sqlalchemy import text
+from app.core.module_system.alembic_utils import build_module_alembic_config
 import importlib
 
 logger = logging.getLogger(__name__)
@@ -55,14 +62,152 @@ def _load_module_resources(module_record) -> tuple[list, list]:
     return menu_items, widgets
 
 
-def _run_alembic_upgrade() -> None:
-    alembic_ini = Path(__file__).resolve().parents[4] / "alembic.ini"
-    if not alembic_ini.exists():
-        logger.warning("Alembic config not found at %s", alembic_ini)
+def _run_module_alembic_upgrade(module_record) -> bool:
+    manifest = module_record.manifest or {}
+    schema_target = manifest.get("schema_target")
+    if schema_target not in {"public", "public + tenant"}:
+        return True
+
+    migrations_path = manifest.get("migrations_path")
+    module_prefix = manifest.get("module_short_code")
+    if not migrations_path or not module_prefix:
+        logger.warning(
+            "Module '%s' missing migrations_path/module_short_code for public migrations",
+            module_record.technical_name,
+        )
+        return False
+
+    module_path = Path(module_record.install_path)
+    migrations_dir = (module_path / migrations_path).resolve()
+    if not migrations_dir.exists():
+        logger.warning(
+            "Module '%s' migrations_path not found: %s",
+            module_record.technical_name,
+            migrations_dir,
+        )
+        return False
+
+    backend_dir = Path(__file__).resolve().parents[4] / "backend"
+    config_path = build_module_alembic_config(backend_dir, migrations_dir)
+    logger.debug(
+        "Module '%s' public migrations: migrations_dir=%s config=%s prefix=%s",
+        module_record.technical_name,
+        migrations_dir,
+        config_path,
+        module_prefix,
+    )
+    try:
+        config_preview = config_path.read_text(encoding="utf-8")
+        for line in config_preview.splitlines():
+            if line.strip().lower().startswith("version_locations") or line.strip() == "[alembic]":
+                logger.debug("Alembic config: %s", line)
+    except Exception as e:
+        logger.debug("Could not read alembic config %s: %s", config_path, e)
+    try:
+        result = subprocess.run(
+            [
+                "alembic",
+                "-c",
+                str(config_path),
+                "-x",
+                "schema=public",
+                "-x",
+                f"module_prefix={module_prefix}",
+                "-x",
+                f"module_version_table=alembic_version_{module_prefix}",
+                "upgrade",
+                "head",
+            ],
+            cwd=str(backend_dir),
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    finally:
+        config_path.unlink(missing_ok=True)
+
+    if result.returncode != 0:
+        logger.warning(
+            "Module '%s' public migration failed: %s",
+            module_record.technical_name,
+            result.stderr.strip() or result.stdout.strip(),
+        )
+        return False
+    return True
+
+
+def _call_seed_entry(module_name: str, entry_point: str, db) -> None:
+    if ':' in entry_point:
+        module_path, function_name = entry_point.split(':', 1)
+    else:
+        module_path = entry_point
+        function_name = 'register'
+
+    current = importlib.import_module(module_name)
+    if module_path:
+        try:
+            current = importlib.import_module(f"{module_name}.{module_path}")
+        except Exception:
+            parts = module_path.split('.')
+            for part in parts:
+                if not hasattr(current, part):
+                    raise AttributeError(f"Seed entry point '{entry_point}' not found in module")
+                current = getattr(current, part)
+
+    if not hasattr(current, function_name):
+        raise AttributeError(f"Seed entry point function '{function_name}' not found in '{module_path}'")
+
+    func = getattr(current, function_name)
+    if not callable(func):
+        raise TypeError(f"Seed entry point '{entry_point}' is not callable")
+
+    try:
+        signature = inspect.signature(func)
+    except (TypeError, ValueError):
+        func(db)
         return
 
-    config = Config(str(alembic_ini))
-    command.upgrade(config, "head")
+    if len(signature.parameters) == 0:
+        func()
+    else:
+        func(db)
+
+
+def _run_module_public_seed(module_record, db: Session) -> bool:
+    manifest = module_record.manifest or {}
+    schema_target = manifest.get("schema_target")
+    if schema_target not in {"public", "public + tenant"}:
+        return True
+
+    seeds_path = manifest.get("seeds_path")
+    endpoints = manifest.get("endpoints", {}) if isinstance(manifest.get("endpoints"), dict) else {}
+    register_endpoint = endpoints.get("register")
+
+    if not seeds_path or not register_endpoint:
+        logger.warning(
+            "Module '%s' missing seeds_path or endpoints.register for public seeding",
+            module_record.technical_name,
+        )
+        return False
+
+    module_path = Path(module_record.install_path)
+    seeds_dir = (module_path / seeds_path).resolve()
+    if not seeds_dir.exists():
+        logger.warning(
+            "Module '%s' seeds_path not found: %s",
+            module_record.technical_name,
+            seeds_dir,
+        )
+        return False
+
+    try:
+        db.connection().execute(text("SET search_path TO public"))
+        _call_seed_entry(module_record.technical_name, register_endpoint, db)
+        return True
+    except Exception as e:
+        db.rollback()
+        logger.warning("Module public seed failed for %s: %s", module_record.technical_name, e)
+        return False
 
 
 @router.get("/enabled")
@@ -71,7 +216,7 @@ def get_enabled_modules(
     tenant_schema: Optional[str] = Depends(get_tenant_schema)
 ) -> List[Dict[str, Any]]:
     """
-    Get all enabled modules with their frontend configuration.
+    Get all visible modules with their frontend configuration.
 
     Returns module metadata that frontend can use to:
     - Register dynamic routes
@@ -79,49 +224,58 @@ def get_enabled_modules(
     - Register extension points
     """
     logger.debug("Modules enabled: tenant_schema=%s", tenant_schema)
-    registry = ModuleRegistry(db)
-    enabled_modules = registry.get_enabled_modules()
-    logger.debug("Modules enabled: platform enabled count=%s", len(enabled_modules))
-
-    tenant_enabled_ids = None
-    tenant = None
-    if tenant_schema:
-        tenant = db.query(Tenant).filter(Tenant.schema_name == tenant_schema).first()
-        if tenant:
-            tenant_enabled_ids = set(TenantService.get_enabled_modules(tenant.id, db))
-            logger.debug(
-                "Modules enabled: tenant id=%s schema=%s enabled_ids=%s",
-                tenant.id,
-                tenant_schema,
-                sorted(tenant_enabled_ids),
-            )
-        else:
-            tenant_enabled_ids = set()
-            logger.debug("Modules enabled: tenant not found for schema=%s", tenant_schema)
-    else:
+    if not tenant_schema:
         logger.debug("Modules enabled: no tenant_schema in request context")
+        return []
+
+    registry = ModuleRegistry(db)
+    registered_modules = registry.get_registered_modules()
+    logger.debug("Modules enabled: platform registered count=%s", len(registered_modules))
+
+    tenant = db.query(Tenant).filter(Tenant.schema_name == tenant_schema).first()
+    if not tenant:
+        logger.debug("Modules enabled: tenant not found for schema=%s", tenant_schema)
+        return []
+
+    tenant_enabled_ids = set(TenantService.get_enabled_modules(tenant.id, db))
+    logger.debug(
+        "Modules enabled: tenant id=%s schema=%s enabled_ids=%s",
+        tenant.id,
+        tenant_schema,
+        sorted(tenant_enabled_ids),
+    )
+
+    registered_modules = db.query(Module).filter(
+        Module.registered == True,
+        Module.technical_name.in_(tenant_enabled_ids),
+    ).all()
+    logger.debug("Modules enabled: tenant visible count=%s", len(registered_modules))
 
     modules_config = []
     has_config = TenantModuleService._config_column_exists(db)
-    for module in enabled_modules:
-        if tenant_enabled_ids is not None and module.technical_name not in tenant_enabled_ids:
+    for module in registered_modules:
+        health = ensure_module_health(module, db)
+        if not health["ok"]:
+            continue
+        if module.technical_name not in tenant_enabled_ids:
             continue
         manifest = module.manifest or {}
         module_icon = module.icon or manifest.get("icon") or manifest.get("frontend_config", {}).get("menu_icon")
         tenant_module_config = {}
-        if has_config and tenant_enabled_ids is not None and tenant:
+        if has_config and tenant:
             tenant_module = db.query(TenantModule).filter_by(
                 tenant_id=tenant.id,
                 module_id=module.technical_name
             ).first()
             tenant_module_config = tenant_module.config if tenant_module else {}
 
+        is_enabled = module.technical_name in tenant_enabled_ids
         config = {
             "technical_name": module.technical_name,
             "name": module.name,
             "version": module.version,
             "icon": module_icon,
-            "enabled": module.enabled,
+            "enabled": is_enabled,
             "state": module.state,
             "tenant_config": tenant_module_config,
 
@@ -158,11 +312,19 @@ def get_all_modules(
     """
     registry = ModuleRegistry(db)
     all_modules = registry.get_all_modules()
+    tenant_counts = dict(
+        db.query(TenantModule.module_id, func.count())
+        .filter(TenantModule.enabled == True)
+        .group_by(TenantModule.module_id)
+        .all()
+    )
 
     modules_list = []
     for module in all_modules:
+        health = ensure_module_health(module, db)
         manifest = module.manifest or {}
         module_icon = module.icon or manifest.get("icon") or manifest.get("frontend_config", {}).get("menu_icon")
+        module_category = module.category or manifest.get("category") or "other"
 
         module_info = {
             "technical_name": module.technical_name,
@@ -171,9 +333,12 @@ def get_all_modules(
             "description": module.description or manifest.get("description", ""),
             "author": manifest.get("author", ""),
             "icon": module_icon,
-            "enabled": module.enabled,
+            "category": module_category,
+            "registered": module.registered,
             "state": module.state,
+            "missing_public_tables": health.get("missing", []),
             "dependencies": manifest.get("dependencies", []),
+            "tenant_enabled_count": tenant_counts.get(module.technical_name, 0),
             "created_at": module.created_at.isoformat() if module.created_at else None,
             "updated_at": module.updated_at.isoformat() if module.updated_at else None,
         }
@@ -191,33 +356,12 @@ def toggle_module(
     current_user: User = Depends(require_permission("platform.admin"))
 ):
     """
-    Enable or disable a module - Admin only.
-
-    This will update the module's enabled status in the database.
-    A server restart is required for changes to take effect.
+    Deprecated: platform-level enable/disable is not supported.
     """
-    registry = ModuleRegistry(db)
-
-    try:
-        if request.enabled:
-            registry.enable_module(technical_name)
-            message = f"Module '{technical_name}' enabled successfully"
-        else:
-            registry.disable_module(technical_name)
-            message = f"Module '{technical_name}' disabled successfully"
-
-        return {
-            "success": True,
-            "message": message,
-            "technical_name": technical_name,
-            "enabled": request.enabled,
-            "restart_required": True
-        }
-
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error toggling module: {str(e)}")
+    raise HTTPException(
+        status_code=400,
+        detail="Platform module enable/disable is not supported. Use tenant modules instead."
+    )
 
 
 @router.post("/{technical_name}/register-resources")
@@ -236,10 +380,46 @@ def register_module_resources(
     if not module_record:
         raise HTTPException(status_code=404, detail="Module not found")
 
+    manifest_path = Path(module_record.install_path) / "__manifest__.py"
+    if manifest_path.exists():
+        try:
+            manifest = parse_manifest(manifest_path)
+            validate_manifest(manifest)
+            module_record.manifest = manifest
+            module_record.name = manifest.get("name", module_record.name)
+            module_record.version = manifest.get("version", module_record.version)
+            module_record.author = manifest.get("author", module_record.author)
+            module_record.category = None
+            module_record.icon = manifest.get("icon", module_record.icon)
+            db.commit()
+        except ManifestValidationError as e:
+            logger.warning("Manifest validation failed for %s: %s", technical_name, e)
+        except Exception as e:
+            logger.warning("Manifest refresh failed for %s: %s", technical_name, e)
+
+    migrations_ok = False
     try:
-        _run_alembic_upgrade()
+        migrations_ok = _run_module_alembic_upgrade(module_record)
     except Exception as e:
-        logger.warning("Alembic upgrade failed: %s", e)
+        db.rollback()
+        logger.warning("Module migrations failed: %s", e)
+        migrations_ok = False
+
+    if not migrations_ok:
+        module_record.state = "broken"
+        module_record.registered = False
+        db.commit()
+        raise HTTPException(status_code=500, detail="Public migrations failed")
+
+    public_ok, missing_public = check_public_tables(module_record, db)
+    if not public_ok:
+        module_record.state = "broken"
+        module_record.registered = False
+        db.commit()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Missing public tables: {', '.join(missing_public)}",
+        )
 
     menu_items, widgets = _load_module_resources(module_record)
 
@@ -298,15 +478,50 @@ def register_module_resources(
             TenantModuleService.sync_module_tables_for_tenant(tm.tenant_id, technical_name, db)
             tables_ok += 1
         except Exception as e:
+            db.rollback()
             tables_failed.append({"tenant_id": tm.tenant_id, "error": str(e)})
 
-    if technical_name == "anagrafica_italiana":
-        try:
-            from anagrafica_italiana.seeds import seed_tipi_documento, seed_stati_documento
-            seed_tipi_documento(db)
-            seed_stati_documento(db)
-        except Exception as e:
-            logger.warning("Seed anagrafica domini failed: %s", e)
+    module_roles = manifest.get("ruoli_disponibili", []) if manifest else []
+    if module_roles:
+        mapped_roles = []
+        for role in module_roles:
+            codice = role.get("technical_name") or role.get("codice")
+            if not codice:
+                continue
+            mapped_roles.append({
+                "codice": codice,
+                "nome_display": role.get("nome_ruolo") or role.get("nome_display") or codice,
+                "descrizione": role.get("descrizione"),
+                "tabella_specializzazione": role.get("tabella_specializzazione"),
+                "attivo": role.get("attivo", True),
+            })
+        if mapped_roles:
+            RoleRegistry.register_roles(
+                db=db,
+                modulo_id=technical_name,
+                roles=mapped_roles,
+                overwrite=True,
+            )
+
+    try:
+        module_roles_module = importlib.import_module(f"{technical_name}.roles")
+        register_roles = getattr(module_roles_module, "register_roles", None)
+        if callable(register_roles):
+            register_roles(db)
+    except Exception as e:
+        logger.debug("Module roles registration skipped for %s: %s", technical_name, e)
+
+    seed_ok = _run_module_public_seed(module_record, db)
+    if not seed_ok:
+        module_record.state = "broken"
+        module_record.registered = False
+        db.commit()
+        raise HTTPException(status_code=500, detail="Public seed failed")
+
+    db.rollback()
+    module_record.registered = True
+    module_record.registered_at = func.now()
+    db.commit()
 
     return {
         "status": "success",

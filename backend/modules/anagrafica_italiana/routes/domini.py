@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import inspect
 from typing import List, Optional
 from app.core.database import get_db, get_public_db, get_tenant_schema
-from app.core.models.tenant import Tenant
 from app.core.auth.dependencies import get_current_user
 from app.core.auth.models import User
 
@@ -35,7 +34,8 @@ def list_comuni(
     limit: int = 100,
     provincia: Optional[str] = Query(None, max_length=2),
     search: Optional[str] = Query(None, max_length=100),
-    db: Session = Depends(get_public_db),
+    db: Session = Depends(get_db),
+    public_db: Session = Depends(get_public_db),
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(get_current_user)
 ):
@@ -46,7 +46,7 @@ def list_comuni(
     - provincia: Filter by province code (e.g., "MI", "BO")
     - search: Search by municipality name (case-insensitive partial match)
     """
-    query = db.query(ComuneItalia)
+    query = public_db.query(ComuneItalia)
 
     if provincia:
         query = query.filter(ComuneItalia.provincia_sigla == provincia.upper())
@@ -57,18 +57,18 @@ def list_comuni(
 
     comuni = query.order_by(ComuneItalia.nome).offset(skip).limit(limit).all()
 
-    tenant = None
-    if tenant_schema:
-        tenant = db.query(Tenant).filter(Tenant.schema_name == tenant_schema).first()
-
     overrides_by_comune = {}
-    if tenant and comuni:
-        comune_ids = [c.id for c in comuni]
-        overrides = db.query(ComuneItaliaOverride).filter(
-            ComuneItaliaOverride.tenant_id == tenant.id,
-            ComuneItaliaOverride.comune_id.in_(comune_ids),
-        ).all()
-        overrides_by_comune = {o.comune_id: o for o in overrides}
+    if tenant_schema and comuni:
+        try:
+            inspector = inspect(db.get_bind())
+            if inspector.has_table("anag_comuni_italia_overrides", schema=tenant_schema):
+                comune_ids = [c.id for c in comuni]
+                overrides = db.query(ComuneItaliaOverride).filter(
+                    ComuneItaliaOverride.comune_id.in_(comune_ids),
+                ).all()
+                overrides_by_comune = {o.comune_id: o for o in overrides}
+        except Exception:
+            overrides_by_comune = {}
 
     return [
         {
@@ -90,28 +90,29 @@ def list_comuni(
 @router.get("/comuni/{comune_id}", response_model=dict)
 def get_comune(
     comune_id: int,
-    db: Session = Depends(get_public_db),
+    db: Session = Depends(get_db),
+    public_db: Session = Depends(get_public_db),
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(get_current_user)
 ):
     """Get a specific comune by ID"""
-    comune = db.query(ComuneItalia).filter(ComuneItalia.id == comune_id).first()
+    comune = public_db.query(ComuneItalia).filter(ComuneItalia.id == comune_id).first()
 
     if not comune:
         raise HTTPException(status_code=404, detail="Comune non trovato")
 
-    tenant = None
-    if tenant_schema:
-        tenant = db.query(Tenant).filter(Tenant.schema_name == tenant_schema).first()
-
     override = None
-    if tenant:
-        override = db.query(ComuneItaliaOverride).filter(
-            ComuneItaliaOverride.tenant_id == tenant.id,
-            ComuneItaliaOverride.comune_id == comune.id,
-        ).first()
-        if override and override.is_deleted:
-            raise HTTPException(status_code=404, detail="Comune non trovato")
+    if tenant_schema:
+        try:
+            inspector = inspect(db.get_bind())
+            if inspector.has_table("anag_comuni_italia_overrides", schema=tenant_schema):
+                override = db.query(ComuneItaliaOverride).filter(
+                    ComuneItaliaOverride.comune_id == comune.id,
+                ).first()
+                if override and override.is_deleted:
+                    raise HTTPException(status_code=404, detail="Comune non trovato")
+        except Exception:
+            override = None
 
     return {
         "id": comune.id,
@@ -130,30 +131,31 @@ def get_comune(
 @router.get("/comuni/search/cap/{cap}", response_model=List[dict])
 def search_comuni_by_cap(
     cap: str,
-    db: Session = Depends(get_public_db),
+    db: Session = Depends(get_db),
+    public_db: Session = Depends(get_public_db),
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(get_current_user)
 ):
     """Search comuni by postal code (CAP)"""
-    tenant = None
-    if tenant_schema:
-        tenant = db.query(Tenant).filter(Tenant.schema_name == tenant_schema).first()
-
     core_ids_from_overrides = set()
     overrides_by_comune = {}
-    if tenant:
-        overrides = db.query(ComuneItaliaOverride).filter(
-            ComuneItaliaOverride.tenant_id == tenant.id,
-            ComuneItaliaOverride.cap == cap,
-            ComuneItaliaOverride.is_deleted == False,
-        ).all()
-        overrides_by_comune = {o.comune_id: o for o in overrides}
-        core_ids_from_overrides = {o.comune_id for o in overrides if o.comune_id}
+    if tenant_schema:
+        try:
+            inspector = inspect(db.get_bind())
+            if inspector.has_table("anag_comuni_italia_overrides", schema=tenant_schema):
+                overrides = db.query(ComuneItaliaOverride).filter(
+                    ComuneItaliaOverride.cap == cap,
+                    ComuneItaliaOverride.is_deleted == False,
+                ).all()
+                overrides_by_comune = {o.comune_id: o for o in overrides}
+                core_ids_from_overrides = {o.comune_id for o in overrides if o.comune_id}
+        except Exception:
+            overrides_by_comune = {}
 
-    comuni_query = db.query(ComuneItalia).filter(ComuneItalia.cap == cap)
+    comuni_query = public_db.query(ComuneItalia).filter(ComuneItalia.cap == cap)
     if core_ids_from_overrides:
         comuni_query = comuni_query.union(
-            db.query(ComuneItalia).filter(ComuneItalia.id.in_(core_ids_from_overrides))
+            public_db.query(ComuneItalia).filter(ComuneItalia.id.in_(core_ids_from_overrides))
         )
     comuni = comuni_query.all()
 
@@ -217,7 +219,7 @@ def list_tipi_documento(
     if tenant_schema:
         try:
             inspector = inspect(db.get_bind())
-            if inspector.has_table("tipi_documento_overrides", schema=tenant_schema):
+            if inspector.has_table("anag_tipi_documento_overrides", schema=tenant_schema):
                 overrides = db.query(TipoDocumentoOverride).all()
                 overrides_by_id = {o.tipo_documento_id: o for o in overrides}
         except Exception:
@@ -258,7 +260,7 @@ def get_tipo_documento(
     if tenant_schema:
         try:
             inspector = inspect(db.get_bind())
-            if inspector.has_table("tipi_documento_overrides", schema=tenant_schema):
+            if inspector.has_table("anag_tipi_documento_overrides", schema=tenant_schema):
                 override = db.query(TipoDocumentoOverride).filter(
                     TipoDocumentoOverride.tipo_documento_id == tipo_id
                 ).first()
@@ -335,7 +337,7 @@ def list_stati_documento(
     if tenant_schema:
         try:
             inspector = inspect(db.get_bind())
-            if inspector.has_table("stati_documento_overrides", schema=tenant_schema):
+            if inspector.has_table("anag_stati_documento_overrides", schema=tenant_schema):
                 overrides = db.query(StatoDocumentoOverride).all()
                 overrides_by_id = {o.stato_documento_id: o for o in overrides}
         except Exception:
@@ -374,7 +376,7 @@ def get_stato_documento(
     if tenant_schema:
         try:
             inspector = inspect(db.get_bind())
-            if inspector.has_table("stati_documento_overrides", schema=tenant_schema):
+            if inspector.has_table("anag_stati_documento_overrides", schema=tenant_schema):
                 override = db.query(StatoDocumentoOverride).filter(
                     StatoDocumentoOverride.stato_documento_id == stato_id
                 ).first()

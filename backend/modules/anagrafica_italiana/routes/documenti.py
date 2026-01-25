@@ -8,23 +8,17 @@ Uses platform services:
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect
 from typing import List, Optional
 from datetime import date
 
-from app.core.database import get_db
+from app.core.database import get_db, get_tenant_schema
 from app.core.auth.dependencies import get_current_user, require_permission
 from app.core.auth.models import User
 from app.core.platform_services import ScadenzarioService
 
-# Import models and services from modules
-import sys, os
-modules_dir = os.path.join(os.path.dirname(__file__), '../../../modules')
-if modules_dir not in sys.path:
-    sys.path.insert(0, modules_dir)
-
-from affitti_lungo.models.documenti import Documento
-from affitti_lungo.services.document_service import DocumentService
-from anagrafica_italiana.models import SoggettoAnagrafico, TipoDocumento
+from ..models import SoggettoAnagrafico, TipoDocumento, Documento
+from ..services.document_service import DocumentService
 
 router = APIRouter(prefix="/anagrafica/documenti", tags=["documenti-anagrafica"])
 
@@ -37,6 +31,7 @@ async def upload_documento(
     data_scadenza: Optional[str] = Form(None),  # Format: YYYY-MM-DD
     note: Optional[str] = Form(None),
     db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.edit"))
 ):
     """
@@ -54,6 +49,16 @@ async def upload_documento(
     Returns:
         Uploaded documento metadata
     """
+    if not tenant_schema:
+        raise HTTPException(status_code=400, detail="Tenant schema mancante")
+
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("documenti", schema=tenant_schema):
+        raise HTTPException(
+            status_code=409,
+            detail="Tabella documenti non presente. Reinstalla il modulo anagrafica per il tenant.",
+        )
+
     # Verify soggetto exists
     soggetto = db.query(SoggettoAnagrafico).filter(
         SoggettoAnagrafico.id == soggetto_id
@@ -137,6 +142,7 @@ def list_documenti_soggetto(
     categoria: Optional[str] = None,  # Filter by categoria (identita, fiscale, etc.)
     scaduti: bool = False,  # Show only expired docs
     db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.view"))
 ):
     """
@@ -150,6 +156,16 @@ def list_documenti_soggetto(
     Returns:
         List of documents with metadata
     """
+    if not tenant_schema:
+        raise HTTPException(status_code=400, detail="Tenant schema mancante")
+
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("documenti", schema=tenant_schema):
+        raise HTTPException(
+            status_code=409,
+            detail="Tabella documenti non presente. Reinstalla il modulo anagrafica per il tenant.",
+        )
+
     # Verify soggetto exists
     soggetto = db.query(SoggettoAnagrafico).filter(
         SoggettoAnagrafico.id == soggetto_id
@@ -216,6 +232,7 @@ def list_documenti_soggetto(
 def download_documento(
     documento_id: int,
     db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.view"))
 ):
     """
@@ -223,6 +240,16 @@ def download_documento(
 
     Uses platform DocumentService for secure file access.
     """
+    if not tenant_schema:
+        raise HTTPException(status_code=400, detail="Tenant schema mancante")
+
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("documenti", schema=tenant_schema):
+        raise HTTPException(
+            status_code=409,
+            detail="Tabella documenti non presente. Reinstalla il modulo anagrafica per il tenant.",
+        )
+
     doc_service = DocumentService(db)
 
     try:

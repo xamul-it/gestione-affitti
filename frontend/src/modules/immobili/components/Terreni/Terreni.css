@@ -16,6 +16,12 @@
   align-items: center;
 }
 
+.terreni-filters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .filter-group {
   display: flex;
   align-items: center;

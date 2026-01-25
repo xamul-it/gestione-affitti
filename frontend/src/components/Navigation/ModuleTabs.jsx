@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { renderIcon } from './iconRegistry.jsx';
+import { loadLocalModuleManifests } from '../../core/modules/localManifests.js';
 import './ModuleTabs.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -16,12 +17,24 @@ function ModuleTabs() {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [localManifests, setLocalManifests] = useState({});
   const location = useLocation();
   const navigate = useNavigate();
   const switcherRef = useRef(null);
 
   useEffect(() => {
     loadModules();
+    loadLocalModuleManifests().then(setLocalManifests);
+  }, []);
+
+  useEffect(() => {
+    const handleMenuUpdated = () => {
+      loadModules();
+    };
+    window.addEventListener('menu-updated', handleMenuUpdated);
+    return () => {
+      window.removeEventListener('menu-updated', handleMenuUpdated);
+    };
   }, []);
 
   const loadModules = async () => {
@@ -51,6 +64,7 @@ function ModuleTabs() {
     if (path.startsWith('/anagrafiche')) return 'anagrafica_italiana';
     if (
       path.startsWith('/unita-immobiliari') ||
+      path.startsWith('/terreni') ||
       path.startsWith('/proprietari') ||
       path.startsWith('/condomini') ||
       path.startsWith('/certificati-energetici') ||
@@ -81,6 +95,8 @@ function ModuleTabs() {
 
   const activeModule = getActiveModule();
   const activeModuleData = modules.find(module => module.technical_name === activeModule) || null;
+  const activeManifest = activeModuleData ? localManifests[activeModuleData.technical_name] : null;
+  const activeIcon = activeManifest?.icon || activeModuleData?.icon;
   const otherModules = activeModuleData
     ? modules.filter(module => module.technical_name !== activeModuleData.technical_name)
     : modules;
@@ -123,10 +139,10 @@ function ModuleTabs() {
           aria-expanded={menuOpen}
         >
           <span className="module-switcher-icon" aria-hidden="true">
-            {renderIcon(activeModuleData?.icon || 'package', { size: 18 })}
+            {renderIcon(activeIcon || 'package', { size: 18 })}
           </span>
           <span className="module-switcher-label">
-            {activeModuleData?.name || 'Seleziona modulo'}
+            {activeManifest?.displayName || activeModuleData?.name || 'Seleziona modulo'}
           </span>
         </button>
         <button
@@ -140,7 +156,7 @@ function ModuleTabs() {
           aria-expanded={menuOpen}
         >
           <span className={`module-switcher-caret-icon ${menuOpen ? 'open' : ''}`} aria-hidden="true">
-            ▾
+            ▼
           </span>
         </button>
 
@@ -149,20 +165,25 @@ function ModuleTabs() {
             {otherModules.length === 0 && (
               <div className="module-switcher-empty">Nessun altro modulo</div>
             )}
-            {otherModules.map(module => (
-              <Link
-                key={module.technical_name}
-                to={`/modules/${module.technical_name}/dashboard`}
-                className="module-switcher-item"
-                role="menuitem"
-                onClick={() => setMenuOpen(false)}
-              >
-                <span className="module-switcher-item-icon" aria-hidden="true">
-                  {renderIcon(module.icon || 'package', { size: 16 })}
-                </span>
-                <span className="module-switcher-item-label">{module.name}</span>
-              </Link>
-            ))}
+            {otherModules.map(module => {
+              const local = localManifests[module.technical_name];
+              const displayName = local?.displayName || module.name;
+              const displayIcon = local?.icon || module.icon;
+              return (
+                <Link
+                  key={module.technical_name}
+                  to={`/modules/${module.technical_name}/dashboard`}
+                  className="module-switcher-item"
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <span className="module-switcher-item-icon" aria-hidden="true">
+                    {renderIcon(displayIcon || 'package', { size: 16 })}
+                  </span>
+                  <span className="module-switcher-item-label">{displayName}</span>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

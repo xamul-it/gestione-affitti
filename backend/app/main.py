@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import Base, engine, SessionLocal
+from sqlalchemy import MetaData
 
 # Import module system models to ensure tables are created
 from app.core.module_system.models import (
@@ -26,15 +27,9 @@ if modules_dir not in sys.path:
 
 # Import platform models
 from app.core.models.import_configuration import ImportConfiguration
+from app.core.models.table_configuration import TableConfiguration
 from app.core.models import RuoloDisponibile, SoggettoRuolo
 from app.core.models.tenant import Tenant, UserTenant, TenantModule
-
-# IMPORTANT: Import modules in dependency order BEFORE routes to ensure
-# all models are loaded before SQLAlchemy attempts relationship configuration
-# This avoids "Mapper has no property" errors with cross-module relationships
-import anagrafica_italiana.models
-import immobili.models
-import affitti_lungo.models
 
 # Import platform models
 from app.core.platform.models import MenuItem, Widget, UserDashboard, Scadenza, ScadenzaDestinatario, ScadenzaLog
@@ -44,12 +39,17 @@ from app.core.module_system import ModuleRegistry, ModuleLoader
 
 # Import platform-level routes (ONLY platform routes, NO business module routes)
 from app.core.routes.import_export import router as import_export_router
+from app.core.routes.table_configurations import router as table_config_router
+from app.core.routes.unified_search import router as unified_search_router
 from app.core.routes.admin_comuni import router as admin_comuni_router
+from app.core.routes.admin_core import router as admin_core_router
 from app.core.routes.scadenze import router as scadenze_router
 
 # Import auth routes
 from app.core.auth.routes import router as auth_router
 from app.core.auth.routes_roles import router as roles_router
+from app.core.auth.routes_roles_debug import router as roles_debug_router
+from app.core.routes.ruoli_disponibili import router as ruoli_disponibili_router
 
 # Import tenant routes
 from app.core.routes.tenants import router as tenants_router
@@ -57,14 +57,34 @@ from app.core.routes.tenants import router as tenants_router
 # Import platform routes
 from app.core.platform.routes import menu as platform_menu_router
 from app.core.platform.routes import dashboard as platform_dashboard_router
+from affitti_lungo.routes.modules_api import router as modules_api_router
 
 # Configure logging
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
 logger = logging.getLogger(__name__)
 
-# Crea le tabelle nel database
-Base.metadata.create_all(bind=engine)
+def create_core_tables():
+    """
+    Create only core tables (prefix core_) in public schema.
+    Avoids creating module tables outside tenant install.
+    """
+    core_metadata = MetaData()
+    for table in Base.metadata.tables.values():
+        if table.name.startswith("core_"):
+            table.to_metadata(core_metadata)
+    core_metadata.create_all(bind=engine)
+
+
+# Crea le tabelle core nel database (evita tabelle moduli in public)
+create_core_tables()
+
+# IMPORTANT: Import modules in dependency order AFTER core tables are created
+# to avoid creating tenant tables in public schema via create_all.
+import anagrafica_italiana.models
+import immobili.models
+import affitti_lungo.models
+import esempio_componenti.models
 
 # Initialize module system and seed data
 logger.info("Initializing module system...")
@@ -73,28 +93,18 @@ module_loader = None
 module_registry = None
 
 try:
-    # Seed reference data
-    from immobili.seeds.seed_categorie_catastali import seed_categorie_catastali
-    from anagrafica_italiana.seeds import seed_tipi_documento, seed_comuni_italia_minimal, seed_stati_documento
+    # Seed domain data in PUBLIC schema (managed by platform admin)
+    from app.core.seeds import seed_all_domain_data
     from app.core.auth.init_data import init_auth_data
 
-    logger.info("Seeding reference data...")
+    logger.info("Seeding domain data in PUBLIC schema...")
     try:
-        categorie_count = seed_categorie_catastali(db)
-        if categorie_count > 0:
-            logger.info(f"Seeded {categorie_count} categorie catastali")
-
-        comuni_count = seed_comuni_italia_minimal(db)
-        if comuni_count > 0:
-            logger.info(f"Seeded {comuni_count} comuni Italia")
-
-        tipi_doc_count = seed_tipi_documento(db)
-        stati_doc_count = seed_stati_documento(db)
-        if tipi_doc_count > 0:
-            logger.info(f"Seeded {tipi_doc_count} tipi documento")
-        logger.info(f"Seeded {stati_doc_count} stati documento")
+        seed_results = seed_all_domain_data(db)
+        total_seeded = sum(seed_results.values())
+        if total_seeded > 0:
+            logger.info(f"Seeded {total_seeded} domain data records in public schema")
     except Exception as e:
-        logger.error(f"Error seeding reference data: {e}")
+        logger.error(f"Error seeding domain data: {e}")
 
     # Initialize auth system (roles, permissions, first admin)
     logger.info("Initializing authentication system...")
@@ -124,8 +134,12 @@ try:
     if installed:
         logger.info(f"Installed {len(installed)} new modules: {', '.join(installed)}")
 
-    # Reload enabled modules
-    module_loader.reload_enabled_modules()
+    tenant_registered = module_loader.ensure_tenant_only_registered()
+    if tenant_registered:
+        logger.info("Registered %s tenant-only modules", tenant_registered)
+
+    # Reload registered modules
+    module_loader.reload_registered_modules()
 
     # Register module roles (dynamic role system)
     logger.info("Registering module roles...")
@@ -152,18 +166,28 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
+app.include_router(modules_api_router, prefix=settings.API_V1_STR)
 # Set app instance in module loader (needed for register_module calls)
 logger.info(f"Setting app in module_loader: loader={module_loader}, registry={module_registry}")
 if module_loader:
     module_loader.app = app
     logger.info("App instance set in module_loader")
 
-# Reload enabled modules again to call register_module(app) for route registration
+# Reload registered modules again to call register_module(app) for route registration
 if module_loader and module_registry:
-    logger.info("Reloading enabled modules with app instance for route registration...")
-    module_loader.reload_enabled_modules()
+    logger.info("Reloading registered modules with app instance for route registration...")
+    module_loader.reload_registered_modules()
 else:
     logger.warning(f"Skipping module reload: loader={module_loader}, registry={module_registry}")
+
+# Initialize unified search registry with all module entities
+logger.info("Initializing unified search registry...")
+try:
+    from app.core.platform_services.search_registry_init import init_search_registry
+    init_search_registry()
+    logger.info("Unified search registry initialized successfully")
+except Exception as e:
+    logger.error(f"Error initializing search registry: {e}")
 
 # Configurazione CORS con supporto dinamico per rete locale
 from starlette.middleware.cors import CORSMiddleware as StarletteMiddleware
@@ -218,6 +242,10 @@ app.add_middleware(TenantMiddleware)
 @app.on_event("startup")
 async def register_module_resources():
     """Registra menu items e widget dei moduli al startup"""
+    if os.getenv("REGISTER_MENUS_ON_STARTUP", "").lower() not in {"1", "true", "yes"}:
+        logger.info("Skipping menu/widget registration at startup (REGISTER_MENUS_ON_STARTUP not enabled)")
+        return
+
     import httpx
 
     async with httpx.AsyncClient() as client:
@@ -251,12 +279,21 @@ async def register_module_resources():
                     "required_permission": "platform.admin"
                 },
                 {
+                    "id": "platform.admin.roles_debug",
+                    "label": "Debug Ruoli",
+                    "path": "/admin/roles-debug",
+                    "icon": "shield-check",
+                    "parent_id": "platform.admin",
+                    "order_index": 3,
+                    "required_permission": "platform.admin"
+                },
+                {
                     "id": "platform.admin.data",
                     "label": "Amministrazione Dati",
                     "path": "/admin/data",
                     "icon": "list",
                     "parent_id": "platform.admin",
-                    "order_index": 3,
+                    "order_index": 4,
                     "required_permission": "platform.admin"
                 },
                 {
@@ -265,7 +302,7 @@ async def register_module_resources():
                     "path": "/admin/database",
                     "icon": "database",
                     "parent_id": "platform.admin",
-                    "order_index": 4,
+                    "order_index": 5,
                     "required_permission": "platform.admin"
                 }
                 # Scadenze removed - it's a CORE SERVICE (badge in TopBar), not a menu page
@@ -410,6 +447,86 @@ async def register_module_resources():
         except Exception as e:
             logger.warning(f"⚠️  Could not register affitti_lungo resources: {e}")
 
+        # Registra modulo AFFITTI_BREVI
+        try:
+            from affitti_brevi import MENU_ITEMS as AFFITTI_BREVI_MENU, WIDGETS as AFFITTI_BREVI_WIDGETS
+
+            logger.info("Registering menu items for affitti_brevi module...")
+            response = await client.post(
+                f"http://localhost:8000{settings.API_V1_STR}/platform/menu/register",
+                json={
+                    "module_id": "affitti_brevi",
+                    "items": AFFITTI_BREVI_MENU
+                },
+                timeout=5.0
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"✅ Registered {result['items_registered']} menu items for affitti_brevi")
+            else:
+                logger.error(f"❌ Failed to register menu items: HTTP {response.status_code}")
+
+            # Registra widget affitti_brevi
+            logger.info("Registering widgets for affitti_brevi module...")
+            response = await client.post(
+                f"http://localhost:8000{settings.API_V1_STR}/platform/dashboard/register-widgets",
+                json={
+                    "module_id": "affitti_brevi",
+                    "widgets": AFFITTI_BREVI_WIDGETS
+                },
+                timeout=5.0
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"✅ Registered {result['widgets_registered']} widgets for affitti_brevi")
+            else:
+                logger.error(f"❌ Failed to register widgets: HTTP {response.status_code}")
+
+        except Exception as e:
+            logger.warning(f"⚠️  Could not register affitti_brevi resources: {e}")
+
+        # Registra modulo ESEMPIO_COMPONENTI
+        try:
+            from esempio_componenti import MENU_ITEMS as ESEMPIO_MENU, WIDGETS as ESEMPIO_WIDGETS
+
+            logger.info("Registering menu items for esempio_componenti module...")
+            response = await client.post(
+                f"http://localhost:8000{settings.API_V1_STR}/platform/menu/register",
+                json={
+                    "module_id": "esempio_componenti",
+                    "items": ESEMPIO_MENU
+                },
+                timeout=5.0
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"✅ Registered {result['items_registered']} menu items for esempio_componenti")
+            else:
+                logger.error(f"❌ Failed to register menu items: HTTP {response.status_code}")
+
+            # Registra widget esempio_componenti
+            logger.info("Registering widgets for esempio_componenti module...")
+            response = await client.post(
+                f"http://localhost:8000{settings.API_V1_STR}/platform/dashboard/register-widgets",
+                json={
+                    "module_id": "esempio_componenti",
+                    "widgets": ESEMPIO_WIDGETS
+                },
+                timeout=5.0
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"✅ Registered {result['widgets_registered']} widgets for esempio_componenti")
+            else:
+                logger.error(f"❌ Failed to register widgets: HTTP {response.status_code}")
+
+        except Exception as e:
+            logger.warning(f"⚠️  Could not register esempio_componenti resources: {e}")
+
 
 @app.get("/")
 def root():
@@ -428,6 +545,8 @@ def health_check():
 # Registrazione auth routers
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(roles_router, prefix=settings.API_V1_STR)
+app.include_router(roles_debug_router, prefix=settings.API_V1_STR)
+app.include_router(ruoli_disponibili_router, prefix=settings.API_V1_STR)
 
 # Registrazione tenant routers (multi-tenant system)
 app.include_router(tenants_router, prefix=settings.API_V1_STR)
@@ -436,17 +555,23 @@ app.include_router(tenants_router, prefix=settings.API_V1_STR)
 app.include_router(platform_menu_router.router, prefix=settings.API_V1_STR)
 app.include_router(platform_dashboard_router.router, prefix=settings.API_V1_STR)
 
-# Platform-level routers (admin, import/export, scadenze)
+# Platform-level routers (admin, import/export, scadenze, tables, search)
 app.include_router(import_export_router, prefix=settings.API_V1_STR, tags=["Platform"])
+app.include_router(table_config_router, prefix=settings.API_V1_STR, tags=["Platform"])
+app.include_router(unified_search_router, prefix=settings.API_V1_STR, tags=["Search"])
 app.include_router(admin_comuni_router, prefix=settings.API_V1_STR, tags=["Admin"])
+app.include_router(admin_core_router, prefix=settings.API_V1_STR, tags=["Admin"])
 app.include_router(scadenze_router, prefix=settings.API_V1_STR)
 
 # ====================================================================
 # AUTO-DISCOVERY: Register all module routers dynamically
 # ====================================================================
 logger.info("🔍 Auto-discovering module routers...")
-module_names = ["anagrafica_italiana", "immobili", "affitti_lungo"]
+module_names = ["anagrafica_italiana", "immobili", "affitti_lungo", "affitti_brevi", "esempio_componenti"]
 total_routers_registered = 0
+modules_dir = Path(__file__).parent.parent / settings.MODULE_DIR
+if str(modules_dir) not in sys.path:
+    sys.path.insert(0, str(modules_dir))
 
 for module_name in module_names:
     try:
@@ -454,18 +579,22 @@ for module_name in module_names:
         module = __import__(module_name)
 
         # Check if module has ROUTERS attribute
-        if hasattr(module, 'ROUTERS'):
+        if hasattr(module, 'get_routers'):
+            routers = module.get_routers()
+            logger.info(f"📦 Module '{module_name}': Found {len(routers)} routers (lazy)")
+        elif hasattr(module, 'ROUTERS'):
             routers = module.ROUTERS
             logger.info(f"📦 Module '{module_name}': Found {len(routers)} routers")
-
-            # Register each router
-            for router in routers:
-                app.include_router(router, prefix=settings.API_V1_STR)
-                router_name = getattr(router, 'prefix', 'unknown')
-                logger.info(f"  ✅ Registered: {router_name}")
-                total_routers_registered += 1
         else:
-            logger.warning(f"⚠️  Module '{module_name}' has no ROUTERS attribute")
+            routers = []
+            logger.warning(f"⚠️  Module '{module_name}' has no routers")
+
+        # Register each router
+        for router in routers:
+            app.include_router(router, prefix=settings.API_V1_STR)
+            router_name = getattr(router, 'prefix', 'unknown')
+            logger.info(f"  ✅ Registered: {router_name}")
+            total_routers_registered += 1
     except ImportError as e:
         logger.error(f"❌ Failed to import module '{module_name}': {e}")
     except Exception as e:

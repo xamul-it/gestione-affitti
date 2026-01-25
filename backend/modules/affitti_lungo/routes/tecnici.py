@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
-from app.core.database import get_db
+from sqlalchemy import inspect
+from typing import List, Optional
+from app.core.database import get_db, get_tenant_schema
 from ..models import Tecnico
 from ..schemas.tecnici import TecnicoCreate, TecnicoUpdate, TecnicoResponse
 
@@ -13,9 +14,15 @@ def get_tecnici(
     skip: int = 0,
     limit: int = 100,
     attivi_solo: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Ottieni lista di tutti i tecnici"""
+    if not tenant_schema:
+        return []
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("tecnici", schema=tenant_schema):
+        return []
     query = db.query(Tecnico)
     if attivi_solo:
         query = query.filter(Tecnico.attivo == True)
@@ -24,8 +31,17 @@ def get_tecnici(
 
 
 @router.get("/{tecnico_id}", response_model=TecnicoResponse)
-def get_tecnico(tecnico_id: int, db: Session = Depends(get_db)):
+def get_tecnico(
+    tecnico_id: int,
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
+):
     """Ottieni dettagli di un tecnico specifico"""
+    if not tenant_schema:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tenant schema mancante")
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("tecnici", schema=tenant_schema):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tabella tecnici non presente")
     tecnico = db.query(Tecnico).filter(Tecnico.id == tecnico_id).first()
     if not tecnico:
         raise HTTPException(
@@ -36,8 +52,17 @@ def get_tecnico(tecnico_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=TecnicoResponse, status_code=status.HTTP_201_CREATED)
-def create_tecnico(tecnico: TecnicoCreate, db: Session = Depends(get_db)):
+def create_tecnico(
+    tecnico: TecnicoCreate,
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
+):
     """Crea un nuovo tecnico"""
+    if not tenant_schema:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tenant schema mancante")
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("tecnici", schema=tenant_schema):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tabella tecnici non presente")
     new_tecnico = Tecnico(**tecnico.model_dump())
     db.add(new_tecnico)
     db.commit()
@@ -49,9 +74,15 @@ def create_tecnico(tecnico: TecnicoCreate, db: Session = Depends(get_db)):
 def update_tecnico(
     tecnico_id: int,
     tecnico: TecnicoUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Aggiorna un tecnico esistente"""
+    if not tenant_schema:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tenant schema mancante")
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("tecnici", schema=tenant_schema):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tabella tecnici non presente")
     db_tecnico = db.query(Tecnico).filter(Tecnico.id == tecnico_id).first()
     if not db_tecnico:
         raise HTTPException(
@@ -69,8 +100,17 @@ def update_tecnico(
 
 
 @router.delete("/{tecnico_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_tecnico(tecnico_id: int, db: Session = Depends(get_db)):
+def delete_tecnico(
+    tecnico_id: int,
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
+):
     """Elimina un tecnico (soft delete - imposta attivo=False)"""
+    if not tenant_schema:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tenant schema mancante")
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("tecnici", schema=tenant_schema):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tabella tecnici non presente")
     db_tecnico = db.query(Tecnico).filter(Tecnico.id == tecnico_id).first()
     if not db_tecnico:
         raise HTTPException(

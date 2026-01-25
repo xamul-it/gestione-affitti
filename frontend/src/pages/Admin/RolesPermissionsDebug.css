@@ -1,0 +1,95 @@
+.roles-debug {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.roles-debug-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.roles-debug-header .header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.roles-debug-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: #2c3e50;
+}
+
+.roles-debug-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.roles-debug-loading,
+.roles-debug-empty {
+  text-align: center;
+  color: #6b7280;
+  padding: 16px;
+}
+
+.roles-debug-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.roles-debug-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.roles-debug-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.roles-debug-card-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #1f2937;
+}
+
+.roles-debug-card-header p {
+  margin: 4px 0 0 0;
+  color: #6b7280;
+}
+
+.roles-debug-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.roles-debug-table th,
+.roles-debug-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.9rem;
+}
+
+.roles-debug-table th {
+  background: #f9fafb;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.roles-debug-empty-perms {
+  color: #6b7280;
+  padding: 8px 0;
+}

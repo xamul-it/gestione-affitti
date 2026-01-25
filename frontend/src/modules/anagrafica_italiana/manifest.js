@@ -8,13 +8,13 @@
 export const manifest = {
   // Module identification
   id: 'anagrafica_italiana',
-  name: 'Anagrafica',
+  displayName: 'Anagrafica',
   version: '1.0.0',
   description: 'Gestione registro anagrafiche italiane con Codice Fiscale e Partita IVA',
 
   // Module metadata
   author: 'Gestione Affitti',
-  category: 'registry',
+  category: 'Base',
   icon: 'id-card',
 
   // Dependencies (no dependencies - this is a foundational module)

@@ -42,12 +42,14 @@ function Drawer() {
 
     // Immobili module routes
     if (path.startsWith('/unita-immobiliari') ||
+        path.startsWith('/terreni') ||
         path.startsWith('/proprietari') ||
         path.startsWith('/condomini') ||
         path.startsWith('/certificati-energetici') ||
         path.startsWith('/tabelle-millesimali') ||
         path.startsWith('/millesimi-immobile') ||
-        path.startsWith('/categorie-catastali')) {
+        path.startsWith('/categorie-catastali') ||
+        path.startsWith('/tipologie-terreno')) {
       return 'immobili';
     }
 

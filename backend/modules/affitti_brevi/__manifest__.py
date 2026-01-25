@@ -1,118 +1,265 @@
 """
 Affitti Brevi Module Manifest
+
+Short-term rental management module with unified calendar,
+iCal synchronization, guest management, and compliance tracking.
 """
 
 manifest = {
     "name": "Gestione Affitti Brevi",
     "technical_name": "affitti_brevi",
-    "version": "1.0.0",
-    "status": "production",  # Production ready as of 2025-12-28
-    "description": "Sistema completo per la gestione degli affitti brevi con sincronizzazione iCal, calendario multi-piattaforma, gestione ospiti, calcolo tassa di soggiorno e gestione scadenze legali",
+    "version": "2025021701",
+    "module_short_code": "abrev",
+    "schema_target": "tenant",
+    "migrations_path": "migrations/versions",
+    "seeds_path": "seeds",
+    "table_prefix": "ab",
+    "endpoints": {
+        "register": ":register",
+        "install": ":install",
+    },
+    "status": "production",
     "author": "Gestione Affitti Platform",
-    "icon": "calendar",
-
-    "category": "rentals",
     "sequence": 20,
+    "installable": True,
+    "auto_install": False,
+    "application": True,
 
     # Module dependencies
     "dependencies": [
         "immobili",            # For UnitaImmobiliare
         "anagrafica_italiana"  # For SoggettoAnagrafico (guests)
     ],
+    "depends": [
+        "immobili",
+        "anagrafica_italiana",
+    ],
 
     # Models provided by this module
     "models": [
-        # Phase 1-3: Core booking and calendar models
-        "calendario_ical",
+        # Channel configuration
+        "canale",
+        # Calendar and bookings
+        "calendario_canale",
         "prenotazione",
-        "ospite_prenotazione",
         "blocco_calendario",
-        # Phase 4: Tourist tax models
+        # Stay management
+        "soggiorno",
+        "ospite_soggiorno",
+        # Tourist tax
         "tassa_soggiorno_config",
         "tassa_soggiorno_scaglione",
-        "tassa_prenotazione",
-        # Phase 5: Deadlines and legal compliance models
-        # NOTE: Uses core.Scadenza (app.core.platform.models.scadenza) + extension table
-        "scadenza_ext",  # Extension table for affitti_brevi-specific scadenza metadata
-        "comunicazione_polizia",
+        "tassa_soggiorno",
+        # Communications and compliance
+        "comunicazione",
+        "attivita_schedulata",
     ],
 
     # API route prefix
     "api_prefix": "/affitti-brevi",
 
-    # Features completed
+    # API routes
+    "api_routes": [
+        {"prefix": "/canali", "description": "Booking channel management"},
+        {"prefix": "/calendari", "description": "Property-channel calendar links"},
+        {"prefix": "/calendario-unificato", "description": "Unified calendar view"},
+        {"prefix": "/prenotazioni", "description": "Booking management"},
+        {"prefix": "/soggiorni", "description": "Stay operations and guest management"},
+        {"prefix": "/sync", "description": "iCal synchronization"},
+        {"prefix": "/tasse", "description": "Tourist tax configuration and calculation"},
+    ],
+
+    # Features
     "features": {
-        "ical_sync": True,           # Phase 2: Automatic iCal synchronization (6-hour interval)
-        "multi_calendar": True,      # Phase 3: Multi-platform calendar with conflict detection
-        "tourist_tax": True,         # Phase 4: Tourist tax calculation (3 types: fixed, percentage, tiered)
-        "deadlines": True,           # Phase 5: Legal deadlines (Police 24h, ISTAT monthly)
-        "optimizations": True,       # Phase 6: Database indexes, caching, performance tuning
-        "frontend_calendar": True,   # Phase 3: Calendar UI components
-        "frontend_tax": True,        # Phase 4: Tax configuration UI
-        "frontend_deadlines": True,  # Phase 5: Deadline UI (ScadenzeList, ScadenzaDetail, Badge, ComunicazioniPoliziaList)
+        "unified_calendar": True,        # Single calendar per property aggregating all channels
+        "ical_sync": True,               # Automatic iCal synchronization
+        "conflict_detection": True,       # Overlapping booking detection
+        "guest_management": True,         # Guest data collection for compliance
+        "self_service_checkin": True,    # Guest self-service data entry
+        "tourist_tax": True,             # Tax calculation with exemptions
+        "police_communications": True,    # Alloggiati Web integration
+        "istat_statistics": True,        # ISTAT reporting
+        "scheduled_activities": True,    # Recurring tasks
     },
 
-    # Performance characteristics (Phase 6 optimizations)
-    "performance": {
-        "database_indexes": 11,      # Composite indexes for date queries, status filters
-        "caching": "in-memory",      # 1-hour TTL on calendar overview
-        "recommended_max_properties": 50,  # For optimal calendar performance
-        "calendar_cache_ttl": 3600,  # 1 hour
+    # Visual conventions (from analysis)
+    "calendar_visual": {
+        "channels": {
+            "AIRBNB": {"color": "#FF5A5F", "symbol": "A"},
+            "BOOKING_COM": {"color": "#003580", "symbol": "B"},
+            "VRBO": {"color": "#5D3B9E", "symbol": "V"},
+            "DIRETTO": {"color": "#2E8B57", "symbol": "D"},
+            "ALTRO": {"color": "#808080", "symbol": "?"},
+        },
+        "states": {
+            "LIBERO": {"display": "○", "description": "Available (border only)"},
+            "PRENOTATO": {"display": "●", "description": "Booked (filled)"},
+            "CHIUSO": {"display": "✕", "description": "Closed/unavailable"},
+        },
+        "aggregate_states": {
+            "LIBERO": "All channels free",
+            "OCCUPATO": "At least one booking",
+            "NON_DISPONIBILE": "Property blocked",
+            "CONFLITTO": "Multiple bookings - requires resolution",
+        }
     },
 
     # Permissions
     "permissions": [
         {
             "code": "affitti_brevi.view",
-            "name": "View Short-Term Rentals",
-            "description": "Can view bookings, guests, and calendars"
+            "name": "Visualizza Affitti Brevi",
+            "description": "Può visualizzare prenotazioni, ospiti e calendari"
         },
         {
             "code": "affitti_brevi.create",
-            "name": "Create Short-Term Rentals",
-            "description": "Can create bookings, guests, and calendars"
+            "name": "Crea Affitti Brevi",
+            "description": "Può creare prenotazioni e soggiorni"
         },
         {
             "code": "affitti_brevi.edit",
-            "name": "Edit Short-Term Rentals",
-            "description": "Can modify bookings, guests, and calendars"
+            "name": "Modifica Affitti Brevi",
+            "description": "Può modificare prenotazioni, ospiti e soggiorni"
         },
         {
             "code": "affitti_brevi.delete",
-            "name": "Delete Short-Term Rentals",
-            "description": "Can delete bookings, guests, and calendars"
+            "name": "Elimina Affitti Brevi",
+            "description": "Può eliminare prenotazioni e soggiorni"
+        },
+        {
+            "code": "affitti_brevi.checkin",
+            "name": "Gestione Check-in",
+            "description": "Può eseguire check-in e check-out"
         },
         {
             "code": "affitti_brevi.sync",
-            "name": "Sync iCal Calendars",
-            "description": "Can trigger manual iCal synchronization"
+            "name": "Sincronizzazione iCal",
+            "description": "Può attivare sincronizzazione manuale dei calendari"
         },
         {
             "code": "affitti_brevi.tax_config",
-            "name": "Configure Tourist Tax",
-            "description": "Can configure municipality tourist tax settings"
+            "name": "Configurazione Tasse",
+            "description": "Può configurare le tariffe della tassa di soggiorno"
         },
         {
             "code": "affitti_brevi.tax_override",
-            "name": "Override Tax Calculations",
-            "description": "Can manually override automatic tax calculations"
-        },
-        {
-            "code": "affitti_brevi.deadlines",
-            "name": "Manage Deadlines",
-            "description": "Can view and complete legal deadlines (Police, ISTAT)"
+            "name": "Override Tasse",
+            "description": "Può sovrascrivere manualmente il calcolo delle tasse"
         },
         {
             "code": "affitti_brevi.communications",
-            "name": "Manage Police Communications",
-            "description": "Can manage police guest communications (Alloggiati Web)"
+            "name": "Comunicazioni Obbligatorie",
+            "description": "Può gestire comunicazioni Polizia e ISTAT"
         },
+        {
+            "code": "affitti_brevi.channels",
+            "name": "Gestione Canali",
+            "description": "Può configurare canali di prenotazione"
+        },
+    ],
+
+    # Frontend routes
+    "frontend_routes": [
+        {
+            "path": "/affitti-brevi/calendario",
+            "component": "CalendarioMultiPiattaforma",
+            "label": "Calendario",
+            "icon": "calendar",
+        },
+        {
+            "path": "/affitti-brevi/prenotazioni",
+            "component": "PrenotazioniList",
+            "label": "Prenotazioni",
+            "icon": "calendar-check",
+        },
+        {
+            "path": "/affitti-brevi/calendari",
+            "component": "CalendariList",
+            "label": "Calendari iCal",
+            "icon": "calendar-alt",
+        },
+        {
+            "path": "/affitti-brevi/tasse",
+            "component": "TassaConfigList",
+            "label": "Tasse Soggiorno",
+            "icon": "euro-sign",
+        },
+    ],
+
+    # Menu items
+    "menu_items": [
+        {
+            "id": "affitti_brevi.calendario",
+            "label": "Calendario",
+            "path": "/affitti-brevi/calendario",
+            "icon": "calendar",
+            "order_index": 5,
+            "required_permission": "affitti_brevi.view",
+        },
+        {
+            "id": "affitti_brevi.prenotazioni",
+            "label": "Prenotazioni",
+            "path": "/affitti-brevi/prenotazioni",
+            "icon": "calendar-check",
+            "order_index": 10,
+            "required_permission": "affitti_brevi.view",
+        },
+        {
+            "id": "affitti_brevi.calendari",
+            "label": "Calendari iCal",
+            "path": "/affitti-brevi/calendari",
+            "icon": "calendar-alt",
+            "order_index": 20,
+            "required_permission": "affitti_brevi.view",
+        },
+        {
+            "id": "affitti_brevi.tasse",
+            "label": "Tasse Soggiorno",
+            "path": "/affitti-brevi/tasse",
+            "icon": "euro-sign",
+            "order_index": 25,
+            "required_permission": "affitti_brevi.view",
+        },
+    ],
+
+    # Dashboard widgets
+    "widgets": [
+        {
+            "id": "affitti_brevi.scadenze",
+            "title": "Scadenze Affitti Brevi",
+            "component": "ScadenzeWidget",
+            "description": "Monitoraggio scadenze urgenti: comunicazioni polizia, ISTAT e adempimenti",
+            "default_width": 6,
+            "default_height": 4,
+            "category": "alerts",
+            "module_id": "affitti_brevi",
+            "required_permission": "affitti_brevi.view"
+        },
+        {
+            "id": "affitti_brevi.calendario",
+            "title": "Calendario Prenotazioni",
+            "component": "CalendarioWidget",
+            "description": "Panoramica prenotazioni prossimi 7 giorni e conflitti da risolvere",
+            "default_width": 6,
+            "default_height": 4,
+            "category": "stats",
+            "module_id": "affitti_brevi",
+            "required_permission": "affitti_brevi.view"
+        },
+    ],
+
+    # Seeds
+    "seeds": [
+        {
+            "name": "seed_canali",
+            "description": "Default booking channels (Airbnb, Booking.com, Vrbo, Direct)",
+            "target": "tenant"
+        }
     ],
 
     # Documentation
     "documentation": {
-        "user_guide": "USER_GUIDE.md",           # Comprehensive user manual (Italian)
-        "optimization_guide": "OPTIMIZATION_GUIDE.md",  # Performance tuning and deployment guide
-        "functional_analysis": "../../docs/ANALISI_FUNZIONALE_AFFITTI_BREVI.md",  # Original requirements
+        "analysis": "Analisi.md",
+        "user_guide": "USER_GUIDE.md",
     },
 }

@@ -18,9 +18,10 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useDataTable, useDebounce, useToast } from '../../hooks';
+import { useDataTable, useDebounce, useToast, tableConfigAPI } from '../../hooks';
 import { formatValue, getNestedValue } from '../../utils/formatters';
 import { LoadingSpinner, EmptyState, ErrorMessage, ConfirmDialog, Badge, StatusBadge } from '../common';
+import { ColumnSelector } from './ColumnSelector';
 import './DataTable.css';
 
 /**
@@ -35,6 +36,11 @@ export function DataTable({
   onDelete,
   onRowClick,
   customActions,
+  toolbarContent,
+  addDisabled = false,
+  hideAddButton = false,
+  tableOptions = {},
+  onTableReady,
   options = {},
 }) {
   const {
@@ -45,6 +51,7 @@ export function DataTable({
     bulkActions = [],
     defaultSort,
     defaultFilters,
+    defaultParams,
     searchPlaceholder = 'Cerca...',
     emptyTitle = 'Nessun dato trovato',
     emptyMessage,
@@ -66,8 +73,9 @@ export function DataTable({
     columns,
     defaultSort,
     defaultFilters,
+    defaultParams,
     pageSize,
-  });
+  }, tableOptions);
 
   // Local UI state
   const [showForm, setShowForm] = useState(false);
@@ -77,9 +85,16 @@ export function DataTable({
   const [isDeleting, setIsDeleting] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [bulkDeleteTarget, setBulkDeleteTarget] = useState([]);
+  const [columnSelectorOpen, setColumnSelectorOpen] = useState(false);
 
   // Toast notifications
   const toast = useToast();
+
+  React.useEffect(() => {
+    if (onTableReady) {
+      onTableReady(table);
+    }
+  }, [onTableReady, table]);
 
   // Search with debounce
   const [searchInput, setSearchInput] = useState('');
@@ -242,6 +257,14 @@ export function DataTable({
     return (
       <div className="core-datatable__actions">
         {rowActions.map((action) => {
+          if (action.visible && !action.visible(row)) {
+            return null;
+          }
+
+          const actionLabel = typeof action.label === 'function' ? action.label(row) : action.label;
+          const actionVariant = typeof action.variant === 'function' ? action.variant(row) : action.variant;
+          const actionIcon = typeof action.icon === 'function' ? action.icon(row) : action.icon;
+
           // Built-in actions
           if (action.action === 'view' || action.id === 'view') {
             if (action.to) {
@@ -251,9 +274,9 @@ export function DataTable({
                   key={action.id}
                   to={linkPath}
                   className="core-datatable__action-btn core-datatable__action-btn--primary"
-                  title={action.label || 'Dettagli'}
+                  title={actionLabel || 'Dettagli'}
                 >
-                  {action.icon || 'Dettagli'}
+                  {actionIcon || 'Dettagli'}
                 </Link>
               );
             }
@@ -263,9 +286,9 @@ export function DataTable({
                 type="button"
                 className="core-datatable__action-btn core-datatable__action-btn--primary"
                 onClick={() => handleView(row)}
-                title={action.label || 'Dettagli'}
+                title={actionLabel || 'Dettagli'}
               >
-                {action.icon || 'Dettagli'}
+                {actionIcon || 'Dettagli'}
               </button>
             );
           }
@@ -277,9 +300,9 @@ export function DataTable({
                 type="button"
                 className="core-datatable__action-btn core-datatable__action-btn--secondary"
                 onClick={() => handleEdit(row)}
-                title={action.label || 'Modifica'}
+                title={actionLabel || 'Modifica'}
               >
-                {action.icon || 'Modifica'}
+                {actionIcon || 'Modifica'}
               </button>
             );
           }
@@ -291,9 +314,9 @@ export function DataTable({
                 type="button"
                 className="core-datatable__action-btn core-datatable__action-btn--danger"
                 onClick={() => handleDeleteRequest(row)}
-                title={action.label || 'Elimina'}
+                title={actionLabel || 'Elimina'}
               >
-                {action.icon || 'Elimina'}
+                {actionIcon || 'Elimina'}
               </button>
             );
           }
@@ -304,11 +327,11 @@ export function DataTable({
               <button
                 key={action.id}
                 type="button"
-                className={`core-datatable__action-btn core-datatable__action-btn--${action.variant || 'default'}`}
-                onClick={() => action.onClick(row)}
-                title={action.label}
+                className={`core-datatable__action-btn core-datatable__action-btn--${actionVariant || 'default'}`}
+                onClick={() => action.onClick(row, table)}
+                title={actionLabel}
               >
-                {action.icon || action.label}
+                {actionIcon || actionLabel}
               </button>
             );
           }
@@ -338,14 +361,17 @@ export function DataTable({
       <div className="core-datatable__header">
         <h1 className="core-datatable__title">{title}</h1>
         <div className="core-datatable__header-actions">
-          {customActions}
-          <button
-            type="button"
-            className="core-datatable__add-btn"
-            onClick={handleAdd}
-          >
-            + {addButtonLabel}
-          </button>
+          {typeof customActions === 'function' ? customActions({ table }) : customActions}
+          {!hideAddButton && (
+            <button
+              type="button"
+              className="core-datatable__add-btn"
+              onClick={handleAdd}
+              disabled={addDisabled}
+            >
+              + {addButtonLabel}
+            </button>
+          )}
         </div>
       </div>
 
@@ -379,6 +405,12 @@ export function DataTable({
                 ⟳
               </span>
             )}
+          </div>
+        )}
+
+        {toolbarContent && (
+          <div className="core-datatable__toolbar-extra">
+            {typeof toolbarContent === 'function' ? toolbarContent({ table }) : toolbarContent}
           </div>
         )}
 
@@ -431,6 +463,77 @@ export function DataTable({
           >
             Rimuovi filtri
           </button>
+        )}
+
+        {/* Column Selector Toggle */}
+        {showColumnSelector !== undefined && (
+          <div className="core-datatable__column-selector-wrapper">
+            <button
+              type="button"
+              className="core-datatable__columns-btn"
+              onClick={() => setColumnSelectorOpen(!columnSelectorOpen)}
+              title="Gestisci colonne"
+            >
+              <span className="core-datatable__columns-icon">☰</span>
+              Colonne
+            </button>
+
+            {columnSelectorOpen && (
+              <>
+                <div
+                  className="core-datatable__column-selector-overlay"
+                  onClick={() => setColumnSelectorOpen(false)}
+                />
+                <ColumnSelector
+                  columns={columns}
+                  visibleColumns={visibleColumns.map(c => c.field)}
+                  onColumnsChange={(newColumns) => {
+                    // Update local state
+                    newColumns.forEach(field => {
+                      if (!table.columnVisibility[field]) {
+                        table.toggleColumnVisibility(field);
+                      }
+                    });
+                    Object.keys(table.columnVisibility).forEach(field => {
+                      if (table.columnVisibility[field] && !newColumns.includes(field)) {
+                        table.toggleColumnVisibility(field);
+                      }
+                    });
+
+                    // Persist to backend if module/entity configured
+                    if (config.moduleName && config.entityName) {
+                      tableConfigAPI.updateColumns(
+                        config.moduleName,
+                        config.entityName,
+                        newColumns
+                      ).catch(err => {
+                        console.warn('Could not persist column config:', err);
+                      });
+                    }
+                  }}
+                  onReset={() => {
+                    // Reset all columns to visible
+                    columns.forEach(col => {
+                      if (!table.columnVisibility[col.field]) {
+                        table.toggleColumnVisibility(col.field);
+                      }
+                    });
+
+                    // Reset backend config
+                    if (config.moduleName && config.entityName) {
+                      tableConfigAPI.resetConfig(
+                        config.moduleName,
+                        config.entityName
+                      ).catch(err => {
+                        console.warn('Could not reset column config:', err);
+                      });
+                    }
+                  }}
+                  onClose={() => setShowColumnSelector(false)}
+                />
+              </>
+            )}
+          </div>
         )}
       </div>
 

@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { renderIcon } from '../../components/Navigation/iconRegistry.jsx';
 import { useTenant } from '../../contexts/TenantContext';
+import { useNavigation } from '../../contexts/NavigationContext';
+import { loadLocalModuleManifests } from '../../core/modules/localManifests.js';
 import './TenantModules.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -13,6 +16,10 @@ export default function TenantModules() {
   const [configEditor, setConfigEditor] = useState(null);
   const [configValue, setConfigValue] = useState('');
   const [configSaving, setConfigSaving] = useState(false);
+  const [localManifests, setLocalManifests] = useState({});
+  const [dropTablesByModule, setDropTablesByModule] = useState({});
+  const [seedTestDataByModule, setSeedTestDataByModule] = useState({});
+  const { loadMenu } = useNavigation();
 
   useEffect(() => {
     if (!currentTenant) {
@@ -20,6 +27,7 @@ export default function TenantModules() {
       return;
     }
     loadTenantModules(currentTenant.id);
+    loadLocalModuleManifests().then(setLocalManifests);
   }, [currentTenant?.id]);
 
   const loadTenantModules = async (tenantId) => {
@@ -42,7 +50,12 @@ export default function TenantModules() {
     }
   };
 
-  const toggleTenantModule = async (moduleId, enabled) => {
+  const toggleTenantModule = async (
+    moduleId,
+    enabled,
+    dropTables = false,
+    seedTestData = false
+  ) => {
     if (!currentTenant) return;
     try {
       const token = localStorage.getItem('access_token');
@@ -51,19 +64,33 @@ export default function TenantModules() {
         return;
       }
       if (enabled) {
+        if (dropTables) {
+          const confirmed = window.confirm(
+            'Confermi la disabilitazione con cancellazione delle tabelle? Questa operazione elimina i dati del modulo per il tenant.'
+          );
+          if (!confirmed) {
+            return;
+          }
+        }
         await axios.post(
           `${API_BASE_URL}/tenants/${currentTenant.id}/modules/${moduleId}/disable`,
           {},
-          { headers: { Authorization: `Bearer ${token}` } }
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            params: dropTables ? { drop_tables: true } : undefined,
+          }
         );
       } else {
         await axios.post(
           `${API_BASE_URL}/tenants/${currentTenant.id}/modules/install`,
-          { module_id: moduleId },
+          { module_id: moduleId, seed_test_data: seedTestData },
           { headers: { Authorization: `Bearer ${token}` } }
         );
       }
+      setDropTablesByModule((prev) => ({ ...prev, [moduleId]: false }));
+      setSeedTestDataByModule((prev) => ({ ...prev, [moduleId]: false }));
       await loadTenantModules(currentTenant.id);
+      await loadMenu();
     } catch (err) {
       alert(`Errore moduli: ${err.response?.data?.detail || 'Operazione fallita'}`);
     }
@@ -159,38 +186,149 @@ export default function TenantModules() {
           <p>Nessun modulo disponibile.</p>
         </div>
       ) : (
-        <div className="tenant-modules-list">
-          {modules.map((module) => (
-            <div key={module.module_id} className="tenant-modules-item">
-              <div className="module-main">
-                <div className="module-title">
-                  <strong>{module.name}</strong>
-                  <span className={`module-status ${module.enabled ? 'enabled' : 'disabled'}`}>
-                    {module.enabled ? 'Attivo' : 'Disattivo'}
-                  </span>
+        <div className="tenant-modules-groups">
+          {Object.entries(
+            modules.reduce((acc, module) => {
+              const local = localManifests[module.module_id]
+              const category = (local?.category || module.category || 'other').toLowerCase()
+              if (!acc[category]) acc[category] = []
+              acc[category].push(module)
+              return acc
+            }, {})
+          )
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([category, groupModules]) => (
+              <section key={category} className="tenant-modules-group">
+                <div className="tenant-modules-group-header">
+                  <h2>{category}</h2>
+                  <span className="tenant-modules-group-count">{groupModules.length} moduli</span>
                 </div>
-                <div className="module-meta">
-                  <code>{module.module_id}</code>
-                  <span className="module-meta-sep">•</span>
-                  <span>Tabelle: {module.table_count}</span>
+                <div className="tenant-modules-grid">
+                  {[...groupModules]
+                    .sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase()))
+                    .map(module => {
+                      const local = localManifests[module.module_id]
+                      const displayName = local?.displayName || module.name
+                      const displayDescription = local?.description || module.description
+                      const displayIcon = local?.icon || module.icon
+                      return (
+                    <div key={module.module_id} className="tenant-module-card">
+                      <div className="tenant-module-header">
+                        <div className="tenant-module-info">
+                          <div className="tenant-module-title">
+                            <span className="tenant-module-title-icon" aria-hidden="true">
+                              {renderIcon(displayIcon || 'package', { size: 18, fallbackClassName: 'tenant-module-icon-emoji' })}
+                            </span>
+                            <h3>{displayName}</h3>
+                          </div>
+                          {module.version && <span className="tenant-module-version">v{module.version}</span>}
+                        </div>
+                        <div className="tenant-module-status">
+                          <span className={`status-badge ${module.enabled ? 'active' : 'inactive'}`}>
+                            {module.enabled ? 'Attivo' : 'Disattivo'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="tenant-module-body">
+                        <p className="tenant-module-description">
+                          {displayDescription || 'Nessuna descrizione disponibile'}
+                        </p>
+
+                        {module.author && (
+                          <p className="tenant-module-author">
+                            <strong>Autore:</strong> {module.author}
+                          </p>
+                        )}
+
+                        <p className="tenant-module-technical-name">
+                          <strong>Nome tecnico:</strong> <code>{module.module_id}</code>
+                        </p>
+
+                        <div className="tenant-module-tables">
+                          <strong>Tabelle presenti ({module.tenant_tables?.length ?? 0}):</strong>
+                          {module.tenant_tables && module.tenant_tables.length > 0 ? (
+                            <div className="tenant-module-tables-list">
+                              {module.tenant_tables.map(table => (
+                                <span key={table} className="tenant-module-table-pill">
+                                  {table}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="tenant-module-tables-empty">Nessuna</span>
+                          )}
+                        </div>
+
+                        <div className="tenant-module-dependencies">
+                          <strong>Dipendenze:</strong>
+                          {module.dependencies && module.dependencies.length > 0 ? (
+                            <ul>
+                              {module.dependencies.map(dep => (
+                                <li key={dep}><code>{dep}</code></li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <span className="tenant-module-dependencies-empty">Nessuna</span>
+                          )}
+                        </div>
+
+                        <div className="tenant-module-actions">
+                          {!module.enabled && (
+                            <label className="tenant-module-testdata-toggle">
+                              <input
+                                type="checkbox"
+                                checked={!!seedTestDataByModule[module.module_id]}
+                                onChange={(event) =>
+                                  setSeedTestDataByModule((prev) => ({
+                                    ...prev,
+                                    [module.module_id]: event.target.checked,
+                                  }))
+                                }
+                              />
+                              Carica dati di test
+                            </label>
+                          )}
+                          {module.enabled && (
+                            <label className="tenant-module-drop-toggle">
+                              <input
+                                type="checkbox"
+                                checked={!!dropTablesByModule[module.module_id]}
+                                onChange={(event) =>
+                                  setDropTablesByModule((prev) => ({
+                                    ...prev,
+                                    [module.module_id]: event.target.checked,
+                                  }))
+                                }
+                              />
+                              Cancella tabelle tenant
+                            </label>
+                          )}
+                          <button
+                            className={`btn btn-sm ${module.enabled ? 'btn-outline' : 'btn-primary'}`}
+                            onClick={() => toggleTenantModule(
+                              module.module_id,
+                              module.enabled,
+                              !!dropTablesByModule[module.module_id],
+                              !!seedTestDataByModule[module.module_id]
+                            )}
+                          >
+                            {module.enabled ? 'Disabilita' : 'Abilita'}
+                          </button>
+                          <button
+                            className="btn btn-sm btn-secondary"
+                            onClick={() => openConfigEditor(module)}
+                          >
+                            Config
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                      )
+                    })}
                 </div>
-              </div>
-              <div className="module-actions">
-                <button
-                  className={`btn btn-sm ${module.enabled ? 'btn-outline' : 'btn-primary'}`}
-                  onClick={() => toggleTenantModule(module.module_id, module.enabled)}
-                >
-                  {module.enabled ? 'Disabilita' : 'Abilita'}
-                </button>
-                <button
-                  className="btn btn-sm btn-secondary"
-                  onClick={() => openConfigEditor(module)}
-                >
-                  Config
-                </button>
-              </div>
-            </div>
-          ))}
+              </section>
+            ))}
         </div>
       )}
 

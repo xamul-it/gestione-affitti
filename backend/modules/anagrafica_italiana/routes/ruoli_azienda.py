@@ -3,11 +3,11 @@ API endpoints for RuoloAzienda (Person-Company role associations)
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
-from typing import List
+from sqlalchemy import func, inspect
+from typing import List, Optional
 from datetime import date
 
-from app.core.database import get_db
+from app.core.database import get_db, get_tenant_schema
 from app.core.auth.dependencies import get_current_user, require_permission
 from app.core.auth.models import User
 
@@ -27,9 +27,15 @@ def get_all_ruoli_azienda(
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(require_permission("soggetto.view")),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Ottieni tutti i ruoli azienda"""
+    if not tenant_schema:
+        return []
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
+        return []
     ruoli = db.query(RuoloAzienda).options(
         joinedload(RuoloAzienda.persona_fisica),
         joinedload(RuoloAzienda.persona_giuridica)
@@ -42,7 +48,8 @@ def get_ruoli_by_soggetto(
     soggetto_id: int,
     attivi_only: bool = False,
     current_user: User = Depends(require_permission("soggetto.view")),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """
     Ottieni tutti i ruoli per un soggetto specifico.
@@ -51,6 +58,12 @@ def get_ruoli_by_soggetto(
     - come_persona: ruoli in cui questo soggetto lavora come persona fisica
     - come_azienda: ruoli in cui questo soggetto ha dipendenti (se è un'azienda)
     """
+    if not tenant_schema:
+        return {"come_persona": [], "come_azienda": []}
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
+        return {"come_persona": [], "come_azienda": []}
+
     soggetto = db.query(SoggettoAnagrafico).filter(SoggettoAnagrafico.id == soggetto_id).first()
     if not soggetto:
         raise HTTPException(
@@ -142,9 +155,15 @@ def get_ruoli_by_soggetto(
 def get_ruolo_azienda(
     ruolo_id: int,
     current_user: User = Depends(require_permission("soggetto.view")),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Ottieni un ruolo azienda specifico"""
+    if not tenant_schema:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
     ruolo = db.query(RuoloAzienda).options(
         joinedload(RuoloAzienda.persona_fisica),
         joinedload(RuoloAzienda.persona_giuridica)
@@ -163,9 +182,15 @@ def get_ruolo_azienda(
 def create_ruolo_azienda(
     ruolo_data: RuoloAziendaCreate,
     current_user: User = Depends(require_permission("soggetto.create")),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Crea un nuovo ruolo azienda (associazione persona-azienda)"""
+    if not tenant_schema:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant non valido")
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Modulo ruoli azienda non attivo")
 
     # Valida che persona_fisica sia effettivamente una persona fisica
     persona = db.query(SoggettoAnagrafico).filter(
@@ -225,9 +250,15 @@ def update_ruolo_azienda(
     ruolo_id: int,
     ruolo_update: RuoloAziendaUpdate,
     current_user: User = Depends(require_permission("soggetto.update")),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Aggiorna un ruolo azienda esistente"""
+    if not tenant_schema:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
     ruolo = db.query(RuoloAzienda).filter(RuoloAzienda.id == ruolo_id).first()
 
     if not ruolo:
@@ -268,9 +299,15 @@ def update_ruolo_azienda(
 def delete_ruolo_azienda(
     ruolo_id: int,
     current_user: User = Depends(require_permission("soggetto.delete")),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Elimina un ruolo azienda"""
+    if not tenant_schema:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
     ruolo = db.query(RuoloAzienda).filter(RuoloAzienda.id == ruolo_id).first()
 
     if not ruolo:

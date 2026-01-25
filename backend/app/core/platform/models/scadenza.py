@@ -46,7 +46,7 @@ class Scadenza(Base):
     Audit Trail:
         - All changes tracked in scadenza_log via relationship
     """
-    __tablename__ = "scadenze"
+    __tablename__ = "core_scadenze"
 
     # Primary key
     id = Column(Integer, primary_key=True, index=True)
@@ -79,7 +79,7 @@ class Scadenza(Base):
     # Creator tracking
     creato_da = Column(
         Integer,
-        ForeignKey('users.id', ondelete='CASCADE'),
+        ForeignKey('core_users.id', ondelete='CASCADE'),
         nullable=False,
         comment="User who created this scadenza"
     )
@@ -101,7 +101,7 @@ class Scadenza(Base):
     # Completion tracking
     completato_da = Column(
         Integer,
-        ForeignKey('users.id', ondelete='SET NULL'),
+        ForeignKey('core_users.id', ondelete='SET NULL'),
         nullable=True,
         comment="User who completed this scadenza"
     )
@@ -138,9 +138,10 @@ class Scadenza(Base):
 
     # Indexes for performance
     __table_args__ = (
-        Index('idx_scadenze_entity', 'modulo', 'entity_type', 'entity_id'),
-        Index('idx_scadenze_stato_data', 'stato', 'data_scadenza'),
-        Index('idx_scadenze_creator', 'creato_da'),
+        Index('idx_core_scadenze_entity', 'modulo', 'entity_type', 'entity_id'),
+        Index('idx_core_scadenze_stato_data', 'stato', 'data_scadenza'),
+        Index('idx_core_scadenze_creator', 'creato_da'),
+        {"extend_existing": True}
     )
 
     def __repr__(self):

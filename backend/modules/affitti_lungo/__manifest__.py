@@ -7,12 +7,11 @@ This is a built-in module (legacy location in app/modules/).
 manifest = {
     "name": "Affitti",
     "technical_name": "affitti_lungo",
-    "version": "1.0.0",
-    "description": "Gestione completa affitti a lungo termine: contratti, affittuari, incassi, spese",
+    "version": "2025022001",
+    "module_short_code": "alng",
+    "schema_target": "tenant",
+    "migrations_path": "migrations/versions",
     "author": "Gestione Affitti Team",
-    "icon": "briefcase",
-
-    "category": "rental",
     "sequence": 100,  # Built-in module, higher sequence
 
     # Dependencies on other modules

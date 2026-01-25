@@ -45,7 +45,7 @@ class ScadenzaLog(Base):
             note="Contratto firmato, chiudo la scadenza"
         )
     """
-    __tablename__ = "scadenza_log"
+    __tablename__ = "core_scadenza_log"
 
     # Primary key
     id = Column(Integer, primary_key=True, index=True)
@@ -53,13 +53,13 @@ class ScadenzaLog(Base):
     # Foreign keys
     scadenza_id = Column(
         Integer,
-        ForeignKey('scadenze.id', ondelete='CASCADE'),
+        ForeignKey('core_scadenze.id', ondelete='CASCADE'),
         nullable=False,
         comment="Reference to parent scadenza"
     )
     user_id = Column(
         Integer,
-        ForeignKey('users.id', ondelete='SET NULL'),
+        ForeignKey('core_users.id', ondelete='SET NULL'),
         nullable=True,
         comment="User who performed the action (null for system actions)"
     )
@@ -114,9 +114,10 @@ class ScadenzaLog(Base):
 
     # Indexes for performance
     __table_args__ = (
-        Index('idx_log_scadenza', 'scadenza_id'),
-        Index('idx_log_timestamp', 'timestamp'),
-        Index('idx_log_azione', 'azione'),
+        Index('idx_core_log_scadenza', 'scadenza_id'),
+        Index('idx_core_log_timestamp', 'timestamp'),
+        Index('idx_core_log_azione', 'azione'),
+        {"extend_existing": True}
     )
 
     def __repr__(self):

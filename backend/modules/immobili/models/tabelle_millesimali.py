@@ -1,3 +1,9 @@
+"""
+TabellaMillesimale Model - Millesimal table for condominium expense distribution.
+
+SCHEMA: TENANT
+PREFIX: immo_ (modulo immobili)
+"""
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, Float, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -15,10 +21,17 @@ class TipoRipartizione(str, enum.Enum):
 
 
 class TabellaMillesimale(Base):
-    __tablename__ = "tabelle_millesimali"
+    """
+    Millesimal table for condominium expense distribution.
+
+    Each condominium can have multiple tables for different expense types
+    (general expenses, elevator, heating, etc.)
+    """
+    __tablename__ = "immo_tabelle_millesimali"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    condominio_id = Column(Integer, ForeignKey("condomini.id"), nullable=False)
+    condominio_id = Column(Integer, ForeignKey("immo_condomini.id"), nullable=False)
     nome = Column(String(255), nullable=False)  # es. "Spese Generali", "Ascensore", "Riscaldamento"
     codice = Column(String(50), nullable=False, index=True)  # codice identificativo
     tipo_ripartizione = Column(Enum(TipoRipartizione), nullable=False, default=TipoRipartizione.MILLESIMI)

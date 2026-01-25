@@ -109,12 +109,9 @@ def get_my_dashboard(
         else:
             enabled_module_ids = set()
     if enabled_module_ids is None:
-        enabled_modules = db.query(Module.technical_name).filter(
-            Module.enabled == True
-        ).all()
-        enabled_module_ids = {m[0] for m in enabled_modules}
+        enabled_module_ids = set()
 
-    logger.debug(f"Enabled modules: {enabled_module_ids}")
+    logger.debug(f"Visible modules: {enabled_module_ids}")
 
     # 3. Carica widget disponibili (filtrati per moduli abilitati e permessi)
     all_widgets = db.query(Widget).filter(Widget.is_active == True).all()
@@ -314,10 +311,7 @@ def get_available_widgets(
         else:
             enabled_module_ids = set()
     if enabled_module_ids is None:
-        enabled_modules = db.query(Module.technical_name).filter(
-            Module.enabled == True
-        ).all()
-        enabled_module_ids = {m[0] for m in enabled_modules}
+        enabled_module_ids = set()
 
     # Filtra widget per moduli abilitati e permessi
     all_widgets = db.query(Widget).filter(Widget.is_active == True).all()

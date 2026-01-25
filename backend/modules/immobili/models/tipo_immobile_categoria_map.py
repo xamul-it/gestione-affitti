@@ -3,6 +3,9 @@ Tipo Immobile to Categoria Catastale Mapping Model.
 
 Maps free-text property types (e.g., "appartamento", "box") to official
 cadastral categories. Supports both system-defined and user-defined mappings.
+
+SCHEMA: TENANT
+PREFIX: immo_ (modulo immobili)
 """
 from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
@@ -24,13 +27,14 @@ class TipoImmobileCategoriaMap(Base):
     - "box" → C/6 (confidence: 1.0, user_defined: False)
     - "casa signorile" → A/1 (confidence: 0.8, user_defined: True)
     """
-    __tablename__ = "tipo_immobile_categoria_map"
+    __tablename__ = "immo_tipo_immobile_categoria_map"
 
     id = Column(Integer, primary_key=True, index=True)
     tipo_immobile = Column(String(100), nullable=False, index=True)  # Normalized lowercase
+    # FK to public.immo_categorie_catastali
     categoria_catastale_id = Column(
         Integer,
-        ForeignKey("categorie_catastali.id", ondelete="CASCADE"),
+        ForeignKey("public.immo_categorie_catastali.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
@@ -44,7 +48,8 @@ class TipoImmobileCategoriaMap(Base):
 
     # Constraints
     __table_args__ = (
-        UniqueConstraint("tipo_immobile", "categoria_catastale_id", name="uq_tipo_categoria"),
+        UniqueConstraint("tipo_immobile", "categoria_catastale_id", name="immo_uq_tipo_categoria"),
+        {"extend_existing": True}
     )
 
     def __repr__(self):

@@ -215,7 +215,7 @@ function TopBar() {
               aria-expanded={tenantMenuOpen}
             >
               <span className={`topbar-switcher-caret-icon ${tenantMenuOpen ? 'open' : ''}`} aria-hidden="true">
-                ▾
+                ▼
               </span>
             </button>
 
@@ -282,7 +282,7 @@ function TopBar() {
               aria-expanded={debugMenuOpen}
             >
               <span className={`topbar-switcher-caret-icon ${debugMenuOpen ? 'open' : ''}`} aria-hidden="true">
-                ▾
+                ▼
               </span>
             </button>
             {debugMenuOpen && (
@@ -309,6 +309,30 @@ function TopBar() {
                 >
                   Permessi moduli
                 </button>
+                <Link
+                  to="/admin/roles-debug"
+                  className="topbar-switcher-item"
+                  onClick={() => setDebugMenuOpen(false)}
+                  role="menuitem"
+                >
+                  Debug ruoli
+                </Link>
+                <Link
+                  to="/admin/tenant-maintenance"
+                  className="topbar-switcher-item"
+                  onClick={() => setDebugMenuOpen(false)}
+                  role="menuitem"
+                >
+                  Reset tenant
+                </Link>
+                <Link
+                  to="/admin/core-cleanup"
+                  className="topbar-switcher-item"
+                  onClick={() => setDebugMenuOpen(false)}
+                  role="menuitem"
+                >
+                  Pulizia core
+                </Link>
                 <button
                   className="topbar-switcher-item"
                   onClick={() => {

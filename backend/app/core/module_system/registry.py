@@ -40,9 +40,9 @@ class ModuleRegistry:
         """Get all installed modules."""
         return self.db.query(Module).all()
 
-    def get_enabled_modules(self) -> List[Module]:
-        """Get only enabled modules."""
-        return self.db.query(Module).filter(Module.enabled == True).all()
+    def get_registered_modules(self) -> List[Module]:
+        """Get only registered modules."""
+        return self.db.query(Module).filter(Module.registered == True).all()
 
     def get_module_by_id(self, module_id: int) -> Optional[Module]:
         """Get module by ID."""
@@ -89,6 +89,7 @@ class ModuleRegistry:
             manifest=manifest,
             state='installed',
             enabled=False,
+            registered=False,
             **kwargs
         )
 
@@ -101,72 +102,15 @@ class ModuleRegistry:
 
     def enable_module(self, technical_name_or_id) -> Module:
         """
-        Enable a module.
-
-        Args:
-            technical_name_or_id: Module technical name (str) or ID (int) to enable
-
-        Returns:
-            Updated Module instance
+        Platform-level enablement is deprecated. Use tenant modules instead.
         """
-        # Accept both technical_name (str) and module_id (int)
-        if isinstance(technical_name_or_id, str):
-            module = self.get_module_by_technical_name(technical_name_or_id)
-            if not module:
-                raise ValueError(f"Module '{technical_name_or_id}' not found")
-        else:
-            module = self.get_module_by_id(technical_name_or_id)
-            if not module:
-                raise ValueError(f"Module with ID {technical_name_or_id} not found")
-
-        if module.enabled:
-            logger.warning(f"Module '{module.technical_name}' is already enabled")
-            return module
-
-        # TODO: Check dependencies are satisfied
-        # TODO: Validate permissions
-
-        module.enabled = True
-        module.state = 'enabled'
-        self.db.commit()
-        self.db.refresh(module)
-
-        logger.info(f"Module '{module.technical_name}' enabled")
-        return module
+        raise ValueError("Platform module enablement is not supported")
 
     def disable_module(self, technical_name_or_id) -> Module:
         """
-        Disable a module.
-
-        Args:
-            technical_name_or_id: Module technical name (str) or ID (int) to disable
-
-        Returns:
-            Updated Module instance
+        Platform-level disablement is deprecated. Use tenant modules instead.
         """
-        # Accept both technical_name (str) and module_id (int)
-        if isinstance(technical_name_or_id, str):
-            module = self.get_module_by_technical_name(technical_name_or_id)
-            if not module:
-                raise ValueError(f"Module '{technical_name_or_id}' not found")
-        else:
-            module = self.get_module_by_id(technical_name_or_id)
-            if not module:
-                raise ValueError(f"Module with ID {technical_name_or_id} not found")
-
-        if not module.enabled:
-            logger.warning(f"Module '{module.technical_name}' is already disabled")
-            return module
-
-        # TODO: Check if other enabled modules depend on this one
-
-        module.enabled = False
-        module.state = 'disabled'
-        self.db.commit()
-        self.db.refresh(module)
-
-        logger.info(f"Module '{module.technical_name}' disabled")
-        return module
+        raise ValueError("Platform module disablement is not supported")
 
     def uninstall_module(self, module_id: int) -> None:
         """
@@ -179,8 +123,8 @@ class ModuleRegistry:
         if not module:
             raise ValueError(f"Module with ID {module_id} not found")
 
-        if module.enabled:
-            raise ValueError(f"Cannot uninstall enabled module '{module.technical_name}'. Disable it first.")
+        if module.registered:
+            raise ValueError(f"Cannot uninstall registered module '{module.technical_name}'. Unregister it first.")
 
         # TODO: Check if other modules depend on this one
         # TODO: Clean up module data from filesystem
@@ -310,13 +254,13 @@ class ModuleRegistry:
 
     def load_installed_modules(self) -> None:
         """
-        Load all installed and enabled modules.
+        Load all registered modules.
         This should be called at application startup.
         """
-        enabled_modules = self.get_enabled_modules()
-        logger.info(f"Loading {len(enabled_modules)} enabled modules...")
+        registered_modules = self.get_registered_modules()
+        logger.info(f"Loading {len(registered_modules)} registered modules...")
 
-        for module in enabled_modules:
+        for module in registered_modules:
             try:
                 self._load_module(module)
             except Exception as e:

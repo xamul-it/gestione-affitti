@@ -12,7 +12,8 @@ from datetime import datetime
 
 class Widget(Base):
     """Widget disponibile per dashboard"""
-    __tablename__ = "platform_widgets"
+    __tablename__ = "core_platform_widgets"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(String(100), primary_key=True)
     module_id = Column(String(100), nullable=False, index=True)
@@ -33,8 +34,9 @@ class Widget(Base):
 
 class UserDashboard(Base):
     """Layout dashboard personalizzato per utente"""
-    __tablename__ = "platform_user_dashboards"
+    __tablename__ = "core_platform_user_dashboards"
+    __table_args__ = {"extend_existing": True}
 
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(Integer, ForeignKey('core_users.id', ondelete='CASCADE'), primary_key=True)
     layout = Column(JSON, nullable=False)  # [{i: 'widget_id', x, y, w, h}]
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

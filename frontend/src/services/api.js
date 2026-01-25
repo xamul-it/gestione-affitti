@@ -78,9 +78,23 @@ export const immobiliAPI = unitaImmobiliariAPI;
 
 // Search API (platform-level feature)
 export const searchAPI = {
+  // Legacy flat search (backward compatibility)
   search: (query, limit = 10) => api.get('/search/', {
     params: { q: query, limit }
   }),
+
+  // Unified search with grouped results by entity type
+  searchUnified: (query, options = {}) => {
+    const params = { q: query };
+    if (options.limit_per_entity) params.limit_per_entity = options.limit_per_entity;
+    if (options.limit) params.limit = options.limit;
+    if (options.modules) params.modules = options.modules;
+    if (options.entities) params.entities = options.entities;
+    return api.get('/search/unified', { params });
+  },
+
+  // Get list of searchable entities for UI
+  getSearchableEntities: () => api.get('/search/entities'),
 };
 
 // Import/Export API (platform-level feature)
@@ -180,6 +194,45 @@ export const importExportAPI = {
   // Delete an import configuration
   deleteImportConfiguration: (configId) => {
     return api.delete(`/import-export/configurations/${configId}`);
+  },
+
+  // === Download Methods (direct file downloads) ===
+
+  // Download export as file (CSV or Excel)
+  downloadExport: (moduleName, entityName, format = 'csv', fields = null) => {
+    return api.get('/import-export/download', {
+      params: {
+        module_name: moduleName,
+        entity_name: entityName,
+        format,
+        fields
+      },
+      responseType: 'blob'
+    });
+  },
+
+  // Download import template as file
+  downloadTemplate: (moduleName, entityName, includeSample = false) => {
+    return api.get('/import-export/download-template', {
+      params: {
+        module_name: moduleName,
+        entity_name: entityName,
+        include_sample: includeSample
+      },
+      responseType: 'blob'
+    });
+  },
+
+  // Helper to trigger browser file download from blob response
+  triggerDownload: (blob, filename) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   }
 };
 
@@ -222,6 +275,13 @@ export const rolesAPI = {
     headers: { 'Authorization': `Bearer ${token}` }
   }),
   getById: (id, token) => api.get(`/roles/${id}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  }),
+  getAvailable: (token, attivoOnly = true) => api.get('/ruoli-disponibili/', {
+    headers: { 'Authorization': `Bearer ${token}` },
+    params: { attivo_only: attivoOnly }
+  }),
+  getAllWithPermissions: (token) => api.get('/roles-debug/with-permissions', {
     headers: { 'Authorization': `Bearer ${token}` }
   }),
 };

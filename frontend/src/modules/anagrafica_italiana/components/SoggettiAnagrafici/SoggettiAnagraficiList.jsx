@@ -1,183 +1,146 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { getSoggettiAnagrafici, deleteSoggetto } from '../../services/anagraficaAPI';
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { DataTable } from '../../../../core/components';
 import './SoggettiAnagraficiList.css';
 
-/**
- * SoggettiAnagraficiList - Lista principale delle anagrafiche
- *
- * Landing page del modulo Anagrafica Italiana
- * Mostra tabella con soggetti (persone fisiche e giuridiche)
- */
+const soggettiTableConfig = {
+  endpoint: '/anagrafica/soggetti-v2/',
+  title: 'Anagrafiche',
+  searchPlaceholder: 'Cerca per nome, ragione sociale, CF o email...',
+  emptyTitle: 'Nessuna anagrafica trovata',
+  emptyMessage: 'Non ci sono anagrafiche registrate.',
+  addButtonLabel: 'Nuova Anagrafica',
+  defaultParams: {
+    limit: 1000,
+  },
+  columns: [
+    { field: 'tipo_soggetto', label: 'Tipo' },
+    { field: 'nome_completo', label: 'Nome / Ragione Sociale', sortable: true },
+    { field: 'codice_fiscale', label: 'Codice Fiscale', filterable: true },
+    { field: 'partita_iva', label: 'Partita IVA', filterable: true },
+    { field: 'email', label: 'Email', filterable: true },
+    { field: 'telefono', label: 'Telefono', filterable: true },
+    { field: 'citta', label: 'Citta', filterable: true },
+    { field: 'attivo', label: 'Stato' },
+    { field: 'nome', label: 'Nome', filterable: true, visible: false },
+    { field: 'cognome', label: 'Cognome', filterable: true, visible: false },
+    { field: 'ragione_sociale', label: 'Ragione Sociale', filterable: true, visible: false },
+  ],
+  defaultSort: { field: 'nome', order: 'asc' },
+  rowActions: [
+    {
+      id: 'view',
+      label: 'Dettagli',
+      action: 'view',
+      variant: 'secondary',
+    },
+    {
+      id: 'delete',
+      label: 'Elimina',
+      action: 'delete',
+      variant: 'danger',
+    },
+  ],
+};
+
 function SoggettiAnagraficiList() {
-  const [soggetti, setSoggetti] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const navigate = useNavigate();
   const [attiviSolo, setAttiviSolo] = useState(false);
 
-  useEffect(() => {
-    loadSoggetti();
-  }, [attiviSolo]);
+  const getTipoLabel = useCallback((tipo) => (
+    tipo === 'PERSONA_FISICA' ? 'Persona Fisica' : 'Persona Giuridica'
+  ), []);
 
-  const loadSoggetti = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getSoggettiAnagrafici({ attivi_solo: attiviSolo, limit: 1000 });
-      setSoggetti(data);
-    } catch (err) {
-      console.error('Error loading soggetti:', err);
-      setError('Errore nel caricamento delle anagrafiche');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const getTipoIcon = useCallback((tipo) => (
+    tipo === 'PERSONA_FISICA' ? '👤' : '🏢'
+  ), []);
 
-  const handleDelete = async (id) => {
-    if (!confirm('Sei sicuro di voler eliminare questa anagrafica?')) {
-      return;
-    }
-
-    try {
-      await deleteSoggetto(id);
-      loadSoggetti();
-    } catch (err) {
-      console.error('Error deleting soggetto:', err);
-      alert('Errore nell\'eliminazione dell\'anagrafica');
-    }
-  };
-
-  const getTipoLabel = (tipo) => {
-    return tipo === 'PERSONA_FISICA' ? 'Persona Fisica' : 'Persona Giuridica';
-  };
-
-  const getTipoIcon = (tipo) => {
-    return tipo === 'PERSONA_FISICA' ? '👤' : '🏢';
-  };
-
-  const getNomeCompleto = (soggetto) => {
+  const getNomeCompleto = useCallback((soggetto) => {
     if (soggetto.tipo_soggetto === 'PERSONA_FISICA') {
       return `${soggetto.nome || ''} ${soggetto.cognome || ''}`.trim() || '(Non specificato)';
     }
     return soggetto.ragione_sociale || '(Non specificato)';
-  };
+  }, []);
 
-  if (loading) {
-    return (
-      <div className="soggetti-list-container">
-        <div className="loading">Caricamento anagrafiche...</div>
-      </div>
-    );
-  }
+  const renderToolbar = useCallback(({ table }) => (
+    <label className="filter-checkbox">
+      <input
+        type="checkbox"
+        checked={attiviSolo}
+        onChange={(e) => {
+          const checked = e.target.checked;
+          setAttiviSolo(checked);
+          table.setFilter('attivo', checked ? true : '');
+        }}
+      />
+      <span>Solo attivi</span>
+    </label>
+  ), [attiviSolo]);
 
-  if (error) {
-    return (
-      <div className="soggetti-list-container">
-        <div className="error">{error}</div>
-      </div>
-    );
-  }
+  const columns = [
+    {
+      ...soggettiTableConfig.columns[0],
+      render: (value) => (
+        <span className="tipo-badge" title={getTipoLabel(value)}>
+          {getTipoIcon(value)}
+        </span>
+      ),
+    },
+    {
+      ...soggettiTableConfig.columns[1],
+      render: (_, row) => (
+        <span className="soggetto-name">
+          {getNomeCompleto(row)}
+        </span>
+      ),
+    },
+    {
+      ...soggettiTableConfig.columns[2],
+      render: (value) => value || '-',
+    },
+    {
+      ...soggettiTableConfig.columns[3],
+      render: (value) => value || '-',
+    },
+    {
+      ...soggettiTableConfig.columns[4],
+      render: (value) => value || '-',
+    },
+    {
+      ...soggettiTableConfig.columns[5],
+      render: (value, row) => value || row.cellulare || '-',
+    },
+    {
+      ...soggettiTableConfig.columns[6],
+      render: (value) => value || '-',
+    },
+    {
+      ...soggettiTableConfig.columns[7],
+      render: (value) => (
+        <span className={`status-badge ${value ? 'active' : 'inactive'}`}>
+          {value ? 'Attivo' : 'Inattivo'}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="soggetti-list-container">
-      <div className="soggetti-list-header">
-        <h1>Anagrafiche</h1>
-        <div className="header-actions">
-          <label className="filter-checkbox">
-            <input
-              type="checkbox"
-              checked={attiviSolo}
-              onChange={(e) => setAttiviSolo(e.target.checked)}
-            />
-            <span>Solo attivi</span>
-          </label>
-          <Link to="/anagrafiche/nuovo" className="btn btn-primary">
-            + Nuova Anagrafica
-          </Link>
-        </div>
-      </div>
-
-      {soggetti.length === 0 ? (
-        <div className="empty-state">
-          <p>Nessuna anagrafica trovata</p>
-          <Link to="/anagrafiche/nuovo" className="btn btn-primary">
-            Crea la prima anagrafica
-          </Link>
-        </div>
-      ) : (
-        <div className="soggetti-table-wrapper">
-          <table className="soggetti-table">
-            <thead>
-              <tr>
-                <th>Tipo</th>
-                <th>Nome / Ragione Sociale</th>
-                <th>Codice Fiscale</th>
-                <th>Partita IVA</th>
-                <th>Email</th>
-                <th>Telefono</th>
-                <th>Citt�</th>
-                <th>Stato</th>
-                <th>Azioni</th>
-              </tr>
-            </thead>
-            <tbody>
-              {soggetti.map((soggetto) => (
-                <tr key={soggetto.id} className={!soggetto.attivo ? 'inactive' : ''}>
-                  <td>
-                    <span className="tipo-badge" title={getTipoLabel(soggetto.tipo_soggetto)}>
-                      {getTipoIcon(soggetto.tipo_soggetto)}
-                    </span>
-                  </td>
-                  <td>
-                    <Link to={`/anagrafiche/${soggetto.id}`} className="soggetto-name">
-                      {getNomeCompleto(soggetto)}
-                    </Link>
-                  </td>
-                  <td>{soggetto.codice_fiscale || '-'}</td>
-                  <td>{soggetto.partita_iva || '-'}</td>
-                  <td>{soggetto.email || '-'}</td>
-                  <td>{soggetto.telefono || soggetto.cellulare || '-'}</td>
-                  <td>{soggetto.citta || '-'}</td>
-                  <td>
-                    <span className={`status-badge ${soggetto.attivo ? 'active' : 'inactive'}`}>
-                      {soggetto.attivo ? 'Attivo' : 'Inattivo'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <Link
-                        to={`/anagrafiche/${soggetto.id}`}
-                        className="btn btn-sm btn-secondary"
-                        title="Visualizza"
-                      >
-                        👁️
-                      </Link>
-                      <Link
-                        to={`/anagrafiche/${soggetto.id}/modifica`}
-                        className="btn btn-sm btn-secondary"
-                        title="Modifica"
-                      >
-                        ✏️
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(soggetto.id)}
-                        className="btn btn-sm btn-danger"
-                        title="Elimina"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <div className="soggetti-list-footer">
-        <p>Totale anagrafiche: {soggetti.length}</p>
-      </div>
+      <DataTable
+        config={{
+          ...soggettiTableConfig,
+          columns,
+        }}
+        toolbarContent={renderToolbar}
+        onAdd={() => navigate('/anagrafiche/nuovo')}
+        onView={(row) => navigate(`/anagrafiche/${row.id}`)}
+        options={{
+          selectable: true,
+          showSearch: true,
+          showPagination: true,
+          pageSize: 50,
+        }}
+      />
     </div>
   );
 }

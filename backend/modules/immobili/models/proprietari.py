@@ -1,3 +1,9 @@
+"""
+Proprietario Model - Property owner role specialization.
+
+SCHEMA: TENANT
+PREFIX: immo_ (modulo immobili)
+"""
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -9,18 +15,20 @@ class Proprietario(Base):
     Tabella specializzazione per il ruolo di Proprietario.
 
     Contiene SOLO i dati specifici del ruolo di proprietario.
-    I dati anagrafici sono centralizzati in soggetti_anagrafici.
+    I dati anagrafici sono centralizzati in anag_soggetti_anagrafici (modulo anagrafica_italiana).
 
     Un soggetto può essere contemporaneamente proprietario, affittuario, tecnico, etc.
     """
-    __tablename__ = "proprietari"
+    __tablename__ = "immo_proprietari"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
 
     # Foreign key al soggetto anagrafico (OBBLIGATORIO)
+    # Riferimento a anag_soggetti_anagrafici nel modulo anagrafica_italiana
     soggetto_id = Column(
         Integer,
-        ForeignKey("soggetti_anagrafici.id", ondelete="CASCADE"),
+        ForeignKey("anag_soggetti_anagrafici.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )

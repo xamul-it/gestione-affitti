@@ -86,6 +86,121 @@ class TenantService:
         db.commit()
 
     @staticmethod
+    def clear_tenant_tables(schema_name: str, db: Session, force: bool = False) -> List[str]:
+        """
+        Drop all tables in a tenant schema, preserving the schema itself.
+
+        Args:
+            schema_name: The tenant schema name
+            db: Database session
+
+        Returns:
+            List of dropped table names
+        """
+        # Safety check
+        if schema_name.lower() in ['public', 'pg_catalog', 'information_schema']:
+            raise ValueError(f"Cannot clear system schema: {schema_name}")
+
+        # Validate schema name
+        if not schema_name.replace('_', '').replace('-', '').isalnum():
+            raise ValueError(f"Invalid schema name: {schema_name}")
+
+        if force:
+            TenantService.terminate_db_connections(db)
+
+        db.execute(text("SET LOCAL lock_timeout = '5s'"))
+        db.execute(text("SET LOCAL statement_timeout = '30s'"))
+
+        tables = db.execute(text("""
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = :schema
+              AND table_type = 'BASE TABLE'
+            ORDER BY table_name
+        """), {"schema": schema_name}).mappings().all()
+
+        dropped = []
+        for row in tables:
+            table_name = row["table_name"]
+            try:
+                db.execute(text(f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}" CASCADE'))
+                dropped.append(table_name)
+            except Exception:
+                db.rollback()
+                raise
+
+        db.commit()
+        return dropped
+
+    @staticmethod
+    def clear_non_core_tables(db: Session, schema_name: str = "public", force: bool = False) -> List[str]:
+        """
+        Drop all non-core tables in a schema.
+
+        Core tables are identified by the "core_" prefix. Alembic version
+        tables are preserved.
+        """
+        if schema_name.lower() in ['pg_catalog', 'information_schema']:
+            raise ValueError(f"Cannot clear system schema: {schema_name}")
+
+        if not schema_name.replace('_', '').replace('-', '').isalnum():
+            raise ValueError(f"Invalid schema name: {schema_name}")
+
+        if force:
+            TenantService.terminate_db_connections(db)
+
+        db.execute(text("SET LOCAL lock_timeout = '5s'"))
+        db.execute(text("SET LOCAL statement_timeout = '30s'"))
+
+        tables = db.execute(text("""
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = :schema
+              AND table_type = 'BASE TABLE'
+            ORDER BY table_name
+        """), {"schema": schema_name}).mappings().all()
+
+        dropped = []
+        for row in tables:
+            table_name = row["table_name"]
+            if table_name.startswith("core_"):
+                continue
+            if table_name.startswith("alembic_version"):
+                continue
+            try:
+                db.execute(text(f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}" CASCADE'))
+                dropped.append(table_name)
+            except Exception:
+                db.rollback()
+                raise
+
+        db.commit()
+        return dropped
+
+    @staticmethod
+    def terminate_db_connections(db: Session) -> int:
+        """
+        Terminate other connections to the current database.
+        Returns number of terminated backends.
+        """
+        pids = db.execute(text("""
+            SELECT pid
+            FROM pg_stat_activity
+            WHERE datname = current_database()
+              AND pid <> pg_backend_pid()
+        """)).mappings().all()
+
+        terminated = 0
+        for row in pids:
+            pid = row["pid"]
+            result = db.execute(text("SELECT pg_terminate_backend(:pid)"), {"pid": pid}).scalar()
+            if result:
+                terminated += 1
+
+        db.commit()
+        return terminated
+
+    @staticmethod
     def get_user_tenants(user_id: int, db: Session) -> List[Dict]:
         """
         Get all tenants accessible by a user.
@@ -253,11 +368,11 @@ class TenantService:
         if not tenant_modules:
             from app.core.module_system.models import Module
 
-            enabled_modules = db.query(Module).filter(Module.enabled == True).all()
+            registered_modules = db.query(Module).filter(Module.registered == True).all()
             from app.core.services.tenant_module_service import TenantModuleService
 
             has_config = TenantModuleService._config_column_exists(db)
-            for module in enabled_modules:
+            for module in registered_modules:
                 tenant_module = TenantModule(
                     tenant_id=tenant_id,
                     module_id=module.technical_name,
@@ -267,7 +382,7 @@ class TenantService:
                     tenant_module.config = {}
                 db.add(tenant_module)
             db.commit()
-            return [module.technical_name for module in enabled_modules]
+            return [module.technical_name for module in registered_modules]
 
         return [tm.module_id for tm in tenant_modules if tm.enabled]
 

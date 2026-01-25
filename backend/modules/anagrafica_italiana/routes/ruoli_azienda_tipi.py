@@ -3,11 +3,10 @@ API endpoints for RuoloAziendaTipo (Company Role Types) - Domain Data Management
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, inspect
 from typing import List
 
 from app.core.database import get_db, get_public_db, get_tenant_schema
-from app.core.models.tenant import Tenant
 from app.core.auth.dependencies import require_permission
 from app.core.auth.models import User
 
@@ -29,7 +28,8 @@ def get_all_ruoli_tipi(
     attivi_solo: bool = False,
     search: str = None,
     current_user: User = Depends(require_permission("soggetto.view")),
-    db: Session = Depends(get_public_db),
+    db: Session = Depends(get_db),
+    public_db: Session = Depends(get_public_db),
     tenant_schema: str | None = Depends(get_tenant_schema),
 ):
     """
@@ -38,20 +38,22 @@ def get_all_ruoli_tipi(
     - **attivi_solo**: Se True, mostra solo ruoli attivi
     - **search**: Filtra per nome (case-insensitive)
     """
-    query = db.query(RuoloAziendaTipo)
-
-    tenant = None
+    query = public_db.query(RuoloAziendaTipo)
+    overrides_enabled = False
     if tenant_schema:
-        tenant = db.query(Tenant).filter(Tenant.schema_name == tenant_schema).first()
+        try:
+            inspector = inspect(db.get_bind())
+            overrides_enabled = inspector.has_table("anag_ruoli_azienda_tipi_overrides", schema=tenant_schema)
+        except Exception:
+            overrides_enabled = False
 
     if search:
         search_like = f"%{search}%"
         override_ids = []
-        if tenant:
+        if overrides_enabled:
             override_ids = [
                 r[0]
                 for r in db.query(RuoloAziendaTipoOverride.ruolo_tipo_id).filter(
-                    RuoloAziendaTipoOverride.tenant_id == tenant.id,
                     RuoloAziendaTipoOverride.is_deleted == False,
                     RuoloAziendaTipoOverride.nome.ilike(search_like),
                 ).all()
@@ -67,10 +69,9 @@ def get_all_ruoli_tipi(
     ruoli = query.order_by(RuoloAziendaTipo.nome).all()
 
     overrides_by_id = {}
-    if tenant and ruoli:
+    if overrides_enabled and ruoli:
         ruolo_ids = [r.id for r in ruoli]
         overrides = db.query(RuoloAziendaTipoOverride).filter(
-            RuoloAziendaTipoOverride.tenant_id == tenant.id,
             RuoloAziendaTipoOverride.ruolo_tipo_id.in_(ruolo_ids),
         ).all()
         overrides_by_id = {o.ruolo_tipo_id: o for o in overrides}
@@ -107,27 +108,28 @@ def get_all_ruoli_tipi(
 def get_ruolo_tipo(
     ruolo_tipo_id: int,
     current_user: User = Depends(require_permission("soggetto.view")),
-    db: Session = Depends(get_public_db),
+    db: Session = Depends(get_db),
+    public_db: Session = Depends(get_public_db),
     tenant_schema: str | None = Depends(get_tenant_schema),
 ):
     """Ottieni un tipo di ruolo specifico"""
-    ruolo_tipo = db.query(RuoloAziendaTipo).filter(RuoloAziendaTipo.id == ruolo_tipo_id).first()
+    ruolo_tipo = public_db.query(RuoloAziendaTipo).filter(RuoloAziendaTipo.id == ruolo_tipo_id).first()
 
     if not ruolo_tipo:
         raise HTTPException(status_code=404, detail="Tipo di ruolo non trovato")
 
-    tenant = None
-    if tenant_schema:
-        tenant = db.query(Tenant).filter(Tenant.schema_name == tenant_schema).first()
-
     override = None
-    if tenant:
-        override = db.query(RuoloAziendaTipoOverride).filter(
-            RuoloAziendaTipoOverride.tenant_id == tenant.id,
-            RuoloAziendaTipoOverride.ruolo_tipo_id == ruolo_tipo_id,
-        ).first()
-        if override and override.is_deleted:
-            raise HTTPException(status_code=404, detail="Tipo di ruolo non trovato")
+    if tenant_schema:
+        try:
+            inspector = inspect(db.get_bind())
+            if inspector.has_table("anag_ruoli_azienda_tipi_overrides", schema=tenant_schema):
+                override = db.query(RuoloAziendaTipoOverride).filter(
+                    RuoloAziendaTipoOverride.ruolo_tipo_id == ruolo_tipo_id,
+                ).first()
+                if override and override.is_deleted:
+                    raise HTTPException(status_code=404, detail="Tipo di ruolo non trovato")
+        except Exception:
+            override = None
 
     return {
         "id": ruolo_tipo.id,

@@ -1,3 +1,9 @@
+"""
+DirittoImmobile Model - Property rights management.
+
+SCHEMA: TENANT
+PREFIX: immo_ (modulo immobili)
+"""
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Numeric, func, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -13,11 +19,18 @@ class TipoDiritto(str, Enum):
 
 
 class DirittoImmobile(Base):
-    __tablename__ = "diritti_immobile"
+    """
+    Property right association.
+
+    Links a proprietario to a property unit with a specific right type
+    (ownership, co-ownership, usufruct, bare ownership, etc.)
+    """
+    __tablename__ = "immo_diritti_immobile"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    unita_immobiliare_id = Column(Integer, ForeignKey("unita_immobiliari.id", ondelete="CASCADE"), nullable=False, index=True)
-    proprietario_id = Column(Integer, ForeignKey("proprietari.id", ondelete="CASCADE"), nullable=False, index=True)
+    unita_immobiliare_id = Column(Integer, ForeignKey("immo_unita_immobiliari.id", ondelete="CASCADE"), nullable=False, index=True)
+    proprietario_id = Column(Integer, ForeignKey("immo_proprietari.id", ondelete="CASCADE"), nullable=False, index=True)
     tipo_diritto = Column(SQLEnum(TipoDiritto), nullable=False)
     quota_percentuale = Column(Numeric(5, 2), nullable=True)  # es. 50.00 per 50%
     data_inizio = Column(String(10), nullable=True)  # formato YYYY-MM-DD

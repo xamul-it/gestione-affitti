@@ -6,6 +6,7 @@ from app.core.database import Base
 
 class Incasso(Base):
     __tablename__ = "incassi"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     contratto_id = Column(Integer, ForeignKey("contratti.id"), nullable=False)
