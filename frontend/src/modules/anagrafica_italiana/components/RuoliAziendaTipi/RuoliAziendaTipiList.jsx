@@ -5,6 +5,7 @@ import {
   mergeRuoliAziendaTipi,
 } from '../../services/anagraficaAPI';
 import RuoloAziendaTipoForm from './RuoloAziendaTipoForm';
+import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import './RuoliAziendaTipi.css';
 
 const ruoliAziendaTipiTableConfig = {
@@ -25,8 +26,20 @@ const ruoliAziendaTipiTableConfig = {
   ],
   defaultSort: { field: 'nome', order: 'asc' },
   rowActions: [
-    { id: 'edit', label: 'Modifica', action: 'edit', variant: 'secondary' },
-    { id: 'delete', label: 'Elimina', action: 'delete', variant: 'danger' },
+    {
+      id: 'edit',
+      label: 'Modifica',
+      action: 'edit',
+      variant: 'secondary',
+      icon: renderIcon('pencil', { size: 14 }),
+    },
+    {
+      id: 'delete',
+      label: 'Elimina',
+      action: 'delete',
+      variant: 'danger',
+      icon: renderIcon('trash', { size: 14 }),
+    },
   ],
 };
 

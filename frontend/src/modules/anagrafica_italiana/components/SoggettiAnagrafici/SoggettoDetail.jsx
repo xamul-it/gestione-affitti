@@ -382,6 +382,7 @@ function SoggettoDetail() {
               <div className="upload-section">
                 <DocumentoUpload
                   soggettoId={parseInt(id)}
+                  soggettoTipo={soggetto?.tipo_soggetto}
                   onUploadSuccess={handleUploadSuccess}
                   onCancel={() => setShowUpload(false)}
                 />

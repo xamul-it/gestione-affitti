@@ -209,11 +209,18 @@ export default function DatabaseManagement() {
         return;
       }
       if (enabled) {
-        await axios.post(
+        const response = await axios.post(
           `${API_BASE_URL}/tenants/${tenantId}/modules/${moduleId}/disable`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        const failed = response.data?.tables_failed || [];
+        if (failed.length > 0) {
+          alert(
+            `Disabilitazione completata, ma non tutte le tabelle sono state rimosse.\n` +
+            `Tabelle rimaste: ${failed.map((item) => item.table).join(', ')}`
+          );
+        }
       } else {
         await axios.post(
           `${API_BASE_URL}/tenants/${tenantId}/modules/install`,

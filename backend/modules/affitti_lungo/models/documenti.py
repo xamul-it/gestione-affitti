@@ -3,6 +3,10 @@ Shim for Documento model.
 
 Documento is owned by anagrafica_italiana to avoid cyclic dependencies.
 """
-from anagrafica_italiana.models.documento import Documento, EntityType, TipoDocumento
+# Import from package root; use enum to keep Pydantic schema generation simple.
+from anagrafica_italiana.models import Documento, EntityType, TipoDocumentoEnum
 
-__all__ = ["Documento", "EntityType", "TipoDocumento"]
+# Alias for backward compatibility within this module/package.
+TipoDocumento = TipoDocumentoEnum
+
+__all__ = ["Documento", "EntityType", "TipoDocumento", "TipoDocumentoEnum"]

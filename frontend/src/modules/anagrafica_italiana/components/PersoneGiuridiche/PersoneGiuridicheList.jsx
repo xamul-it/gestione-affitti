@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import { DataTable } from '../../../../core/components';
 import ImportButton from '../../../../components/Platform/ImportButton';
 import ExportButton from '../../../../components/Platform/ExportButton';
@@ -20,18 +21,36 @@ const personeGiuridicheTableConfig = {
   },
   columns: [
     { field: 'ragione_sociale', label: 'Ragione Sociale', filterable: true, sortable: true },
-    { field: 'codice_fiscale', label: 'Codice Fiscale', filterable: true },
     { field: 'partita_iva', label: 'Partita IVA', filterable: true },
     { field: 'email', label: 'Email', filterable: true },
     { field: 'telefono', label: 'Telefono', filterable: true },
-    { field: 'citta', label: 'Citta', filterable: true },
-    { field: 'attivo', label: 'Stato' },
+    { field: 'codice_fiscale', label: 'Codice Fiscale', filterable: true, visible: false },
+    { field: 'citta', label: 'Citta', filterable: true, visible: false },
+    { field: 'attivo', label: 'Stato', visible: false },
   ],
   defaultSort: { field: 'ragione_sociale', order: 'asc' },
   rowActions: [
-    { id: 'view', label: 'Dettagli', action: 'view', variant: 'secondary' },
-    { id: 'edit', label: 'Modifica', action: 'edit', variant: 'secondary' },
-    { id: 'delete', label: 'Elimina', action: 'delete', variant: 'danger' },
+    {
+      id: 'view',
+      label: 'Dettagli',
+      action: 'view',
+      variant: 'secondary',
+      icon: renderIcon('info', { size: 14 }),
+    },
+    {
+      id: 'edit',
+      label: 'Modifica',
+      action: 'edit',
+      variant: 'secondary',
+      icon: renderIcon('pencil', { size: 14 }),
+    },
+    {
+      id: 'delete',
+      label: 'Elimina',
+      action: 'delete',
+      variant: 'danger',
+      icon: renderIcon('trash', { size: 14 }),
+    },
   ],
 };
 
@@ -57,7 +76,11 @@ function PersoneGiuridicheList() {
   const columns = [
     {
       ...personeGiuridicheTableConfig.columns[0],
-      render: (value) => value || '(Non specificato)',
+      render: (value, row) => (
+        <Link to={`/anagrafiche/persone-giuridiche/${row.id}`} className="table-link">
+          {value || '(Non specificato)'}
+        </Link>
+      ),
     },
     {
       ...personeGiuridicheTableConfig.columns[1],
@@ -69,11 +92,11 @@ function PersoneGiuridicheList() {
     },
     {
       ...personeGiuridicheTableConfig.columns[3],
-      render: (value) => value || '-',
+      render: (value, row) => value || row.cellulare || '-',
     },
     {
       ...personeGiuridicheTableConfig.columns[4],
-      render: (value, row) => value || row.cellulare || '-',
+      render: (value) => value || '-',
     },
     {
       ...personeGiuridicheTableConfig.columns[5],

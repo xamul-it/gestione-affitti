@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getSoggettoById, deleteSoggetto, getSoggettoRuoli } from '../../services/anagraficaAPI';
+import { getSoggettoById, deleteSoggetto } from '../../services/anagraficaAPI';
 import { DocumentoUpload, DocumentoList } from '../Documenti';
 import RuoliAziendaSection from '../RuoliAzienda/RuoliAziendaSection';
+import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import '../SoggettiAnagrafici/SoggettoDetail.css';
 
 /**
@@ -17,7 +18,6 @@ function PersonaGiuridicaDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [azienda, setAzienda] = useState(null);
-  const [ruoli, setRuoli] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('anagrafica');
@@ -26,7 +26,6 @@ function PersonaGiuridicaDetail() {
 
   useEffect(() => {
     loadAzienda();
-    loadRuoli();
   }, [id]);
 
   const loadAzienda = async () => {
@@ -47,15 +46,6 @@ function PersonaGiuridicaDetail() {
       setError('Errore nel caricamento della persona giuridica');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadRuoli = async () => {
-    try {
-      const data = await getSoggettoRuoli(id);
-      setRuoli(data);
-    } catch (err) {
-      console.error('Error loading ruoli:', err);
     }
   };
 
@@ -129,7 +119,7 @@ function PersonaGiuridicaDetail() {
       {/* Header */}
       <div className="soggetto-detail-header">
         <div className="header-title">
-          <span className="tipo-icon">🏢</span>
+          {renderIcon('building', { size: 30, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
           <h1>{azienda.ragione_sociale || '(Non specificato)'}</h1>
           <span className={`status-badge ${azienda.attivo ? 'active' : 'inactive'}`}>
             {azienda.attivo ? 'Attivo' : 'Inattivo'}
@@ -140,10 +130,16 @@ function PersonaGiuridicaDetail() {
             to={`/anagrafiche/persone-giuridiche/${azienda.id}/modifica`}
             className="btn btn-primary"
           >
-            ✏️ Modifica
+            <span className="button-icon">
+              {renderIcon('pencil', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
+            </span>
+            Modifica
           </Link>
           <button onClick={handleDelete} className="btn btn-danger">
-            🗑️ Elimina
+            <span className="button-icon">
+              {renderIcon('trash', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
+            </span>
+            Elimina
           </button>
         </div>
       </div>
@@ -154,25 +150,28 @@ function PersonaGiuridicaDetail() {
           className={`tab ${activeTab === 'anagrafica' ? 'active' : ''}`}
           onClick={() => setActiveTab('anagrafica')}
         >
-          📋 Dati Anagrafici
+          <span className="tab-icon">
+            {renderIcon('list', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
+          </span>
+          Dati Anagrafici
         </button>
         <button
           className={`tab ${activeTab === 'ruoli-azienda' ? 'active' : ''}`}
           onClick={() => setActiveTab('ruoli-azienda')}
         >
-          👥 Persone
+          <span className="tab-icon">
+            {renderIcon('users', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
+          </span>
+          Persone
         </button>
         <button
           className={`tab ${activeTab === 'documenti' ? 'active' : ''}`}
           onClick={() => setActiveTab('documenti')}
         >
-          📄 Documenti
-        </button>
-        <button
-          className={`tab ${activeTab === 'ruoli' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ruoli')}
-        >
-          🎭 Ruoli {ruoli.length > 0 && `(${ruoli.length})`}
+          <span className="tab-icon">
+            {renderIcon('file-text', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
+          </span>
+          Documenti
         </button>
       </div>
 
@@ -189,7 +188,10 @@ function PersonaGiuridicaDetail() {
               borderLeft: '4px solid #ffc107',
               color: '#856404'
             }}>
-              ℹ️ <strong>Nota:</strong> Le persone giuridiche (aziende, società) <strong>non possono avere account utente</strong>.
+              <span className="inline-icon">
+                {renderIcon('info', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
+              </span>
+              <strong>Nota:</strong> Le persone giuridiche (aziende, società) <strong>non possono avere account utente</strong>.
               Per accedere al sistema, crea un account per una persona fisica che rappresenta l'azienda.
             </div>
 
@@ -199,7 +201,12 @@ function PersonaGiuridicaDetail() {
               <div className="detail-grid">
                 <div className="detail-field">
                   <label>Tipo Soggetto</label>
-                  <div className="field-value">🏢 Persona Giuridica</div>
+                  <div className="field-value">
+                    <span className="inline-icon">
+                      {renderIcon('building', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
+                    </span>
+                    Persona Giuridica
+                  </div>
                 </div>
                 <div className="detail-field">
                   <label>Ragione Sociale</label>
@@ -326,7 +333,7 @@ function PersonaGiuridicaDetail() {
           </div>
         )}
 
-        {/* Tab: Ruoli Azienda */}
+        {/* Tab: Persone Associate */}
         {activeTab === 'ruoli-azienda' && (
           <div className="tab-content tab-ruoli-azienda">
             <RuoliAziendaSection
@@ -340,13 +347,21 @@ function PersonaGiuridicaDetail() {
         {activeTab === 'documenti' && (
           <div className="tab-content tab-documenti">
             <div className="tab-header">
-              <h2>📄 Gestione Documenti</h2>
+              <h2>
+                <span className="tab-icon">
+                  {renderIcon('file-text', { size: 18, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
+                </span>
+                Gestione Documenti
+              </h2>
               {!showUpload && (
                 <button
                   onClick={() => setShowUpload(true)}
                   className="btn btn-primary"
                 >
-                  ➕ Carica Documento
+                  <span className="button-icon">
+                    {renderIcon('plus', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
+                  </span>
+                  Carica Documento
                 </button>
               )}
             </div>
@@ -355,6 +370,7 @@ function PersonaGiuridicaDetail() {
               <div className="upload-section">
                 <DocumentoUpload
                   soggettoId={parseInt(id)}
+                  soggettoTipo={azienda?.tipo_soggetto}
                   onUploadSuccess={handleUploadSuccess}
                   onCancel={() => setShowUpload(false)}
                 />
@@ -371,53 +387,15 @@ function PersonaGiuridicaDetail() {
           </div>
         )}
 
-        {/* Tab: Ruoli */}
-        {activeTab === 'ruoli' && (
-          <div className="tab-content tab-ruoli">
-            <div className="tab-header">
-              <h2>👥 Ruoli Assegnati</h2>
-              <button className="btn btn-primary">
-                ➕ Aggiungi Ruolo
-              </button>
-            </div>
-
-            {ruoli.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">👥</div>
-                <p>Nessun ruolo assegnato</p>
-                <p className="empty-hint">
-                  Aggiungi ruoli per definire le responsabilità di questa azienda/ente
-                  (es. Proprietario immobile, Fornitore servizi)
-                </p>
-              </div>
-            ) : (
-              <div className="ruoli-list">
-                {ruoli.map((ruolo) => (
-                  <div key={ruolo.id} className="ruolo-card">
-                    <div className="ruolo-header">
-                      <span className="ruolo-nome">{ruolo.ruolo_nome}</span>
-                      <span className="ruolo-modulo">{ruolo.modulo_id}</span>
-                    </div>
-                    {ruolo.ruolo_descrizione && (
-                      <div className="ruolo-descrizione">{ruolo.ruolo_descrizione}</div>
-                    )}
-                    {ruolo.note && (
-                      <div className="ruolo-note">
-                        <strong>Note:</strong> {ruolo.note}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Footer */}
       <div className="soggetto-detail-footer">
         <Link to="/anagrafiche/persone-giuridiche" className="btn btn-secondary">
-          ← Torna all'elenco persone giuridiche
+          <span className="button-icon">
+            {renderIcon('list', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
+          </span>
+          Torna all'elenco persone giuridiche
         </Link>
       </div>
     </div>

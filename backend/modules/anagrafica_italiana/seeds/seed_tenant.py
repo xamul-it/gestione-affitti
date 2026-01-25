@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 def seed_tenant(
     db: Session,
-    seed_test_data: bool = False,
     tenant_id: int | None = None,
     tenant_schema: str | None = None,
+    seed_test_data: bool = False,
 ) -> dict:
     """
     Seed tenant-level data for anagrafica_italiana.
@@ -28,7 +28,8 @@ def seed_tenant(
     """
     results = {"test_data_seeded": 0}
 
-    if seed_test_data:
+    # Only seed when explicitly requested with a boolean True.
+    if seed_test_data is True:
         logger.info(
             "Seeding test data for anagrafica_italiana (tenant_id=%s, schema=%s)",
             tenant_id,

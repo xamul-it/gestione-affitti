@@ -3,7 +3,7 @@ API endpoints for RuoloAzienda (Person-Company role associations)
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, inspect
+from sqlalchemy import func, inspect, text
 from typing import List, Optional
 from datetime import date
 
@@ -21,6 +21,25 @@ from ..schemas.ruolo_azienda import (
 
 router = APIRouter(prefix="/anagrafica/ruoli-azienda", tags=["Ruoli Azienda"])
 
+def _ensure_ruoli_azienda_tables(db: Session, tenant_schema: Optional[str]) -> None:
+    if not tenant_schema:
+        raise HTTPException(status_code=400, detail="Tenant schema mancante")
+
+    # Force tenant search_path for this session.
+    db.execute(text(f"SET search_path TO {tenant_schema}, public"))
+
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Tabella anag_ruoli_azienda non presente. Reinstalla il modulo anagrafica per il tenant.",
+        )
+    if not inspector.has_table("anag_soggetti_anagrafici", schema=tenant_schema):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Tabella anag_soggetti_anagrafici non presente. Reinstalla il modulo anagrafica per il tenant.",
+        )
+
 
 @router.get("/", response_model=List[RuoloAziendaResponse])
 def get_all_ruoli_azienda(
@@ -31,11 +50,7 @@ def get_all_ruoli_azienda(
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Ottieni tutti i ruoli azienda"""
-    if not tenant_schema:
-        return []
-    inspector = inspect(db.get_bind())
-    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
-        return []
+    _ensure_ruoli_azienda_tables(db, tenant_schema)
     ruoli = db.query(RuoloAzienda).options(
         joinedload(RuoloAzienda.persona_fisica),
         joinedload(RuoloAzienda.persona_giuridica)
@@ -58,11 +73,7 @@ def get_ruoli_by_soggetto(
     - come_persona: ruoli in cui questo soggetto lavora come persona fisica
     - come_azienda: ruoli in cui questo soggetto ha dipendenti (se è un'azienda)
     """
-    if not tenant_schema:
-        return {"come_persona": [], "come_azienda": []}
-    inspector = inspect(db.get_bind())
-    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
-        return {"come_persona": [], "come_azienda": []}
+    _ensure_ruoli_azienda_tables(db, tenant_schema)
 
     soggetto = db.query(SoggettoAnagrafico).filter(SoggettoAnagrafico.id == soggetto_id).first()
     if not soggetto:
@@ -159,11 +170,7 @@ def get_ruolo_azienda(
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Ottieni un ruolo azienda specifico"""
-    if not tenant_schema:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
-    inspector = inspect(db.get_bind())
-    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
+    _ensure_ruoli_azienda_tables(db, tenant_schema)
     ruolo = db.query(RuoloAzienda).options(
         joinedload(RuoloAzienda.persona_fisica),
         joinedload(RuoloAzienda.persona_giuridica)
@@ -186,11 +193,7 @@ def create_ruolo_azienda(
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Crea un nuovo ruolo azienda (associazione persona-azienda)"""
-    if not tenant_schema:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant non valido")
-    inspector = inspect(db.get_bind())
-    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Modulo ruoli azienda non attivo")
+    _ensure_ruoli_azienda_tables(db, tenant_schema)
 
     # Valida che persona_fisica sia effettivamente una persona fisica
     persona = db.query(SoggettoAnagrafico).filter(
@@ -254,11 +257,7 @@ def update_ruolo_azienda(
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Aggiorna un ruolo azienda esistente"""
-    if not tenant_schema:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
-    inspector = inspect(db.get_bind())
-    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
+    _ensure_ruoli_azienda_tables(db, tenant_schema)
     ruolo = db.query(RuoloAzienda).filter(RuoloAzienda.id == ruolo_id).first()
 
     if not ruolo:
@@ -303,11 +302,7 @@ def delete_ruolo_azienda(
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """Elimina un ruolo azienda"""
-    if not tenant_schema:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
-    inspector = inspect(db.get_bind())
-    if not inspector.has_table("anag_ruoli_azienda", schema=tenant_schema):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruolo azienda non trovato")
+    _ensure_ruoli_azienda_tables(db, tenant_schema)
     ruolo = db.query(RuoloAzienda).filter(RuoloAzienda.id == ruolo_id).first()
 
     if not ruolo:

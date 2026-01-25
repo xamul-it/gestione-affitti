@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import inspect
 from typing import List, Optional
 from app.core.database import get_db, get_public_db, get_tenant_schema
-from app.core.auth.dependencies import get_current_user
+from app.core.auth.dependencies import get_current_user, require_permission
 from app.core.auth.models import User
 
 # Import from this module
@@ -20,6 +20,7 @@ from ..models import (
     StatoDocumento,
     StatoDocumentoOverride,
 )
+from ..services.comuni_sync_service import sync_comuni_italia
 
 router = APIRouter(prefix="/anagrafica/domini", tags=["anagrafica-domini"])
 
@@ -80,11 +81,23 @@ def list_comuni(
             "regione": (o.regione if o and o.regione is not None else c.regione),
             "codice_istat": (o.codice_istat if o and o.codice_istat is not None else c.codice_istat),
             "codice_catastale": (o.codice_catastale if o and o.codice_catastale is not None else c.codice_catastale),
+            "attivo": (c.attivo if c.attivo is not None else True),
         }
         for c in comuni
         for o in [overrides_by_comune.get(c.id)]
         if not (o and o.is_deleted)
     ]
+
+
+@router.post("/comuni/refresh", response_model=dict)
+def refresh_comuni(
+    public_db: Session = Depends(get_public_db),
+    current_user: User = Depends(require_permission("platform.admin")),
+):
+    """
+    Refresh comuni list from external source and update public database.
+    """
+    return sync_comuni_italia(public_db)
 
 
 @router.get("/comuni/{comune_id}", response_model=dict)
@@ -237,6 +250,7 @@ def list_tipi_documento(
             "descrizione": o.descrizione if o and o.descrizione is not None else t.descrizione,
             "categoria": o.categoria if o and o.categoria is not None else t.categoria,
             "richiede_scadenza": o.richiede_scadenza if o and o.richiede_scadenza is not None else t.richiede_scadenza,
+            "attivo": o.attivo if o and o.attivo is not None else t.attivo,
         })
 
     return result
@@ -277,6 +291,7 @@ def get_tipo_documento(
         "descrizione": override.descrizione if override and override.descrizione is not None else tipo.descrizione,
         "categoria": override.categoria if override and override.categoria is not None else tipo.categoria,
         "richiede_scadenza": override.richiede_scadenza if override and override.richiede_scadenza is not None else tipo.richiede_scadenza,
+        "attivo": override.attivo if override and override.attivo is not None else tipo.attivo,
     }
 
 
@@ -353,6 +368,7 @@ def list_stati_documento(
             "codice": o.codice if o and o.codice is not None else s.codice,
             "nome": o.nome if o and o.nome is not None else s.nome,
             "descrizione": o.descrizione if o and o.descrizione is not None else s.descrizione,
+            "attivo": o.attivo if o and o.attivo is not None else s.attivo,
         })
 
     return result
@@ -391,4 +407,5 @@ def get_stato_documento(
         "codice": override.codice if override and override.codice is not None else stato.codice,
         "nome": override.nome if override and override.nome is not None else stato.nome,
         "descrizione": override.descrizione if override and override.descrizione is not None else stato.descrizione,
+        "attivo": override.attivo if override and override.attivo is not None else stato.attivo,
     }

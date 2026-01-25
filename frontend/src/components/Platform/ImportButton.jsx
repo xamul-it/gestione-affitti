@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ImportWizard } from './ImportWizard';
+import { renderIcon } from '../Navigation/iconRegistry.jsx';
 import './ImportButton.css';
 
 /**
@@ -39,7 +40,10 @@ function ImportButton({ moduleName, entityName, entityLabel, onImportComplete })
         onClick={() => setShowWizard(true)}
         title={`Importa ${entityLabel || entityName} da CSV`}
       >
-        📥 Importa
+        <span className="btn-import-icon" aria-hidden="true">
+          {renderIcon('upload', { size: 16, className: 'btn-import-icon-svg', fallbackClassName: 'btn-import-icon-svg' })}
+        </span>
+        Importa
       </button>
 
       {showWizard && (

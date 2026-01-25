@@ -82,49 +82,59 @@ function StatsSoggettiWidget() {
           </span>
           Anagrafiche
         </h3>
-        <Link to="/anagrafiche" className="view-all-link">
+        <Link to="/anagrafiche/lista" className="view-all-link">
           Vedi tutto
         </Link>
       </div>
 
       {/* Stats Grid */}
       <div className="stats-grid">
-        <div className="stat-card totale">
-          <div className="stat-value">{stats.totale}</div>
-          <div className="stat-label">Totale</div>
-        </div>
-
-        <div className="stat-card persone-fisiche">
-          <div className="stat-icon" aria-hidden="true">
-            {renderIcon('user', { size: 22, className: 'stat-icon-svg', fallbackClassName: 'nav-emoji-icon' })}
+        <Link to="/anagrafiche/lista" className="stat-card-link">
+          <div className="stat-card totale">
+            <div className="stat-value">{stats.totale}</div>
+            <div className="stat-label">Totale</div>
           </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.persone_fisiche}</div>
-            <div className="stat-label">Persone Fisiche</div>
-          </div>
-        </div>
+        </Link>
 
-        <div className="stat-card persone-giuridiche">
-          <div className="stat-icon" aria-hidden="true">
-            {renderIcon('building', { size: 22, className: 'stat-icon-svg', fallbackClassName: 'nav-emoji-icon' })}
+        <Link to="/anagrafiche/persone-fisiche" className="stat-card-link">
+          <div className="stat-card persone-fisiche">
+            <div className="stat-icon" aria-hidden="true">
+              {renderIcon('user', { size: 22, className: 'stat-icon-svg', fallbackClassName: 'nav-emoji-icon' })}
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.persone_fisiche}</div>
+              <div className="stat-label">Persone Fisiche</div>
+            </div>
           </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.persone_giuridiche}</div>
-            <div className="stat-label">Persone Giuridiche</div>
+        </Link>
+
+        <Link to="/anagrafiche/persone-giuridiche" className="stat-card-link">
+          <div className="stat-card persone-giuridiche">
+            <div className="stat-icon" aria-hidden="true">
+              {renderIcon('building', { size: 22, className: 'stat-icon-svg', fallbackClassName: 'nav-emoji-icon' })}
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.persone_giuridiche}</div>
+              <div className="stat-label">Persone Giuridiche</div>
+            </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="stat-card attivi">
-          <div className="stat-value">{stats.attivi}</div>
-          <div className="stat-label">Attivi</div>
-          <div className="stat-badge active">●</div>
-        </div>
+        <Link to="/anagrafiche/lista" className="stat-card-link">
+          <div className="stat-card attivi">
+            <div className="stat-value">{stats.attivi}</div>
+            <div className="stat-label">Attivi</div>
+            <div className="stat-badge active">●</div>
+          </div>
+        </Link>
 
-        <div className="stat-card inattivi">
-          <div className="stat-value">{stats.inattivi}</div>
-          <div className="stat-label">Inattivi</div>
-          <div className="stat-badge inactive">●</div>
-        </div>
+        <Link to="/anagrafiche/lista" className="stat-card-link">
+          <div className="stat-card inattivi">
+            <div className="stat-value">{stats.inattivi}</div>
+            <div className="stat-label">Inattivi</div>
+            <div className="stat-badge inactive">●</div>
+          </div>
+        </Link>
       </div>
 
       {/* Quick Action */}

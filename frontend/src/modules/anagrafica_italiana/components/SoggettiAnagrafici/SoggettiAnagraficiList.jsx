@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { DataTable } from '../../../../core/components';
+import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import './SoggettiAnagraficiList.css';
 
 const soggettiTableConfig = {
@@ -16,12 +17,12 @@ const soggettiTableConfig = {
   columns: [
     { field: 'tipo_soggetto', label: 'Tipo' },
     { field: 'nome_completo', label: 'Nome / Ragione Sociale', sortable: true },
-    { field: 'codice_fiscale', label: 'Codice Fiscale', filterable: true },
     { field: 'partita_iva', label: 'Partita IVA', filterable: true },
     { field: 'email', label: 'Email', filterable: true },
     { field: 'telefono', label: 'Telefono', filterable: true },
-    { field: 'citta', label: 'Citta', filterable: true },
-    { field: 'attivo', label: 'Stato' },
+    { field: 'codice_fiscale', label: 'Codice Fiscale', filterable: true, visible: false },
+    { field: 'citta', label: 'Citta', filterable: true, visible: false },
+    { field: 'attivo', label: 'Stato', visible: false },
     { field: 'nome', label: 'Nome', filterable: true, visible: false },
     { field: 'cognome', label: 'Cognome', filterable: true, visible: false },
     { field: 'ragione_sociale', label: 'Ragione Sociale', filterable: true, visible: false },
@@ -33,12 +34,21 @@ const soggettiTableConfig = {
       label: 'Dettagli',
       action: 'view',
       variant: 'secondary',
+      icon: renderIcon('info', { size: 14 }),
+    },
+    {
+      id: 'edit',
+      label: 'Modifica',
+      action: 'edit',
+      variant: 'secondary',
+      icon: renderIcon('pencil', { size: 14 }),
     },
     {
       id: 'delete',
       label: 'Elimina',
       action: 'delete',
       variant: 'danger',
+      icon: renderIcon('trash', { size: 14 }),
     },
   ],
 };
@@ -49,10 +59,6 @@ function SoggettiAnagraficiList() {
 
   const getTipoLabel = useCallback((tipo) => (
     tipo === 'PERSONA_FISICA' ? 'Persona Fisica' : 'Persona Giuridica'
-  ), []);
-
-  const getTipoIcon = useCallback((tipo) => (
-    tipo === 'PERSONA_FISICA' ? '👤' : '🏢'
   ), []);
 
   const getNomeCompleto = useCallback((soggetto) => {
@@ -82,16 +88,22 @@ function SoggettiAnagraficiList() {
       ...soggettiTableConfig.columns[0],
       render: (value) => (
         <span className="tipo-badge" title={getTipoLabel(value)}>
-          {getTipoIcon(value)}
+          {renderIcon(value === 'PERSONA_FISICA' ? 'user' : 'building', { size: 14 })}
         </span>
       ),
     },
     {
       ...soggettiTableConfig.columns[1],
       render: (_, row) => (
-        <span className="soggetto-name">
+        <Link
+          to={row.tipo_soggetto === 'PERSONA_FISICA'
+            ? `/anagrafiche/persone-fisiche/${row.id}`
+            : `/anagrafiche/persone-giuridiche/${row.id}`
+          }
+          className="table-link"
+        >
           {getNomeCompleto(row)}
-        </span>
+        </Link>
       ),
     },
     {
@@ -104,11 +116,11 @@ function SoggettiAnagraficiList() {
     },
     {
       ...soggettiTableConfig.columns[4],
-      render: (value) => value || '-',
+      render: (value, row) => value || row.cellulare || '-',
     },
     {
       ...soggettiTableConfig.columns[5],
-      render: (value, row) => value || row.cellulare || '-',
+      render: (value) => value || '-',
     },
     {
       ...soggettiTableConfig.columns[6],
@@ -134,6 +146,7 @@ function SoggettiAnagraficiList() {
         toolbarContent={renderToolbar}
         onAdd={() => navigate('/anagrafiche/nuovo')}
         onView={(row) => navigate(`/anagrafiche/${row.id}`)}
+        onEdit={(row) => navigate(`/anagrafiche/${row.id}/modifica`)}
         options={{
           selectable: true,
           showSearch: true,

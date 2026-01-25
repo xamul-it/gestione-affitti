@@ -8,9 +8,11 @@ Uses platform services:
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
+from sqlalchemy.exc import ProgrammingError
 from typing import List, Optional
 from datetime import date
+import logging
 
 from app.core.database import get_db, get_tenant_schema
 from app.core.auth.dependencies import get_current_user, require_permission
@@ -21,6 +23,68 @@ from ..models import SoggettoAnagrafico, TipoDocumento, Documento
 from ..services.document_service import DocumentService
 
 router = APIRouter(prefix="/anagrafica/documenti", tags=["documenti-anagrafica"])
+logger = logging.getLogger(__name__)
+
+def _ensure_documenti_table(db: Session, tenant_schema: Optional[str]) -> None:
+    if not tenant_schema:
+        raise HTTPException(status_code=400, detail="Tenant schema mancante")
+
+    # Ensure tenant schema is first in search_path for this session.
+    db.execute(text(f"SET search_path TO {tenant_schema}, public"))
+
+    inspector = inspect(db.get_bind())
+    has_table = inspector.has_table("anag_documenti", schema=tenant_schema)
+
+    if not has_table:
+        try:
+            db.execute(text(f"""
+                CREATE TABLE IF NOT EXISTS "{tenant_schema}"."anag_documenti" (
+                    id SERIAL PRIMARY KEY,
+                    entity_type VARCHAR(50) NOT NULL,
+                    entity_id INTEGER NOT NULL,
+                    tipo_documento VARCHAR(50) NOT NULL,
+                    nome_file VARCHAR(255) NOT NULL,
+                    file_path VARCHAR(500) NOT NULL,
+                    mime_type VARCHAR(100),
+                    dimensione BIGINT,
+                    descrizione VARCHAR(500),
+                    note VARCHAR(500),
+                    data_scadenza DATE,
+                    tipo_documento_id INTEGER REFERENCES public.anag_tipi_documento(id),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ
+                )
+            """))
+            db.execute(text(
+                f'CREATE INDEX IF NOT EXISTS ix_anag_documenti_entity_type '
+                f'ON "{tenant_schema}"."anag_documenti"(entity_type)'
+            ))
+            db.execute(text(
+                f'CREATE INDEX IF NOT EXISTS ix_anag_documenti_entity_id '
+                f'ON "{tenant_schema}"."anag_documenti"(entity_id)'
+            ))
+            db.execute(text(
+                f'CREATE INDEX IF NOT EXISTS ix_anag_documenti_data_scadenza '
+                f'ON "{tenant_schema}"."anag_documenti"(data_scadenza)'
+            ))
+            db.commit()
+            return
+        except Exception as exc:
+            db.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail=f"Tabella anag_documenti non presente. Reinstalla il modulo anagrafica per il tenant. ({exc})",
+            )
+
+    # Double-check with a simple query in case of stale inspector cache.
+    try:
+        db.execute(text(f'SELECT 1 FROM "{tenant_schema}"."anag_documenti" LIMIT 1'))
+    except ProgrammingError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=f"Tabella anag_documenti non presente. Reinstalla il modulo anagrafica per il tenant. ({exc})",
+        )
 
 
 @router.post("/upload")
@@ -49,15 +113,7 @@ async def upload_documento(
     Returns:
         Uploaded documento metadata
     """
-    if not tenant_schema:
-        raise HTTPException(status_code=400, detail="Tenant schema mancante")
-
-    inspector = inspect(db.get_bind())
-    if not inspector.has_table("documenti", schema=tenant_schema):
-        raise HTTPException(
-            status_code=409,
-            detail="Tabella documenti non presente. Reinstalla il modulo anagrafica per il tenant.",
-        )
+    _ensure_documenti_table(db, tenant_schema)
 
     # Verify soggetto exists
     soggetto = db.query(SoggettoAnagrafico).filter(
@@ -88,7 +144,7 @@ async def upload_documento(
         )
 
     # Use DocumentService to upload file
-    doc_service = DocumentService(db)
+    doc_service = DocumentService(db, tenant_schema=tenant_schema)
 
     try:
         # Note: DocumentService expects 'tipo' as string, but we'll store tipo_documento_id separately
@@ -104,7 +160,7 @@ async def upload_documento(
         )
 
         # Update documento with anagrafica-specific fields
-        documento = db.query(Documento).filter(Documento.id == documento_data["id"]).first()
+        documento = doc_service.get(documento_data["id"])
         if documento:
             documento.tipo_documento_id = tipo_documento_id
             documento.data_scadenza = parsed_scadenza
@@ -130,6 +186,13 @@ async def upload_documento(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(
+            "[ANAG][UPLOAD] Failed to upload documento: soggetto_id=%s tipo_documento_id=%s schema=%s file=%s",
+            soggetto_id,
+            tipo_documento_id,
+            tenant_schema,
+            getattr(file, "filename", None),
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Errore durante il caricamento: {str(e)}"
@@ -159,12 +222,7 @@ def list_documenti_soggetto(
     if not tenant_schema:
         raise HTTPException(status_code=400, detail="Tenant schema mancante")
 
-    inspector = inspect(db.get_bind())
-    if not inspector.has_table("documenti", schema=tenant_schema):
-        raise HTTPException(
-            status_code=409,
-            detail="Tabella documenti non presente. Reinstalla il modulo anagrafica per il tenant.",
-        )
+    _ensure_documenti_table(db, tenant_schema)
 
     # Verify soggetto exists
     soggetto = db.query(SoggettoAnagrafico).filter(
@@ -243,14 +301,9 @@ def download_documento(
     if not tenant_schema:
         raise HTTPException(status_code=400, detail="Tenant schema mancante")
 
-    inspector = inspect(db.get_bind())
-    if not inspector.has_table("documenti", schema=tenant_schema):
-        raise HTTPException(
-            status_code=409,
-            detail="Tabella documenti non presente. Reinstalla il modulo anagrafica per il tenant.",
-        )
+    _ensure_documenti_table(db, tenant_schema)
 
-    doc_service = DocumentService(db)
+    doc_service = DocumentService(db, tenant_schema=tenant_schema)
 
     try:
         # Get file path (includes permission check)
@@ -285,6 +338,7 @@ def download_documento(
 def delete_documento(
     documento_id: int,
     db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.delete"))
 ):
     """
@@ -292,7 +346,7 @@ def delete_documento(
 
     Uses platform DocumentService for safe deletion.
     """
-    doc_service = DocumentService(db)
+    doc_service = DocumentService(db, tenant_schema=tenant_schema)
 
     try:
         # Get documento first to verify ownership
@@ -323,6 +377,7 @@ def delete_documento(
 def get_scadenzario_soggetto(
     soggetto_id: int,
     db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.view"))
 ):
     """
@@ -330,6 +385,8 @@ def get_scadenzario_soggetto(
 
     Uses platform ScadenzarioService.
     """
+    _ensure_documenti_table(db, tenant_schema)
+
     # Verify soggetto exists
     soggetto = db.query(SoggettoAnagrafico).filter(
         SoggettoAnagrafico.id == soggetto_id
@@ -337,7 +394,7 @@ def get_scadenzario_soggetto(
     if not soggetto:
         raise HTTPException(status_code=404, detail="Soggetto non trovato")
 
-    scad_service = ScadenzarioService(db)
+    scad_service = ScadenzarioService(db, model_class=Documento)
 
     # Get documents grouped by deadline status
     scadenze = scad_service.get_by_entity(
@@ -380,6 +437,7 @@ def get_scadenzario_soggetto(
 @router.get("/scadenzario/statistics")
 def get_scadenzario_statistics(
     db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.view"))
 ):
     """
@@ -387,7 +445,9 @@ def get_scadenzario_statistics(
 
     Uses platform ScadenzarioService.
     """
-    scad_service = ScadenzarioService(db)
+    _ensure_documenti_table(db, tenant_schema)
+
+    scad_service = ScadenzarioService(db, model_class=Documento)
 
     stats = scad_service.get_statistics(entity_type="SOGGETTO_ANAGRAFICO")
 

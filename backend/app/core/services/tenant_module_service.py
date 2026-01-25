@@ -582,14 +582,42 @@ class TenantModuleService:
             func(db, tenant_id, tenant_schema)
             return
 
-        params = len(signature.parameters)
-        if params == 0:
+        params = list(signature.parameters.values())
+        if not params:
             func()
-        elif params == 1:
+            return
+
+        allowed = {"db", "session", "tenant_id", "tenant_schema", "seed_test_data"}
+        has_var_kw = any(p.kind == py_inspect.Parameter.VAR_KEYWORD for p in params)
+        has_var_pos = any(p.kind == py_inspect.Parameter.VAR_POSITIONAL for p in params)
+        all_named = all(
+            p.kind in (py_inspect.Parameter.POSITIONAL_OR_KEYWORD, py_inspect.Parameter.KEYWORD_ONLY)
+            and p.name in allowed
+            for p in params
+        )
+
+        if all_named or has_var_kw:
+            kwargs = {}
+            if "db" in signature.parameters:
+                kwargs["db"] = db
+            if "session" in signature.parameters:
+                kwargs["session"] = db
+            if "tenant_id" in signature.parameters:
+                kwargs["tenant_id"] = tenant_id
+            if "tenant_schema" in signature.parameters:
+                kwargs["tenant_schema"] = tenant_schema
+            if "seed_test_data" in signature.parameters:
+                kwargs["seed_test_data"] = seed_test_data
+            func(**kwargs)
+            return
+
+        # Fallback to positional calling convention
+        count = len(params)
+        if count == 1:
             func(db)
-        elif params == 2:
+        elif count == 2:
             func(db, tenant_id)
-        elif params == 3:
+        elif count == 3:
             func(db, tenant_id, tenant_schema)
         else:
             func(db, tenant_id, tenant_schema, seed_test_data)
@@ -829,10 +857,11 @@ class TenantModuleService:
             db.commit()
 
         if drop_tables:
-            TenantModuleService.drop_module_tables_for_tenant(tenant_id, module_id, db)
+            return TenantModuleService.drop_module_tables_for_tenant(tenant_id, module_id, db)
+        return {"dropped": [], "failed": []}
 
     @staticmethod
-    def drop_module_tables_for_tenant(tenant_id: int, module_id: str, db: Session) -> List[str]:
+    def drop_module_tables_for_tenant(tenant_id: int, module_id: str, db: Session) -> Dict[str, List[Dict]]:
         """
         Drop tenant schema tables for a module.
 
@@ -855,7 +884,8 @@ class TenantModuleService:
             schema_tables,
         )
 
-        dropped = []
+        dropped: List[str] = []
+        failed: List[Dict[str, str]] = []
         for table in sorted(tenant_tables):
             try:
                 db.execute(text("SET LOCAL lock_timeout = '2s'"))
@@ -877,6 +907,7 @@ class TenantModuleService:
                     table,
                     exc,
                 )
+                failed.append({"table": table, "error": str(exc)})
 
         manifest = module_record.manifest or {}
         module_prefix = manifest.get("module_short_code")
@@ -894,8 +925,9 @@ class TenantModuleService:
                     version_table,
                     exc,
                 )
+                failed.append({"table": version_table, "error": str(exc)})
 
-        return dropped
+        return {"dropped": [{"table": name} for name in dropped], "failed": failed}
 
     @staticmethod
     def uninstall_module_for_tenant(
@@ -930,13 +962,22 @@ class TenantModuleService:
             # Drop in reverse order to handle FK dependencies
             for table_name in reversed(table_names):
                 try:
-                    db.execute(text(f"DROP TABLE IF EXISTS {schema_name}.{table_name} CASCADE"))
+                    db.execute(text("SET LOCAL lock_timeout = '5s'"))
+                    db.execute(text("SET LOCAL statement_timeout = '30s'"))
+                    db.execute(text(f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}" CASCADE'))
                 except Exception as e:
+                    db.rollback()
                     TenantModuleService.logger.warning(
                         f"Could not drop {schema_name}.{table_name}: {e}"
                     )
+                else:
+                    db.commit()
 
-            db.commit()
+            # Ensure we have a clean transaction state
+            try:
+                db.commit()
+            except Exception:
+                db.rollback()
 
         # Remove registration
         db.query(TenantModule).filter_by(

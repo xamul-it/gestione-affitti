@@ -65,3 +65,21 @@
   background: #fee2e2;
   border-radius: 8px;
 }
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-secondary {
+  background: #e2e3e5;
+  color: #383d41;
+}

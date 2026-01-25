@@ -398,13 +398,21 @@ def disable_module(
     Disable module (keep data) - PLATFORM ADMIN ONLY.
     """
     ensure_tenant_admin_access(tenant_id, current_user, db)
-    TenantModuleService.disable_module_for_tenant(tenant_id, module_id, db, drop_tables=drop_tables)
-    return {"status": "disabled", "module_id": module_id, "tables_dropped": drop_tables}
+    drop_result = TenantModuleService.disable_module_for_tenant(
+        tenant_id, module_id, db, drop_tables=drop_tables
+    )
+    return {
+        "status": "disabled",
+        "module_id": module_id,
+        "tables_dropped": drop_result.get("dropped", []),
+        "tables_failed": drop_result.get("failed", []),
+    }
 
 
 @router.post("/{tenant_id}/clear-tables")
 def clear_tenant_tables(
     tenant_id: int,
+    force: bool = False,
     current_user: User = Depends(require_permission("platform.admin")),
     db: Session = Depends(get_db),
 ):
@@ -416,8 +424,13 @@ def clear_tenant_tables(
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    dropped = TenantService.clear_tenant_tables(tenant.schema_name, db)
-    return {"status": "cleared", "tenant_id": tenant_id, "tables_dropped": dropped}
+    result = TenantService.clear_tenant_tables(tenant.schema_name, db, force=force)
+    return {
+        "status": "cleared",
+        "tenant_id": tenant_id,
+        "tables_dropped": result["dropped"],
+        "tables_failed": result["failed"],
+    }
 
 
 @router.delete("/{tenant_id}/modules/{module_id}")

@@ -9,7 +9,7 @@ Provides comprehensive data for Italian municipalities (comuni) including:
 
 Used for address normalization and CAP lookup during import.
 """
-from sqlalchemy import Column, Integer, String, Numeric, DateTime, Index
+from sqlalchemy import Column, Integer, String, Numeric, DateTime, Index, Boolean
 from sqlalchemy.sql import func
 from app.core.database import Base
 
@@ -42,6 +42,7 @@ class ComuneItalia(Base):
     regione = Column(String(100), nullable=True)  # Region name
     latitudine = Column(Numeric(10, 7), nullable=True)  # Geographic latitude
     longitudine = Column(Numeric(10, 7), nullable=True)  # Geographic longitude
+    attivo = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (

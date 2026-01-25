@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import { DataTable } from '../../../../core/components';
 import ImportButton from '../../../../components/Platform/ImportButton';
 import ExportButton from '../../../../components/Platform/ExportButton';
@@ -20,22 +21,40 @@ const personeFisicheTableConfig = {
   },
   columns: [
     { field: 'nome_completo', label: 'Nome Completo', sortable: true },
-    { field: 'codice_fiscale', label: 'Codice Fiscale', filterable: true },
-    { field: 'data_nascita', label: 'Data Nascita' },
-    { field: 'luogo_nascita', label: 'Luogo Nascita', filterable: true },
     { field: 'email', label: 'Email', filterable: true },
     { field: 'telefono', label: 'Telefono', filterable: true },
     { field: 'citta', label: 'Citta', filterable: true },
-    { field: 'partita_iva', label: 'P.IVA', filterable: true },
-    { field: 'attivo', label: 'Stato' },
+    { field: 'codice_fiscale', label: 'Codice Fiscale', filterable: true, visible: false },
+    { field: 'data_nascita', label: 'Data Nascita', visible: false },
+    { field: 'luogo_nascita', label: 'Luogo Nascita', filterable: true, visible: false },
+    { field: 'partita_iva', label: 'P.IVA', filterable: true, visible: false },
+    { field: 'attivo', label: 'Stato', visible: false },
     { field: 'nome', label: 'Nome', filterable: true, visible: false },
     { field: 'cognome', label: 'Cognome', filterable: true, visible: false },
   ],
   defaultSort: { field: 'cognome', order: 'asc' },
   rowActions: [
-    { id: 'view', label: 'Dettagli', action: 'view', variant: 'secondary' },
-    { id: 'edit', label: 'Modifica', action: 'edit', variant: 'secondary' },
-    { id: 'delete', label: 'Elimina', action: 'delete', variant: 'danger' },
+    {
+      id: 'view',
+      label: 'Dettagli',
+      action: 'view',
+      variant: 'secondary',
+      icon: renderIcon('info', { size: 14 }),
+    },
+    {
+      id: 'edit',
+      label: 'Modifica',
+      action: 'edit',
+      variant: 'secondary',
+      icon: renderIcon('pencil', { size: 14 }),
+    },
+    {
+      id: 'delete',
+      label: 'Elimina',
+      action: 'delete',
+      variant: 'danger',
+      icon: renderIcon('trash', { size: 14 }),
+    },
   ],
 };
 
@@ -71,9 +90,9 @@ function PersoneFisicheList() {
     {
       ...personeFisicheTableConfig.columns[0],
       render: (_, row) => (
-        <span className="soggetto-name">
+        <Link className="soggetto-name" to={`/anagrafiche/persone-fisiche/${row.id}`}>
           {getNomeCompleto(row)}
-        </span>
+        </Link>
       ),
     },
     {

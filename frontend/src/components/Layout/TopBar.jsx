@@ -108,6 +108,38 @@ function TopBar() {
     }
   };
 
+  const handleRefreshComuni = async () => {
+    const proceed = window.confirm(
+      "Aggiornare l'elenco dei comuni da fonte esterna?\n\n" +
+      "L'operazione può richiedere qualche minuto."
+    );
+    if (!proceed) return;
+
+    try {
+      setDebugMenuOpen(false);
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/anagrafica/domini/comuni/refresh`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      alert(
+        `Aggiornamento comuni completato.\n\n` +
+        `Totale fonte: ${data.source_rows}\n` +
+        `Creati: ${data.created}\n` +
+        `Aggiornati: ${data.updated}\n` +
+        `Riattivati: ${data.reactivated}\n` +
+        `Disattivati: ${data.deactivated}`
+      );
+    } catch (err) {
+      console.error('Errore aggiornamento comuni:', err);
+      alert('Errore durante aggiornamento comuni.');
+    }
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -333,6 +365,15 @@ function TopBar() {
                 >
                   Pulizia core
                 </Link>
+                {(user?.is_superuser || hasPermission('platform.admin')) && (
+                  <button
+                    className="topbar-switcher-item"
+                    onClick={handleRefreshComuni}
+                    role="menuitem"
+                  >
+                    Aggiorna comuni
+                  </button>
+                )}
                 <button
                   className="topbar-switcher-item"
                   onClick={() => {

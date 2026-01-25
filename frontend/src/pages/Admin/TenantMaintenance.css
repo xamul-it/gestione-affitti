@@ -70,6 +70,12 @@
   font-size: 0.75rem;
 }
 
+.tenant-maintenance-table-pill.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
 .tenant-maintenance-loading {
   padding: 16px;
 }

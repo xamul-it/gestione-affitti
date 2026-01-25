@@ -6,7 +6,7 @@ Gestisce la tabella centralizzata dei soggetti anagrafici con informazioni sui r
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, inspect
+from sqlalchemy import or_, inspect, text
 from app.core.database import get_db, get_tenant_schema
 from ..models import SoggettoAnagrafico, TipoSoggetto
 from pydantic import BaseModel
@@ -14,6 +14,19 @@ from datetime import date
 
 router = APIRouter(prefix="/anagrafica/soggetti", tags=["Soggetti Anagrafici"])
 
+def _ensure_soggetti_table(db: Session, tenant_schema: Optional[str]) -> None:
+    if not tenant_schema:
+        raise HTTPException(status_code=400, detail="Tenant schema mancante")
+
+    # Force tenant search_path for this session.
+    db.execute(text(f"SET search_path TO {tenant_schema}, public"))
+
+    inspector = inspect(db.get_bind())
+    if not inspector.has_table("anag_soggetti_anagrafici", schema=tenant_schema):
+        raise HTTPException(
+            status_code=409,
+            detail="Tabella anag_soggetti_anagrafici non presente. Reinstalla il modulo anagrafica per il tenant.",
+        )
 
 def _get_role_tables(db: Session, tenant_schema: Optional[str]) -> dict:
     if not tenant_schema:
@@ -122,6 +135,7 @@ def get_all_soggetti(
     - Dati anagrafici completi
     - Ruoli attivi (proprietario, affittuario, tecnico)
     """
+    _ensure_soggetti_table(db, tenant_schema)
     query = db.query(SoggettoAnagrafico)
 
     if attivo is not None:
@@ -176,6 +190,7 @@ def get_soggetto(
 
     Restituisce dati anagrafici completi e informazioni dettagliate sui ruoli attivi.
     """
+    _ensure_soggetti_table(db, tenant_schema)
     soggetto = db.query(SoggettoAnagrafico).filter(
         SoggettoAnagrafico.id == soggetto_id
     ).first()
@@ -224,6 +239,7 @@ def search_soggetti(
 
     Utile per autocomplete e selezione rapida nei form.
     """
+    _ensure_soggetti_table(db, tenant_schema)
     search_pattern = f"%{q}%"
 
     soggetti = db.query(SoggettoAnagrafico).filter(
@@ -277,11 +293,14 @@ def search_soggetti(
 @router.post("/", response_model=SoggettoAnagra_ficoResponse, status_code=201)
 def create_soggetto(
     soggetto: SoggettoAnagra_ficoCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """
     Crea un nuovo soggetto anagrafico.
     """
+
+    _ensure_soggetti_table(db, tenant_schema)
 
     # Verifica unicità CF
     if soggetto.codice_fiscale:
@@ -332,6 +351,7 @@ def update_soggetto(
 
     L'aggiornamento si riflette automaticamente su tutti i ruoli del soggetto.
     """
+    _ensure_soggetti_table(db, tenant_schema)
     db_soggetto = db.query(SoggettoAnagrafico).filter(
         SoggettoAnagrafico.id == soggetto_id
     ).first()
@@ -397,6 +417,7 @@ def delete_soggetto(
     ATTENZIONE: Elimina anche tutti i ruoli associati (proprietario, affittuario, tecnico)
     grazie al CASCADE. Usare con cautela.
     """
+    _ensure_soggetti_table(db, tenant_schema)
     db_soggetto = db.query(SoggettoAnagrafico).filter(
         SoggettoAnagrafico.id == soggetto_id
     ).first()

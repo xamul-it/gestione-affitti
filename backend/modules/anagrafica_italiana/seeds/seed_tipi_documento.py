@@ -50,12 +50,56 @@ def seed_tipi_documento(db: Session):
             "categoria": "fiscale",
             "richiede_scadenza": False
         },
+
+        # Documenti aziendali
         {
             "codice": "VISURA_CAMERALE",
             "nome": "Visura Camerale",
             "descrizione": "Visura Camera di Commercio",
-            "categoria": "fiscale",
+            "categoria": "aziendale",
             "richiede_scadenza": True
+        },
+        {
+            "codice": "CERTIFICATO_CCIAA",
+            "nome": "Certificato CCIAA",
+            "descrizione": "Certificato Camera di Commercio / REA",
+            "categoria": "aziendale",
+            "richiede_scadenza": True
+        },
+        {
+            "codice": "ATTO_COSTITUTIVO",
+            "nome": "Atto Costitutivo",
+            "descrizione": "Atto costitutivo dell'azienda",
+            "categoria": "aziendale",
+            "richiede_scadenza": False
+        },
+        {
+            "codice": "STATUTO",
+            "nome": "Statuto",
+            "descrizione": "Statuto dell'azienda",
+            "categoria": "aziendale",
+            "richiede_scadenza": False
+        },
+        {
+            "codice": "DURC",
+            "nome": "DURC",
+            "descrizione": "Documento Unico di Regolarità Contributiva",
+            "categoria": "aziendale",
+            "richiede_scadenza": True
+        },
+        {
+            "codice": "CERTIFICATO_REGISTRO_IMPRESE",
+            "nome": "Certificato Registro Imprese",
+            "descrizione": "Certificato di iscrizione al Registro Imprese",
+            "categoria": "aziendale",
+            "richiede_scadenza": True
+        },
+        {
+            "codice": "BILANCIO",
+            "nome": "Bilancio",
+            "descrizione": "Bilancio d'esercizio",
+            "categoria": "aziendale",
+            "richiede_scadenza": False
         },
 
         # Documenti professionali

@@ -86,7 +86,7 @@ class TenantService:
         db.commit()
 
     @staticmethod
-    def clear_tenant_tables(schema_name: str, db: Session, force: bool = False) -> List[str]:
+    def clear_tenant_tables(schema_name: str, db: Session, force: bool = False) -> Dict[str, List[Dict]]:
         """
         Drop all tables in a tenant schema, preserving the schema itself.
 
@@ -106,10 +106,12 @@ class TenantService:
             raise ValueError(f"Invalid schema name: {schema_name}")
 
         if force:
-            TenantService.terminate_db_connections(db)
+            # Terminate only sessions that hold locks in the target schema.
+            TenantService.terminate_schema_connections(db, schema_name=schema_name)
 
-        db.execute(text("SET LOCAL lock_timeout = '5s'"))
-        db.execute(text("SET LOCAL statement_timeout = '30s'"))
+        # Use longer timeouts when forcing cleanup to reduce lock-timeout failures.
+        lock_timeout = "20s" if force else "5s"
+        statement_timeout = "120s" if force else "30s"
 
         tables = db.execute(text("""
             SELECT table_name
@@ -120,17 +122,29 @@ class TenantService:
         """), {"schema": schema_name}).mappings().all()
 
         dropped = []
+        failed = []
         for row in tables:
             table_name = row["table_name"]
-            try:
-                db.execute(text(f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}" CASCADE'))
-                dropped.append(table_name)
-            except Exception:
-                db.rollback()
-                raise
+            attempts = 3 if force else 1
+            for attempt in range(1, attempts + 1):
+                try:
+                    db.execute(text(f"SET LOCAL lock_timeout = '{lock_timeout}'"))
+                    db.execute(text(f"SET LOCAL statement_timeout = '{statement_timeout}'"))
+                    db.execute(text(f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}" CASCADE'))
+                    db.commit()
+                    dropped.append(table_name)
+                    break
+                except Exception as exc:
+                    db.rollback()
+                    if attempt >= attempts:
+                        failed.append({
+                            "table": table_name,
+                            "error": str(exc),
+                        })
+                    else:
+                        continue
 
-        db.commit()
-        return dropped
+        return {"dropped": dropped, "failed": failed}
 
     @staticmethod
     def clear_non_core_tables(db: Session, schema_name: str = "public", force: bool = False) -> List[str]:
@@ -189,6 +203,37 @@ class TenantService:
             WHERE datname = current_database()
               AND pid <> pg_backend_pid()
         """)).mappings().all()
+
+        terminated = 0
+        for row in pids:
+            pid = row["pid"]
+            result = db.execute(text("SELECT pg_terminate_backend(:pid)"), {"pid": pid}).scalar()
+            if result:
+                terminated += 1
+
+        db.commit()
+        return terminated
+
+    @staticmethod
+    def terminate_schema_connections(db: Session, schema_name: str) -> int:
+        """
+        Terminate connections that hold locks on objects in the given schema.
+        Returns number of terminated backends.
+        """
+        # Validate schema name
+        if not schema_name.replace('_', '').replace('-', '').isalnum():
+            raise ValueError(f"Invalid schema name: {schema_name}")
+
+        pids = db.execute(text("""
+            SELECT DISTINCT a.pid
+            FROM pg_stat_activity a
+            JOIN pg_locks l ON l.pid = a.pid
+            JOIN pg_class c ON c.oid = l.relation
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE a.datname = current_database()
+              AND a.pid <> pg_backend_pid()
+              AND n.nspname = :schema
+        """), {"schema": schema_name}).mappings().all()
 
         terminated = 0
         for row in pids:

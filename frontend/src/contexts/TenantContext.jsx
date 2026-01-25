@@ -14,6 +14,44 @@ export function TenantProvider({ children }) {
   const isFetchingRef = useRef(false); // Use ref to prevent render loops
   const refreshAttemptedRef = useRef(false);
 
+  const decodeTokenPayload = (token) => {
+    if (!token) return null;
+    try {
+      const payload = token.split('.')[1];
+      if (!payload) return null;
+      const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(atob(normalized));
+    } catch (err) {
+      console.error('Failed to decode token payload:', err);
+      return null;
+    }
+  };
+
+  const syncTenantWithToken = (tenants) => {
+    if (!Array.isArray(tenants) || tenants.length === 0) return;
+
+    const token = localStorage.getItem('access_token');
+    const payload = decodeTokenPayload(token);
+    const tokenSchema = payload?.tenant_schema;
+
+    let nextTenant = null;
+    if (tokenSchema) {
+      nextTenant = tenants.find(t => t.schema_name === tokenSchema) || null;
+    }
+
+    if (!nextTenant) {
+      nextTenant = tenants.find(t => t.is_default) || tenants[0];
+    }
+
+    if (!nextTenant) return;
+
+    if (!currentTenant || currentTenant.schema_name !== nextTenant.schema_name) {
+      setCurrentTenant(nextTenant);
+      localStorage.setItem('current_tenant', JSON.stringify(nextTenant));
+      console.log('[TenantContext] Synced current tenant to token:', nextTenant.schema_name);
+    }
+  };
+
   // Initialize tenant state from localStorage
   useEffect(() => {
     const savedTenant = localStorage.getItem('current_tenant');
@@ -76,6 +114,7 @@ export function TenantProvider({ children }) {
 
       console.log('[TenantContext] Tenants fetched:', response.data.length);
       setAvailableTenants(response.data);
+      syncTenantWithToken(response.data);
 
       return response.data;
     } catch (err) {
@@ -92,6 +131,7 @@ export function TenantProvider({ children }) {
               }
             });
             setAvailableTenants(retryResponse.data);
+            syncTenantWithToken(retryResponse.data);
             return retryResponse.data;
           } catch (retryErr) {
             console.error('Failed to fetch tenants after refresh:', retryErr);
@@ -261,6 +301,7 @@ export function TenantProvider({ children }) {
       });
 
       setAvailableTenants(response.data);
+      syncTenantWithToken(response.data);
       return response.data;
     } catch (err) {
       const status = err.response?.status;
@@ -275,6 +316,7 @@ export function TenantProvider({ children }) {
               }
             });
             setAvailableTenants(retryResponse.data);
+            syncTenantWithToken(retryResponse.data);
             return retryResponse.data;
           } catch (retryErr) {
             console.error('Failed to refresh tenants after token refresh:', retryErr);

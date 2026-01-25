@@ -72,7 +72,7 @@ export default function TenantModules() {
             return;
           }
         }
-        await axios.post(
+        const response = await axios.post(
           `${API_BASE_URL}/tenants/${currentTenant.id}/modules/${moduleId}/disable`,
           {},
           {
@@ -80,6 +80,15 @@ export default function TenantModules() {
             params: dropTables ? { drop_tables: true } : undefined,
           }
         );
+        if (dropTables) {
+          const failed = response.data?.tables_failed || [];
+          if (failed.length > 0) {
+            alert(
+              `Disabilitazione completata, ma non tutte le tabelle sono state rimosse.\n` +
+              `Tabelle rimaste: ${failed.map((item) => item.table).join(', ')}`
+            );
+          }
+        }
       } else {
         await axios.post(
           `${API_BASE_URL}/tenants/${currentTenant.id}/modules/install`,

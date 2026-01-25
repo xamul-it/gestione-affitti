@@ -486,6 +486,7 @@ function PersonaFisicaDetail() {
               <div className="upload-section">
                 <DocumentoUpload
                   soggettoId={parseInt(id)}
+                  soggettoTipo={persona?.tipo_soggetto}
                   onUploadSuccess={handleUploadSuccess}
                   onCancel={() => setShowUpload(false)}
                 />

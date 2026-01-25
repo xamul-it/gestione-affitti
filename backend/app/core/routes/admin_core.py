@@ -23,7 +23,7 @@ def cleanup_non_core_tables(
     """
     try:
         terminated = TenantService.terminate_db_connections(db) if force else 0
-        dropped = TenantService.clear_non_core_tables(db, schema_name=schema_name, force=False)
+        dropped = TenantService.clear_non_core_tables(db, schema_name=schema_name, force=force)
         return {
             "status": "cleared",
             "schema": schema_name,

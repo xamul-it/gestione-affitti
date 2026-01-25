@@ -19,12 +19,20 @@ const tipiDocumentoTableConfig = {
     {
       field: 'richiede_scadenza',
       label: 'Scadenza',
-      render: (value) => (value ? 'Si' : 'No'),
+      render: (value) => (
+        <span className={`badge ${value ? 'badge-success' : 'badge-secondary'}`}>
+          {value ? 'Sì' : 'No'}
+        </span>
+      ),
     },
     {
       field: 'attivo',
       label: 'Attivo',
-      render: (value) => (value ? 'Si' : 'No'),
+      render: (value) => (
+        <span className={`badge ${value ? 'badge-success' : 'badge-secondary'}`}>
+          {value ? 'Sì' : 'No'}
+        </span>
+      ),
     },
   ],
   defaultSort: { field: 'nome', order: 'asc' },

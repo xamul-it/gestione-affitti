@@ -37,7 +37,13 @@
 }
 
 .export-icon {
-  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.export-icon-svg {
+  display: block;
 }
 
 .export-spinner {
@@ -129,8 +135,14 @@
 }
 
 .export-menu-icon {
-  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+}
+
+.export-menu-icon-svg {
+  display: block;
 }
 
 .export-menu-item-content {
@@ -186,7 +198,13 @@
 }
 
 .export-error-icon {
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.export-error-icon-svg {
+  display: block;
 }
 
 .export-error-close {

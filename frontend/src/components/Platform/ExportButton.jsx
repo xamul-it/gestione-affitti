@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { importExportAPI } from '../../services/api';
+import { renderIcon } from '../Navigation/iconRegistry.jsx';
 import './ExportButton.css';
 
 /**
@@ -96,7 +97,10 @@ function ExportButton({ moduleName, entityName, entityLabel, fields = null }) {
           </>
         ) : (
           <>
-            <span className="export-icon">📤</span> Esporta
+            <span className="export-icon" aria-hidden="true">
+              {renderIcon('download', { size: 16, className: 'export-icon-svg', fallbackClassName: 'export-icon-svg' })}
+            </span>
+            Esporta
           </>
         )}
       </button>
@@ -115,7 +119,9 @@ function ExportButton({ moduleName, entityName, entityLabel, fields = null }) {
                 className="export-menu-item"
                 onClick={() => handleExport('csv')}
               >
-                <span className="export-menu-icon">📄</span>
+                <span className="export-menu-icon" aria-hidden="true">
+                  {renderIcon('file-text', { size: 16, className: 'export-menu-icon-svg', fallbackClassName: 'export-menu-icon-svg' })}
+                </span>
                 <div className="export-menu-item-content">
                   <div className="export-menu-item-title">CSV</div>
                   <div className="export-menu-item-desc">Formato testo, apribile con Excel</div>
@@ -125,7 +131,9 @@ function ExportButton({ moduleName, entityName, entityLabel, fields = null }) {
                 className="export-menu-item"
                 onClick={() => handleExport('excel')}
               >
-                <span className="export-menu-icon">📊</span>
+                <span className="export-menu-icon" aria-hidden="true">
+                  {renderIcon('chart-line', { size: 16, className: 'export-menu-icon-svg', fallbackClassName: 'export-menu-icon-svg' })}
+                </span>
                 <div className="export-menu-item-content">
                   <div className="export-menu-item-title">Excel (XLSX)</div>
                   <div className="export-menu-item-desc">Formato nativo Microsoft Excel</div>
@@ -141,7 +149,9 @@ function ExportButton({ moduleName, entityName, entityLabel, fields = null }) {
                 className="export-menu-item"
                 onClick={() => handleDownloadTemplate(false)}
               >
-                <span className="export-menu-icon">📝</span>
+                <span className="export-menu-icon" aria-hidden="true">
+                  {renderIcon('file-signature', { size: 16, className: 'export-menu-icon-svg', fallbackClassName: 'export-menu-icon-svg' })}
+                </span>
                 <div className="export-menu-item-content">
                   <div className="export-menu-item-title">Template Vuoto</div>
                   <div className="export-menu-item-desc">Solo intestazioni colonne</div>
@@ -151,7 +161,9 @@ function ExportButton({ moduleName, entityName, entityLabel, fields = null }) {
                 className="export-menu-item"
                 onClick={() => handleDownloadTemplate(true)}
               >
-                <span className="export-menu-icon">📋</span>
+                <span className="export-menu-icon" aria-hidden="true">
+                  {renderIcon('list', { size: 16, className: 'export-menu-icon-svg', fallbackClassName: 'export-menu-icon-svg' })}
+                </span>
                 <div className="export-menu-item-content">
                   <div className="export-menu-item-title">Template con Esempio</div>
                   <div className="export-menu-item-desc">Include riga di esempio</div>
@@ -164,7 +176,9 @@ function ExportButton({ moduleName, entityName, entityLabel, fields = null }) {
 
       {error && (
         <div className="export-error-toast">
-          <span className="export-error-icon">⚠️</span>
+          <span className="export-error-icon" aria-hidden="true">
+            {renderIcon('alert-triangle', { size: 16, className: 'export-error-icon-svg', fallbackClassName: 'export-error-icon-svg' })}
+          </span>
           {error}
           <button className="export-error-close" onClick={() => setError(null)}>×</button>
         </div>

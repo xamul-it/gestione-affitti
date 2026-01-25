@@ -10,15 +10,16 @@ const comuniTableConfig = {
   emptyMessage: 'Non ci sono comuni disponibili.',
   addButtonLabel: 'Nuovo Comune',
   defaultParams: {
-    limit: 1000,
+    limit: 10000,
   },
   columns: [
     { field: 'nome', label: 'Comune', filterable: true, sortable: true },
-    { field: 'provincia', label: 'Provincia', filterable: true, sortable: true },
+    { field: 'provincia_sigla', label: 'Provincia', filterable: true, sortable: true },
     { field: 'regione', label: 'Regione', filterable: true },
     { field: 'cap', label: 'CAP', filterable: true },
     { field: 'codice_catastale', label: 'Codice Catastale' },
     { field: 'codice_istat', label: 'Codice ISTAT' },
+    { field: 'attivo', label: 'Attivo' },
   ],
   defaultSort: { field: 'nome', order: 'asc' },
 };
@@ -36,7 +37,7 @@ function ComuniList() {
         onChange={(e) => {
           const value = e.target.value.toUpperCase();
           setSearchProvincia(value);
-          table.setFilter('provincia', value || '');
+          table.setFilter('provincia_sigla', value || '');
         }}
         maxLength={2}
         className="search-input provincia-input"
@@ -76,7 +77,7 @@ function ComuniList() {
     },
     {
       ...comuniTableConfig.columns[1],
-      render: (value) => <span className="provincia-badge">{value}</span>,
+      render: (value) => <span className="provincia-badge">{value || '-'}</span>,
     },
     {
       ...comuniTableConfig.columns[2],
@@ -93,6 +94,14 @@ function ComuniList() {
     {
       ...comuniTableConfig.columns[5],
       render: (value) => <code className="codice-badge">{value || '-'}</code>,
+    },
+    {
+      ...comuniTableConfig.columns[6],
+      render: (value) => (
+        <span className={`badge ${value ? 'badge-success' : 'badge-secondary'}`}>
+          {value ? 'Sì' : 'No'}
+        </span>
+      ),
     },
   ];
 

@@ -65,6 +65,16 @@
   flex: 1;
 }
 
+.stat-card-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.stat-card-link:focus-visible .stat-card {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .stat-card {
   background: #f8f9fa;
   border: 1px solid #e9ecef;
@@ -76,6 +86,7 @@
   align-items: center;
   position: relative;
   transition: all 0.2s;
+  cursor: pointer;
 }
 
 .stat-card:hover {

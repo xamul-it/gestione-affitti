@@ -25,7 +25,7 @@ from .contratti import Contratto, StatoContratto, UsoImmobile, TipologiaContratt
 from .spese import Spesa, CategoriaSpesa
 from .incassi import Incasso
 from .tecnici import Tecnico, SpecializzazioneTecnico
-from .documenti import Documento, EntityType, TipoDocumento
+from .documenti import Documento, EntityType, TipoDocumento, TipoDocumentoEnum
 from .ripartizione_spesa import RipartizioneSpesa
 
 __all__ = [
@@ -46,6 +46,7 @@ __all__ = [
     "Documento",
     "EntityType",
     "TipoDocumento",
+    "TipoDocumentoEnum",
     "Proprietario",
     "DirittoImmobile",
     "TipoDiritto",

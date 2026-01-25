@@ -28,3 +28,13 @@
   cursor: not-allowed;
   transform: none;
 }
+
+.btn-import-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-import-icon-svg {
+  display: block;
+}

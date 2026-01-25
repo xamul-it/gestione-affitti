@@ -64,13 +64,19 @@ export default function TenantMaintenance() {
       const response = await axios.post(
         `${API_BASE_URL}/tenants/${selectedTenant}/clear-tables`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { force: true },
+        }
       );
       const dropped = response.data?.tables_dropped || [];
+      const failed = response.data?.tables_failed || [];
       setResult({
         label,
         droppedCount: dropped.length,
         droppedTables: dropped,
+        failedCount: failed.length,
+        failedTables: failed,
       });
     } catch (err) {
       setError(err.response?.data?.detail || 'Operazione fallita');
@@ -122,11 +128,21 @@ export default function TenantMaintenance() {
           {result && (
             <div className="tenant-maintenance-result">
               <strong>Tenant:</strong> {result.label} <br />
-              <strong>Tabelle eliminate:</strong> {result.droppedCount}
+              <strong>Tabelle eliminate:</strong> {result.droppedCount} <br />
+              <strong>Tabelle non eliminate:</strong> {result.failedCount}
               {result.droppedTables.length > 0 && (
                 <div className="tenant-maintenance-table-list">
                   {result.droppedTables.map((table) => (
                     <span key={table} className="tenant-maintenance-table-pill">{table}</span>
+                  ))}
+                </div>
+              )}
+              {result.failedTables.length > 0 && (
+                <div className="tenant-maintenance-table-list">
+                  {result.failedTables.map((item) => (
+                    <span key={`${item.table}-${item.error}`} className="tenant-maintenance-table-pill error">
+                      {item.table}
+                    </span>
                   ))}
                 </div>
               )}

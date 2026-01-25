@@ -16,7 +16,7 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-export const DocumentoUpload = ({ soggettoId, onUploadSuccess, onCancel }) => {
+export const DocumentoUpload = ({ soggettoId, soggettoTipo, onUploadSuccess, onCancel }) => {
   const [tipiDocumento, setTipiDocumento] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [tipoDocumentoId, setTipoDocumentoId] = useState('');
@@ -122,13 +122,23 @@ export const DocumentoUpload = ({ soggettoId, onUploadSuccess, onCancel }) => {
 
   const selectedTipo = tipiDocumento.find(t => t.id === parseInt(tipoDocumentoId));
 
+  const filteredTipiDocumento = React.useMemo(() => {
+    if (!soggettoTipo) return tipiDocumento;
+    if (soggettoTipo === 'PERSONA_GIURIDICA') {
+      return tipiDocumento.filter((tipo) => (
+        tipo.categoria === 'aziendale' || tipo.categoria === 'altro' || !tipo.categoria
+      ));
+    }
+    return tipiDocumento.filter((tipo) => tipo.categoria !== 'aziendale');
+  }, [tipiDocumento, soggettoTipo]);
+
   // Get today's date for min date validation
   const today = new Date().toISOString().split('T')[0];
 
   return (
     <div className="documento-upload">
       <div className="upload-header">
-        <h3>📎 Carica Documento</h3>
+        <h3>Carica Documento</h3>
         {onCancel && (
           <button type="button" onClick={onCancel} className="btn-close">
             ✕
@@ -149,11 +159,11 @@ export const DocumentoUpload = ({ soggettoId, onUploadSuccess, onCancel }) => {
             disabled={loading}
           >
             <option value="">-- Seleziona tipo documento --</option>
-            {tipiDocumento.map(tipo => (
+            {filteredTipiDocumento.map(tipo => (
               <option key={tipo.id} value={tipo.id}>
                 {tipo.nome}
                 {tipo.categoria ? ` (${tipo.categoria})` : ''}
-                {tipo.richiede_scadenza && ' 📅'}
+                {tipo.richiede_scadenza && ' (scadenza)'}
               </option>
             ))}
           </select>
@@ -179,7 +189,7 @@ export const DocumentoUpload = ({ soggettoId, onUploadSuccess, onCancel }) => {
             />
             {selectedFile && (
               <div className="file-info">
-                <span className="file-name">📄 {selectedFile.name}</span>
+                <span className="file-name">{selectedFile.name}</span>
                 <span className="file-size">
                   {(selectedFile.size / 1024).toFixed(1)} KB
                 </span>
