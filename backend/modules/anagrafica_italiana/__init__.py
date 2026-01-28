@@ -55,6 +55,12 @@ def get_routers():
     except Exception as exc:
         logger.warning("Skipping documenti router: %s", exc)
 
+    try:
+        from .routes import anagrafica_from_document
+        routers.append(anagrafica_from_document.router)
+    except Exception as exc:
+        logger.warning("Skipping anagrafica_from_document router: %s", exc)
+
     return routers
 
 

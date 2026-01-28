@@ -32,7 +32,11 @@ from app.core.models import RuoloDisponibile, SoggettoRuolo
 from app.core.models.tenant import Tenant, UserTenant, TenantModule
 
 # Import platform models
-from app.core.platform.models import MenuItem, Widget, UserDashboard, Scadenza, ScadenzaDestinatario, ScadenzaLog
+from app.core.platform.models import (
+    MenuItem, Widget, UserDashboard,
+    Scadenza, ScadenzaDestinatario, ScadenzaLog,
+    DocumentJob, JobStatus
+)
 
 # Import module system
 from app.core.module_system import ModuleRegistry, ModuleLoader
@@ -44,6 +48,7 @@ from app.core.routes.unified_search import router as unified_search_router
 from app.core.routes.admin_comuni import router as admin_comuni_router
 from app.core.routes.admin_core import router as admin_core_router
 from app.core.routes.scadenze import router as scadenze_router
+from app.core.routes.document_parsing import router as document_parsing_router
 
 # Import auth routes
 from app.core.auth.routes import router as auth_router
@@ -562,6 +567,7 @@ app.include_router(unified_search_router, prefix=settings.API_V1_STR, tags=["Sea
 app.include_router(admin_comuni_router, prefix=settings.API_V1_STR, tags=["Admin"])
 app.include_router(admin_core_router, prefix=settings.API_V1_STR, tags=["Admin"])
 app.include_router(scadenze_router, prefix=settings.API_V1_STR)
+app.include_router(document_parsing_router, prefix=settings.API_V1_STR)
 
 # ====================================================================
 # AUTO-DISCOVERY: Register all module routers dynamically

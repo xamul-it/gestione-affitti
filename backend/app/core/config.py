@@ -38,6 +38,21 @@ class Settings(BaseSettings):
     MODULE_DIR: str = "modules"  # Relative to backend/
     MODULE_UPLOAD_DIR: str = "uploads/modules"
 
+    # Document Parsing Services
+    MRZ_SERVICE_URL: str = "http://localhost:8008"
+    MRZ_SERVICE_TIMEOUT: int = 300
+
+    # Callback URL (per servizi esterni)
+    API_BASE_URL: str = "http://localhost:8000/api/v1"
+
+    # File Storage
+    STORAGE_BASE_PATH: str = "./storage"
+    MAX_UPLOAD_SIZE_MB: int = 50
+
+    # Document Job Retry
+    DOCUMENT_JOB_MAX_RETRIES: int = 3
+    DOCUMENT_JOB_RETRY_DELAY_SECONDS: int = 60
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):

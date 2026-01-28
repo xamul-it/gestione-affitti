@@ -106,3 +106,51 @@ class SoggettoAnagraficoResponse(SoggettoAnagraficoBase):
 
     class Config:
         from_attributes = True
+
+
+class CompleteSoggettoFromDocument(BaseModel):
+    """
+    Schema for completing anagrafica creation from parsed document.
+
+    Used in "create from document" workflow after MRZ parsing.
+    """
+    job_uuid: str = Field(..., description="DocumentJob UUID")
+
+    # Required fields
+    nome: str = Field(..., max_length=100, description="First name (from parsed data)")
+    cognome: str = Field(..., max_length=100, description="Last name (from parsed data)")
+    codice_fiscale: str = Field(..., max_length=16, description="Italian fiscal code (from parsed data)")
+
+    # Optional fields (from parsed data or user input)
+    data_nascita: Optional[str] = Field(None, description="Birth date YYYY-MM-DD (from parsed data)")
+    luogo_nascita: Optional[str] = Field(None, max_length=100, description="Birth place (from parsed data)")
+
+    # Contact info (user input)
+    email: Optional[str] = Field(None, max_length=255)
+    telefono: Optional[str] = Field(None, max_length=20)
+    cellulare: Optional[str] = Field(None, max_length=20)
+
+    # Address (user input)
+    indirizzo: Optional[str] = Field(None, max_length=255)
+    citta: Optional[str] = Field(None, max_length=100)
+    cap: Optional[str] = Field(None, max_length=10)
+    provincia: Optional[str] = Field(None, max_length=2)
+
+    # Document info (from parsed data)
+    document_number: Optional[str] = Field(None, max_length=50, description="Document number from ID")
+    document_expiry: Optional[str] = Field(None, description="Document expiry YYYY-MM-DD")
+
+    # Notes
+    note: Optional[str] = Field(None, max_length=1000)
+
+    @field_validator('data_nascita', 'document_expiry')
+    @classmethod
+    def validate_date_format(cls, v):
+        """Validate date format YYYY-MM-DD"""
+        if v:
+            try:
+                from datetime import datetime
+                datetime.strptime(v, "%Y-%m-%d")
+            except ValueError:
+                raise ValueError("Formato data non valido. Usa YYYY-MM-DD")
+        return v

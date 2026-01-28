@@ -78,6 +78,7 @@ from .import_export_service import ImportExportService
 from .address_normalizer_service import AddressNormalizerService, AddressParseResult
 from .scadenzario_service import ScadenzarioService
 from .scadenza_service import ScadenzaService
+from .document_parsing_service import DocumentParsingService
 
 # Note: DocumentService was moved to affitti_lungo.services.document_service
 # It's business-specific and not part of the generic platform layer
@@ -85,6 +86,10 @@ from .scadenza_service import ScadenzaService
 # Note: ScadenzaService vs ScadenzarioService
 # - ScadenzaService: NEW dedicated service for Scadenza model (universal deadline system)
 # - ScadenzarioService: OLD service for tracking deadlines on existing entities (e.g., Documento.data_scadenza)
+
+# Note: DocumentParsingService
+# - NEW service for async document parsing orchestration (MRZ, OCR, etc.)
+# - Handles upload, job tracking, callbacks, and notifications
 
 __all__ = [
     "EntityService",
@@ -94,4 +99,5 @@ __all__ = [
     "AddressParseResult",
     "ScadenzarioService",
     "ScadenzaService",
+    "DocumentParsingService",
 ]

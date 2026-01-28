@@ -394,6 +394,10 @@ class ModuleLoader:
             if backend_entry:
                 self.call_entry_point(module_obj, backend_entry, self.registry)
 
+            # 4.5. Register document types from manifest
+            from app.core.platform_services.document_type_registry import document_type_registry
+            document_type_registry.register_from_manifest(technical_name, manifest)
+
             # 5. Return module metadata for installation
             return {
                 'technical_name': technical_name,
@@ -596,6 +600,10 @@ class ModuleLoader:
                 backend_entry = manifest.get('backend_entry')
                 if backend_entry:
                     self.call_entry_point(module_obj, backend_entry, self.registry)
+
+                # Register document types from manifest
+                from app.core.platform_services.document_type_registry import document_type_registry
+                document_type_registry.register_from_manifest(technical_name, manifest)
 
                 # Call register_module(app) if it exists (convention for route registration)
                 if self.app and hasattr(module_obj, 'register_module'):

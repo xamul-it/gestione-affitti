@@ -64,6 +64,80 @@ manifest = {
         },
     ],
 
+    # Document types with parsing support
+    "document_types": [
+        {
+            "codice": "CARTA_IDENTITA",
+            "nome": "Carta d'Identità",
+            "categoria": "identita",
+            "richiede_scadenza": True,
+            "parsing_service": "mrz",
+            "parsing_config": {
+                "mrz_format": "td1",
+                "rotate_mode": "auto",
+                "extract_photo": True,
+            }
+        },
+        {
+            "codice": "PASSAPORTO",
+            "nome": "Passaporto",
+            "categoria": "identita",
+            "richiede_scadenza": True,
+            "parsing_service": "mrz",
+            "parsing_config": {
+                "mrz_format": "td3",
+                "rotate_mode": "auto",
+                "extract_photo": True,
+            }
+        },
+        {
+            "codice": "PATENTE_GUIDA",
+            "nome": "Patente di Guida",
+            "categoria": "identita",
+            "richiede_scadenza": True,
+            "parsing_service": "mrz",
+            "parsing_config": {
+                "mrz_format": "td1",
+                "rotate_mode": "auto",
+            }
+        },
+        {
+            "codice": "PERMESSO_SOGGIORNO",
+            "nome": "Permesso di Soggiorno",
+            "categoria": "identita",
+            "richiede_scadenza": True,
+            "parsing_service": "mrz",
+            "parsing_config": {
+                "mrz_format": "td1",
+                "rotate_mode": "auto",
+            }
+        },
+        {
+            "codice": "CODICE_FISCALE",
+            "nome": "Tessera Codice Fiscale",
+            "categoria": "identita",
+            "richiede_scadenza": False,
+        },
+        {
+            "codice": "VISURA_CAMERALE",
+            "nome": "Visura Camerale",
+            "categoria": "aziendale",
+            "richiede_scadenza": False,
+        },
+        {
+            "codice": "ATTO_COSTITUTIVO",
+            "nome": "Atto Costitutivo",
+            "categoria": "aziendale",
+            "richiede_scadenza": False,
+        },
+        {
+            "codice": "STATUTO",
+            "nome": "Statuto Societario",
+            "categoria": "aziendale",
+            "richiede_scadenza": False,
+        },
+    ],
+
     # Menu items for this module - flat structure (no parent-child)
     "menu_items": [
         {

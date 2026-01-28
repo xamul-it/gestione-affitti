@@ -7,6 +7,7 @@ from .soggetto_anagrafico import (
     SoggettoAnagraficoCreate,
     SoggettoAnagraficoUpdate,
     SoggettoAnagraficoResponse,
+    CompleteSoggettoFromDocument,
 )
 
 __all__ = [
@@ -15,4 +16,5 @@ __all__ = [
     "SoggettoAnagraficoCreate",
     "SoggettoAnagraficoUpdate",
     "SoggettoAnagraficoResponse",
+    "CompleteSoggettoFromDocument",
 ]

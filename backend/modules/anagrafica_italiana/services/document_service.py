@@ -97,15 +97,23 @@ class DocumentService:
             self.validate_file(filename, file_size)
 
         try:
+            # Validazione tenant_schema prima di salvare
+            if not self.tenant_schema:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="tenant_schema è obbligatorio per il salvataggio documenti"
+                )
+
             relative_path = self.storage.save_file(
                 file=actual_file,
                 entity_type=entity_type,
                 entity_id=entity_id,
-                filename=filename
+                filename=filename,
+                tenant_schema=self.tenant_schema
             )
 
             if not file_size:
-                file_size = self.storage.get_file_size(relative_path)
+                file_size = self.storage.get_file_size(relative_path, self.tenant_schema)
 
             mime_type, _ = mimetypes.guess_type(filename)
             documento = Documento(
@@ -140,7 +148,7 @@ class DocumentService:
         except Exception as e:
             self.db.rollback()
             try:
-                self.storage.delete_file(relative_path)
+                self.storage.delete_file(relative_path, self.tenant_schema)
             except Exception:
                 pass
             raise HTTPException(
@@ -162,13 +170,13 @@ class DocumentService:
     def get_file_path(self, documento_id: int) -> str:
         self._ensure_tenant_context()
         documento = self.get_or_404(documento_id)
-        return self.storage.get_file_path(documento.file_path)
+        return self.storage.get_file_path(documento.file_path, self.tenant_schema)
 
     def delete(self, documento_id: int) -> bool:
         self._ensure_tenant_context()
         documento = self.get_or_404(documento_id)
         try:
-            self.storage.delete_file(documento.file_path)
+            self.storage.delete_file(documento.file_path, self.tenant_schema)
         except Exception:
             pass
         self.db.delete(documento)

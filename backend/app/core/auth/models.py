@@ -67,6 +67,9 @@ class User(Base):
     scadenze_destinate = relationship("ScadenzaDestinatario", back_populates="user")
     scadenza_logs = relationship("ScadenzaLog", back_populates="user")
 
+    # Document parsing jobs
+    document_jobs = relationship("DocumentJob", back_populates="creator", cascade="all, delete-orphan")
+
     def has_role(self, role_name: str) -> bool:
         """Check if user has a specific role."""
         return any(role.name == role_name for role in self.roles)
