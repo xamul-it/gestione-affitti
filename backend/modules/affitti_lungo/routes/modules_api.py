@@ -372,8 +372,8 @@ def register_module_resources(
 ) -> Dict[str, Any]:
     """
     Force registration for a module:
-    - Create tenant tables (for enabled tenants)
     - Register menu items and widgets in public
+    - Run public migrations + seed
     """
     registry = ModuleRegistry(db)
     module_record = registry.get_module_by_technical_name(technical_name)
@@ -473,14 +473,6 @@ def register_module_resources(
         TenantModule.enabled == True
     ).all()
 
-    for tm in tenant_modules:
-        try:
-            TenantModuleService.sync_module_tables_for_tenant(tm.tenant_id, technical_name, db)
-            tables_ok += 1
-        except Exception as e:
-            db.rollback()
-            tables_failed.append({"tenant_id": tm.tenant_id, "error": str(e)})
-
     module_roles = manifest.get("ruoli_disponibili", []) if manifest else []
     if module_roles:
         mapped_roles = []
@@ -528,7 +520,8 @@ def register_module_resources(
         "module_id": technical_name,
         "menu_items_registered": menu_registered,
         "widgets_registered": widgets_registered,
-        "tenants_processed": len(tenant_modules),
+        "tenants_processed": 0,
+        "tenants_skipped": len(tenant_modules),
         "tables_ok": tables_ok,
         "tables_failed": tables_failed
     }

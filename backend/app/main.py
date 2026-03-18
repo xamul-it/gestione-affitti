@@ -54,6 +54,8 @@ from app.core.routes.document_parsing import router as document_parsing_router
 from app.core.auth.routes import router as auth_router
 from app.core.auth.routes_roles import router as roles_router
 from app.core.auth.routes_roles_debug import router as roles_debug_router
+from app.core.routes.document_parsing_debug import router as document_parsing_debug_router
+from app.core.routes.parsing_services import router as parsing_services_router
 from app.core.routes.ruoli_disponibili import router as ruoli_disponibili_router
 
 # Import tenant routes
@@ -293,12 +295,21 @@ async def register_module_resources():
                     "required_permission": "platform.admin"
                 },
                 {
+                    "id": "platform.admin.parsing_services",
+                    "label": "Servizi Parsing",
+                    "path": "/admin/parsing-services",
+                    "icon": "settings",
+                    "parent_id": "platform.admin",
+                    "order_index": 4,
+                    "required_permission": "platform.admin"
+                },
+                {
                     "id": "platform.admin.data",
                     "label": "Amministrazione Dati",
                     "path": "/admin/data",
                     "icon": "list",
                     "parent_id": "platform.admin",
-                    "order_index": 4,
+                    "order_index": 5,
                     "required_permission": "platform.admin"
                 },
                 {
@@ -307,7 +318,7 @@ async def register_module_resources():
                     "path": "/admin/database",
                     "icon": "database",
                     "parent_id": "platform.admin",
-                    "order_index": 5,
+                    "order_index": 6,
                     "required_permission": "platform.admin"
                 }
                 # Scadenze removed - it's a CORE SERVICE (badge in TopBar), not a menu page
@@ -551,6 +562,8 @@ def health_check():
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(roles_router, prefix=settings.API_V1_STR)
 app.include_router(roles_debug_router, prefix=settings.API_V1_STR)
+app.include_router(document_parsing_debug_router, prefix=settings.API_V1_STR)
+app.include_router(parsing_services_router, prefix=settings.API_V1_STR)
 app.include_router(ruoli_disponibili_router, prefix=settings.API_V1_STR)
 
 # Registrazione tenant routers (multi-tenant system)

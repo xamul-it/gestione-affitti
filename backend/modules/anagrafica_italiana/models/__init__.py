@@ -12,6 +12,7 @@ from .ruolo_azienda import RuoloAzienda
 from .ruolo_azienda_tipo import RuoloAziendaTipo
 from .ruolo_azienda_tipo_override import RuoloAziendaTipoOverride
 from .documento import Documento, EntityType, TipoDocumentoEnum
+from .documento_file import DocumentoFile
 
 __all__ = [
     "SoggettoAnagrafico",
@@ -26,6 +27,7 @@ __all__ = [
     "RuoloAziendaTipo",
     "RuoloAziendaTipoOverride",
     "Documento",
+    "DocumentoFile",
     "EntityType",
     "TipoDocumentoEnum",
 ]

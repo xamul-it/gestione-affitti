@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { getSoggettoById, deleteSoggetto, getSoggettoRuoli } from '../../services/anagraficaAPI';
-import { DocumentoUpload, DocumentoList } from '../Documenti';
+import { DocumentoUpload, DocumentoList, DocumentoParsingPending } from '../Documenti';
 import RuoliAziendaSection from '../RuoliAzienda/RuoliAziendaSection';
 import './SoggettoDetail.css';
 
@@ -16,6 +16,7 @@ import './SoggettoDetail.css';
 function SoggettoDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [soggetto, setSoggetto] = useState(null);
   const [ruoli, setRuoli] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,14 @@ function SoggettoDetail() {
     loadSoggetto();
     loadRuoli();
   }, [id]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
   const loadSoggetto = async () => {
     try {
@@ -390,6 +399,13 @@ function SoggettoDetail() {
             )}
 
             <div className="documents-section">
+              <DocumentoParsingPending
+                soggettoId={parseInt(id)}
+                onCompleted={() => {
+                  setRefreshDocumenti(prev => prev + 1);
+                  loadSoggetto();
+                }}
+              />
               <DocumentoList
                 soggettoId={parseInt(id)}
                 onDocumentDeleted={handleDocumentDeleted}

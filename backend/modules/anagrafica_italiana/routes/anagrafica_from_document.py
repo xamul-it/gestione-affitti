@@ -93,12 +93,19 @@ async def upload_identity_document(
     parsing_service = DocumentParsingService(db, tenant_schema)
 
     try:
+        tipo_doc = db.query(TipoDocumento).filter(
+            TipoDocumento.codice == document_type
+        ).first()
+
         job = parsing_service.upload_and_parse(
             file=file,
             document_type_key=document_type_key,
             entity_type=None,  # No entity yet (will be created in step 2)
             entity_id=None,
-            user_id=current_user.id
+            user_id=current_user.id,
+            parsing_service_override=tipo_doc.parsing_service if tipo_doc else None,
+            parsing_config_override=tipo_doc.parsing_config if tipo_doc else None,
+            callback_url_override=tipo_doc.parsing_callback_url if tipo_doc else None,
         )
 
         return {
@@ -235,6 +242,8 @@ def complete_anagrafica_from_document(
         f"[AnagraficaFromDoc][Complete] User {current_user.id} completing anagrafica "
         f"from job {data.job_uuid}"
     )
+
+    DocumentService(db, tenant_schema=tenant_schema).ensure_documenti_table()
 
     # 1. Load and validate DocumentJob
     parsing_service = DocumentParsingService(db, tenant_schema)
@@ -390,6 +399,8 @@ def complete_anagrafica_from_document(
 
     # Commit all changes
     db.commit()
+    # Ensure tenant search_path before ORM refresh (refresh issues a SELECT).
+    db.execute(text(f"SET search_path TO {tenant_schema}, public"))
     db.refresh(soggetto)
     db.refresh(documento)
 
@@ -419,4 +430,194 @@ def complete_anagrafica_from_document(
             "created_at": documento.created_at.isoformat() if documento.created_at else None
         },
         "message": "Anagrafica creata con successo da documento"
+    }
+
+
+@router.post("/link-to-existing")
+def link_document_to_existing_soggetto(
+    job_uuid: str = Form(...),
+    soggetto_id: int = Form(...),
+    db: Session = Depends(get_db),
+    tenant_schema: str = Depends(get_tenant_schema),
+    current_user: User = Depends(require_permission("soggetto.edit"))
+):
+    """
+    Link document from parsing job to existing SoggettoAnagrafico.
+
+    Use Case:
+        User uploads identity document, parsing completes, similarity matching
+        finds existing anagrafica → user chooses to add document to existing
+        record instead of creating new one.
+
+    Workflow:
+        1. Load DocumentJob and verify ownership/status
+        2. Verify SoggettoAnagrafico exists
+        3. Move file from temp to permanent storage
+        4. Create Documento record linked to soggetto
+        5. Update job.entity_id to link to soggetto
+        6. Complete Scadenza notification
+
+    Args:
+        job_uuid: DocumentJob UUID
+        soggetto_id: Existing SoggettoAnagrafico ID to link document to
+        db: Database session (injected)
+        tenant_schema: Tenant schema (injected)
+        current_user: Current user (injected)
+
+    Returns:
+        {
+            "soggetto_id": 45,
+            "documento": {...},
+            "message": "Documento aggiunto all'anagrafica esistente"
+        }
+
+    Raises:
+        400: Missing tenant or invalid data
+        403: User doesn't own the job
+        404: Job or Soggetto not found
+    """
+    if not tenant_schema:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="Tenant schema mancante"
+        )
+
+    # Ensure tenant search_path
+    db.execute(text(f"SET search_path TO {tenant_schema}, public"))
+
+    logger.info(
+        f"[AnagraficaFromDoc][LinkExisting] User {current_user.id} linking job {job_uuid} "
+        f"to soggetto {soggetto_id}"
+    )
+
+    DocumentService(db, tenant_schema=tenant_schema).ensure_documenti_table()
+
+    # 1. Load and validate DocumentJob
+    parsing_service = DocumentParsingService(db, tenant_schema)
+    job = parsing_service.get_job_or_404(job_uuid)
+
+    # Verify ownership
+    if job.created_by != current_user.id:
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="Non hai accesso a questo job"
+        )
+
+    # Verify status
+    if job.status != JobStatus.COMPLETED:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=f"Job non completato. Status attuale: {job.status.value}"
+        )
+
+    # Verify not already linked
+    if job.entity_id is not None:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="Questo documento è già stato utilizzato"
+        )
+
+    # 2. Verify SoggettoAnagrafico exists
+    soggetto = db.query(SoggettoAnagrafico).filter(
+        SoggettoAnagrafico.id == soggetto_id
+    ).first()
+
+    if not soggetto:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=f"Soggetto #{soggetto_id} non trovato"
+        )
+
+    # 3. Move file from temp to permanent storage
+    try:
+        new_file_path = file_storage.move_from_temp(
+            temp_relative_path=job.file_path,
+            entity_type="SOGGETTO_ANAGRAFICO",
+            entity_id=soggetto.id,
+            tenant_schema=tenant_schema
+        )
+
+        logger.info(
+            f"[AnagraficaFromDoc][LinkExisting] Moved file from temp to permanent: {new_file_path}"
+        )
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[AnagraficaFromDoc][LinkExisting] Failed to move file: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Errore spostamento file: {str(e)}"
+        )
+
+    # 4. Create Documento record
+    try:
+        # Get TipoDocumento for the document type
+        document_type_code = job.document_type_key.split('.')[-1]  # Extract CODE from module.CODE
+        tipo_doc = db.query(TipoDocumento).filter(
+            TipoDocumento.codice == document_type_code
+        ).first()
+
+        documento = Documento(
+            entity_type="SOGGETTO_ANAGRAFICO",
+            entity_id=soggetto.id,
+            tipo_documento=document_type_code,
+            tipo_documento_id=tipo_doc.id if tipo_doc else None,
+            nome_file=job.original_filename,
+            file_path=new_file_path,
+            mime_type=job.mime_type,
+            dimensione=file_storage.get_file_size(new_file_path, tenant_schema),
+            descrizione=f"Documento d'identità (parsing automatico, confidence {job.confidence_score}%)",
+            note=f"Aggiunto da documento parsato"
+        )
+
+        db.add(documento)
+        db.flush()
+
+        logger.info(f"[AnagraficaFromDoc][LinkExisting] Created documento #{documento.id}")
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[AnagraficaFromDoc][LinkExisting] Failed to create documento: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Errore creazione documento: {str(e)}"
+        )
+
+    # 5. Update DocumentJob to link to soggetto
+    job.entity_type = "SOGGETTO_ANAGRAFICO"
+    job.entity_id = soggetto.id
+
+    # 6. Complete Scadenza notification
+    if job.scadenza_id:
+        try:
+            from app.core.platform.models import Scadenza
+            scadenza = db.query(Scadenza).filter(Scadenza.id == job.scadenza_id).first()
+            if scadenza and scadenza.stato == StatoScadenza.ATTIVA:
+                scadenza.stato = StatoScadenza.COMPLETATA
+                scadenza.completato_da = current_user.id
+                scadenza.completato_il = datetime.utcnow()
+                logger.info(f"[AnagraficaFromDoc][LinkExisting] Completed scadenza #{scadenza.id}")
+        except Exception as e:
+            logger.warning(f"[AnagraficaFromDoc][LinkExisting] Failed to complete scadenza: {e}")
+
+    # Commit all changes
+    db.commit()
+    db.execute(text(f"SET search_path TO {tenant_schema}, public"))
+    db.refresh(documento)
+
+    logger.info(
+        f"[AnagraficaFromDoc][LinkExisting] ✓ Completed: "
+        f"job={job.job_uuid}, soggetto={soggetto.id}, documento={documento.id}"
+    )
+
+    return {
+        "soggetto_id": soggetto.id,
+        "documento": {
+            "id": documento.id,
+            "nome_file": documento.nome_file,
+            "tipo_documento": documento.tipo_documento,
+            "dimensione": documento.dimensione,
+            "created_at": documento.created_at.isoformat() if documento.created_at else None
+        },
+        "message": "Documento aggiunto all'anagrafica esistente con successo"
     }

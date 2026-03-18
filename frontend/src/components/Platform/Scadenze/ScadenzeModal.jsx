@@ -14,6 +14,8 @@
  * - Quick actions (save, delete, complete, postpone)
  */
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { renderIcon } from '../../Navigation/iconRegistry.jsx';
 import { useScadenze } from './hooks/useScadenze';
 import './ScadenzeModal.css';
 
@@ -25,6 +27,7 @@ const ScadenzeModal = ({
   entity = null, // { modulo, entityType, entityId }
   onSaved = null,
 }) => {
+  const navigate = useNavigate();
   const {
     createScadenza,
     createTodo,
@@ -245,11 +248,26 @@ const ScadenzeModal = ({
 
   const getPrioritaIcon = (priorita) => {
     switch (priorita) {
-      case 'ALTA': return '🔴';
-      case 'MEDIA': return '🟡';
-      case 'BASSA': return '🟢';
-      default: return '⚪';
+      case 'ALTA':
+        return renderIcon('alert-triangle', { size: 14, className: 'scadenza-icon scadenza-icon--high' });
+      case 'MEDIA':
+        return renderIcon('calendar-check', { size: 14, className: 'scadenza-icon scadenza-icon--medium' });
+      case 'BASSA':
+        return renderIcon('leaf', { size: 14, className: 'scadenza-icon scadenza-icon--low' });
+      default:
+        return renderIcon('info', { size: 14, className: 'scadenza-icon scadenza-icon--default' });
     }
+  };
+
+  const getEntityLink = (scadenzaItem) => {
+    if (!scadenzaItem?.modulo || !scadenzaItem?.entity_type || !scadenzaItem?.entity_id) return null;
+    const params = new URLSearchParams({
+      modulo: scadenzaItem.modulo,
+      entity_type: scadenzaItem.entity_type,
+      entity_id: String(scadenzaItem.entity_id),
+      scadenza_id: String(scadenzaItem.id),
+    });
+    return `/scadenze/resolve?${params.toString()}`;
   };
 
   return (
@@ -258,9 +276,24 @@ const ScadenzeModal = ({
         {/* Header */}
         <div className="modal-header">
           <h2 className="modal-title">
-            {mode === 'create' && '➕ Nuova Scadenza'}
-            {mode === 'edit' && '✏️ Modifica Scadenza'}
-            {mode === 'view' && '👁️ Dettagli Scadenza'}
+            {mode === 'create' && (
+              <>
+                {renderIcon('plus', { size: 18, className: 'scadenza-icon' })}
+                Nuova Scadenza
+              </>
+            )}
+            {mode === 'edit' && (
+              <>
+                {renderIcon('pencil', { size: 18, className: 'scadenza-icon' })}
+                Modifica Scadenza
+              </>
+            )}
+            {mode === 'view' && (
+              <>
+                {renderIcon('info', { size: 18, className: 'scadenza-icon' })}
+                Dettagli Scadenza
+              </>
+            )}
           </h2>
           <button className="modal-close" onClick={onClose}>✖</button>
         </div>
@@ -289,6 +322,18 @@ const ScadenzeModal = ({
                   {getPrioritaIcon(scadenza.priorita)} {scadenza.priorita}
                 </span>
               </div>
+              {mode === 'view' && getEntityLink(scadenza) && (
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={() => {
+                    navigate(getEntityLink(scadenza));
+                    onClose();
+                  }}
+                >
+                  Apri scheda
+                </button>
+              )}
               {scadenza.is_todo && (
                 <span className="status-badge">TODO</span>
               )}
@@ -435,6 +480,22 @@ const ScadenzeModal = ({
             {/* Metadata (view mode only) */}
             {mode === 'view' && scadenza && (
               <div className="scadenza-metadata">
+                {getEntityLink(scadenza) && (
+                  <div className="metadata-row">
+                    <span className="metadata-label">Collegamento:</span>
+                    <button
+                      type="button"
+                      className="btn btn-secondary scadenza-btn"
+                      onClick={() => {
+                        navigate(getEntityLink(scadenza));
+                        onClose();
+                      }}
+                    >
+                      {renderIcon('link', { size: 16, className: 'scadenza-btn__icon' })}
+                      Apri scheda
+                    </button>
+                  </div>
+                )}
                 <div className="metadata-row">
                   <span className="metadata-label">Creato da:</span>
                   <span className="metadata-value">{scadenza.created_by_username || 'N/A'}</span>
@@ -461,7 +522,10 @@ const ScadenzeModal = ({
             {/* Audit logs (view mode only) */}
             {mode === 'view' && logs.length > 0 && (
               <div className="scadenza-logs">
-                <h3>📜 Storico Modifiche</h3>
+                <h3 className="scadenza-logs__title">
+                  {renderIcon('list', { size: 16, className: 'scadenza-icon' })}
+                  Storico Modifiche
+                </h3>
                 <div className="logs-list">
                   {logs.map((log, index) => (
                     <div key={index} className="log-entry">
@@ -469,11 +533,20 @@ const ScadenzeModal = ({
                         <span className="log-azione">{log.azione}</span>
                         <span className="log-date">{new Date(log.created_at).toLocaleString('it-IT')}</span>
                       </div>
-                      <div className="log-user">👤 {log.username || 'Sistema'}</div>
-                      {log.note && <div className="log-note">💬 {log.note}</div>}
+                      <div className="log-user">
+                        {renderIcon('user', { size: 14, className: 'scadenza-icon' })}
+                        {log.username || 'Sistema'}
+                      </div>
+                      {log.note && (
+                        <div className="log-note">
+                          {renderIcon('info', { size: 14, className: 'scadenza-icon' })}
+                          {log.note}
+                        </div>
+                      )}
                       {log.data_vecchia && (
                         <div className="log-data">
-                          📅 {log.data_vecchia} → {log.data_nuova}
+                          {renderIcon('calendar', { size: 14, className: 'scadenza-icon' })}
+                          {log.data_vecchia} → {log.data_nuova}
                         </div>
                       )}
                     </div>
@@ -490,10 +563,11 @@ const ScadenzeModal = ({
                   <button
                     type="button"
                     onClick={handleDelete}
-                    className="btn btn-danger"
+                    className="btn btn-danger scadenza-btn"
                     disabled={loading}
                   >
-                    🗑️ Cancella
+                    {renderIcon('trash', { size: 16, className: 'scadenza-btn__icon' })}
+                    Cancella
                   </button>
                 )}
               </div>
@@ -505,18 +579,20 @@ const ScadenzeModal = ({
                     <button
                       type="button"
                       onClick={handleCompleta}
-                      className="btn btn-success"
+                      className="btn btn-success scadenza-btn"
                       disabled={loading}
                     >
-                      ✅ Completa
+                      {renderIcon('check-circle', { size: 16, className: 'scadenza-btn__icon' })}
+                      Completa
                     </button>
                     <button
                       type="button"
                       onClick={handlePosticipa}
-                      className="btn btn-warning"
+                      className="btn btn-warning scadenza-btn"
                       disabled={loading}
                     >
-                      ⏭️ Posticipa
+                      {renderIcon('calendar', { size: 16, className: 'scadenza-btn__icon' })}
+                      Posticipa
                     </button>
                   </>
                 )}
@@ -524,17 +600,24 @@ const ScadenzeModal = ({
                 {mode !== 'view' && (
                   <button
                     type="submit"
-                    className="btn btn-primary"
+                    className="btn btn-primary scadenza-btn"
                     disabled={loading || isReadOnly}
                   >
-                    {loading ? '⏳ Salvataggio...' : '💾 Salva'}
+                    {loading
+                      ? 'Salvataggio...'
+                      : (
+                        <>
+                          {renderIcon('save', { size: 16, className: 'scadenza-btn__icon' })}
+                          Salva
+                        </>
+                      )}
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={onClose}
-                  className="btn btn-secondary"
+                  className="btn btn-secondary scadenza-btn"
                   disabled={loading}
                 >
                   {mode === 'view' ? 'Chiudi' : 'Annulla'}

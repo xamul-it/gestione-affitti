@@ -9,6 +9,8 @@ from .soggetto_anagrafico import (
     SoggettoAnagraficoResponse,
     CompleteSoggettoFromDocument,
 )
+from .document_parsing import CompleteDocumentoParsing
+from .similarity_matching import FindSimilarRequest
 
 __all__ = [
     "TipoSoggettoEnum",
@@ -17,4 +19,6 @@ __all__ = [
     "SoggettoAnagraficoUpdate",
     "SoggettoAnagraficoResponse",
     "CompleteSoggettoFromDocument",
+    "CompleteDocumentoParsing",
+    "FindSimilarRequest",
 ]

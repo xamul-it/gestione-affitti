@@ -73,6 +73,26 @@ async def upload_and_parse_document(
         f"for {document_type_key} in tenant {tenant_schema}"
     )
 
+    parsing_service_override = None
+    parsing_config_override = None
+    callback_url_override = None
+    if document_type_key.startswith("anagrafica_italiana."):
+        document_code = document_type_key.split(".", 1)[1]
+        try:
+            from anagrafica_italiana.models import TipoDocumento
+            tipo_doc = db.query(TipoDocumento).filter(
+                TipoDocumento.codice == document_code
+            ).first()
+            if tipo_doc:
+                parsing_service_override = tipo_doc.parsing_service
+                parsing_config_override = tipo_doc.parsing_config
+                callback_url_override = tipo_doc.parsing_callback_url
+        except Exception:
+            logger.debug(
+                "[DocumentParsing][Upload] Unable to load TipoDocumento overrides for %s",
+                document_type_key
+            )
+
     # Create service and upload
     service = DocumentParsingService(db, tenant_schema)
 
@@ -82,7 +102,10 @@ async def upload_and_parse_document(
             document_type_key=document_type_key,
             entity_type=entity_type,
             entity_id=entity_id,
-            user_id=current_user.id
+            user_id=current_user.id,
+            parsing_service_override=parsing_service_override,
+            parsing_config_override=parsing_config_override,
+            callback_url_override=callback_url_override,
         )
 
         return {
@@ -303,5 +326,91 @@ def get_pending_documents(
 
     service = DocumentParsingService(db, tenant_schema)
     jobs = service.get_pending_documents(user_id=current_user.id)
+
+    return [job.to_dict() for job in jobs]
+
+
+@router.get("/job/{job_id}")
+def get_job_by_id(
+    job_id: int,
+    tenant_schema: str = Depends(get_tenant_schema),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get parsing job by numeric ID (for scadenza resolution).
+    """
+    if not tenant_schema:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="Tenant schema mancante"
+        )
+
+    service = DocumentParsingService(db, tenant_schema)
+    job = service.get_job_by_id(job_id)
+    if not job:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=f"Job non trovato: {job_id}"
+        )
+
+    if job.created_by != current_user.id:
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="Non hai accesso a questo job"
+        )
+
+    return job.to_dict()
+
+
+@router.get("/entity-jobs")
+def get_entity_jobs(
+    entity_type: str,
+    entity_id: int,
+    status: Optional[str] = None,
+    pending_only: bool = True,
+    tenant_schema: str = Depends(get_tenant_schema),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get parsing jobs for a specific entity.
+
+    Args:
+        entity_type: Target entity type
+        entity_id: Target entity ID
+        status: Optional status filter
+        pending_only: If True, only jobs with active scadenza are returned
+        tenant_schema: Tenant schema (injected)
+        current_user: Current user (injected)
+        db: Database session (injected)
+
+    Returns:
+        List of jobs for the entity
+    """
+    if not tenant_schema:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="Tenant schema mancante"
+        )
+
+    status_filter = None
+    if status:
+        try:
+            status_filter = JobStatus[status.upper()]
+        except KeyError:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail=f"Status non valido: {status}. Valori: {[s.value for s in JobStatus]}"
+            )
+
+    service = DocumentParsingService(db, tenant_schema)
+    jobs = service.get_entity_jobs(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        status_filter=status_filter,
+        created_by=current_user.id,
+        pending_only=pending_only,
+    )
 
     return [job.to_dict() for job in jobs]

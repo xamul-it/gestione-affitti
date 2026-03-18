@@ -9,8 +9,13 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, inspect, text
 from app.core.database import get_db, get_tenant_schema
 from ..models import SoggettoAnagrafico, TipoSoggetto
+from ..services.similarity_matching_service import SimilarityMatchingService
+from ..schemas import FindSimilarRequest
 from pydantic import BaseModel
 from datetime import date
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/anagrafica/soggetti", tags=["Soggetti Anagrafici"])
 
@@ -443,3 +448,87 @@ def delete_soggetto(
     db.commit()
 
     return None
+
+
+@router.post("/find-similar")
+def find_similar_soggetti(
+    request: FindSimilarRequest,
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema)
+):
+    """
+    Find similar SoggettoAnagrafico records using fuzzy matching.
+
+    Use Cases:
+        - Prevent duplicate registrations when creating from document
+        - Suggest existing anagrafiche when uploading documents
+        - Detect potential data entry errors
+
+    Algorithm:
+        1. Codice Fiscale exact match → 100% score (definitive match)
+        2. Levenshtein distance on nome/cognome + data_nascita → 0-99% score
+        3. Threshold filtering (>= 50% for candidates)
+        4. Ranking by similarity score DESC
+
+    Args:
+        request: FindSimilarRequest with search criteria
+        db: Database session (injected)
+        tenant_schema: Tenant schema (injected)
+
+    Returns:
+        {
+            "candidates": [
+                {
+                    "soggetto_id": 45,
+                    "similarity_score": 1.0,
+                    "match_reason": "Codice fiscale identico",
+                    "match_fields": ["codice_fiscale"],
+                    "match_quality": "perfect",
+                    "recommended_action": "USE_EXISTING",
+                    "soggetto": {...}
+                }
+            ],
+            "total": 1
+        }
+
+    Raises:
+        400: Missing tenant schema or invalid input
+    """
+    _ensure_soggetti_table(db, tenant_schema)
+
+    if not request.codice_fiscale and not request.nome and not request.cognome:
+        raise HTTPException(
+            status_code=400,
+            detail="Almeno uno tra codice_fiscale, nome o cognome deve essere fornito"
+        )
+
+    logger.info(
+        f"[FindSimilar] Search: CF={request.codice_fiscale}, "
+        f"nome={request.nome}, cognome={request.cognome}, "
+        f"threshold={request.threshold}"
+    )
+
+    # Use SimilarityMatchingService
+    similarity_service = SimilarityMatchingService(db)
+
+    candidates = similarity_service.find_similar(
+        codice_fiscale=request.codice_fiscale,
+        nome=request.nome,
+        cognome=request.cognome,
+        data_nascita=request.data_nascita,
+        exclude_id=request.exclude_id,
+        threshold=request.threshold
+    )
+
+    # Enhance candidates with match quality and recommended action
+    for candidate in candidates:
+        score = candidate["similarity_score"]
+        candidate["match_quality"] = similarity_service.get_match_quality(score)
+        candidate["recommended_action"] = similarity_service.get_recommended_action(score)
+
+    logger.info(f"[FindSimilar] Found {len(candidates)} candidates")
+
+    return {
+        "candidates": candidates,
+        "total": len(candidates)
+    }

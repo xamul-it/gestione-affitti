@@ -11,7 +11,7 @@ Domain-specific models have been moved to their respective modules:
 - UnitaImmobiliare, Condominio, Proprietario, etc. -> modules/immobili
 
 Import from the appropriate module instead:
-    from modules.anagrafica_italiana.models import SoggettoAnagrafico
+    from anagrafica_italiana.models import SoggettoAnagrafico
     from modules.immobili.models import UnitaImmobiliare, CategoriaCatastale
 """
 # Platform models - these remain in core as they are domain-agnostic

@@ -1,0 +1,64 @@
+.scadenza-resolve {
+  max-width: 720px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.scadenza-resolve__card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.scadenza-resolve__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.scadenza-resolve__subtitle {
+  color: #6b7280;
+  margin: 0 0 16px;
+}
+
+.scadenza-resolve__loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.scadenza-resolve__error {
+  color: #b91c1c;
+  margin-bottom: 10px;
+}
+
+.scadenza-resolve__meta {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px;
+  color: #374151;
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.scadenza-resolve__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resolve-icon {
+  display: inline-flex;
+  align-items: center;
+}

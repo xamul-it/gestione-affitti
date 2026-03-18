@@ -236,6 +236,19 @@ export const importExportAPI = {
   }
 };
 
+// Document parsing debug API (platform admin)
+export const documentParsingDebugAPI = {
+  getLogs: (params = {}) => api.get('/document-parsing/debug/logs', { params }),
+  getJobs: (params = {}) => api.get('/document-parsing/debug/jobs', { params }),
+};
+
+// Parsing services configuration (platform admin)
+export const parsingServicesAPI = {
+  list: () => api.get('/platform/parsing-services'),
+  upsert: (payload) => api.post('/platform/parsing-services', payload),
+  summary: () => api.get('/platform/parsing-services/summary'),
+};
+
 // Auth API - Users and Roles Management (platform-level)
 export const authAPI = {
   // Users

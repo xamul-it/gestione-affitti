@@ -7,7 +7,7 @@ Gestisce i tipi di documenti che possono essere associati ai soggetti anagrafici
 - Documenti professionali (Patente, Certificazioni)
 - Altri documenti
 """
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON
 from sqlalchemy.sql import func
 from app.core.database import Base
 
@@ -36,6 +36,9 @@ class TipoDocumento(Base):
     categoria = Column(String(50), nullable=True, index=True)  # identita, fiscale, professionale, altro
     richiede_scadenza = Column(Boolean, default=False)  # Se il documento ha una data di scadenza
     attivo = Column(Boolean, default=True, nullable=False)
+    parsing_service = Column(String(50), nullable=True)
+    parsing_config = Column(JSON, nullable=True)
+    parsing_callback_url = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

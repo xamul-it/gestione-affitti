@@ -204,6 +204,36 @@ export const getStatoDocumentoById = async (id) => {
 };
 
 // ============================================================================
+// DOCUMENT PARSING (ASYNC)
+// ============================================================================
+
+export const getParsingJobsForEntity = async (entityType, entityId, params = {}) => {
+  const response = await axios.get(
+    `${API_BASE_URL}/document-parsing/entity-jobs`,
+    {
+      headers: getAuthHeader(),
+      params: {
+        entity_type: entityType,
+        entity_id: entityId,
+        ...params,
+      },
+    }
+  );
+
+  return response.data;
+};
+
+export const completeParsedDocumento = async (payload) => {
+  const response = await axios.post(
+    `${API_BASE_URL}/anagrafica/documenti/complete-parsing`,
+    payload,
+    { headers: getAuthHeader() }
+  );
+
+  return response.data;
+};
+
+// ============================================================================
 // RUOLI AZIENDA TIPI
 // ============================================================================
 

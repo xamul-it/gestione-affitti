@@ -19,6 +19,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useScadenze } from './hooks/useScadenze';
+import { renderIcon } from '../../Navigation/iconRegistry.jsx';
 import ScadenzeModal from './ScadenzeModal';
 import './NotifichePanel.css';
 
@@ -36,6 +37,7 @@ const NotifichePanel = ({
     loadMyScadenze,
     completaScadenza,
     posticipaScadenza,
+    deleteScadenza,
   } = useScadenze({ autoLoad: false });
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -56,6 +58,16 @@ const NotifichePanel = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, autoRefresh, refreshInterval]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleScadenzeUpdated = () => loadMyScadenze(false, false);
+    window.addEventListener('scadenze:updated', handleScadenzeUpdated);
+    return () => {
+      window.removeEventListener('scadenze:updated', handleScadenzeUpdated);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Group scadenze by time
   const groupScadenze = () => {
@@ -139,6 +151,17 @@ const NotifichePanel = ({
     }
   };
 
+  const handleDelete = async (e, scadenza) => {
+    e.stopPropagation();
+    if (!window.confirm('Vuoi cancellare questa scadenza?')) return;
+    try {
+      await deleteScadenza(scadenza.id);
+      handleScadenzaSaved();
+    } catch (err) {
+      console.error('Error deleting scadenza:', err);
+    }
+  };
+
   const handleViewAll = () => {
     navigate('/test/scadenze');
     onClose();
@@ -146,11 +169,26 @@ const NotifichePanel = ({
 
   const getPrioritaIcon = (priorita) => {
     switch (priorita) {
-      case 'ALTA': return '🔴';
-      case 'MEDIA': return '🟡';
-      case 'BASSA': return '🟢';
-      default: return '⚪';
+      case 'ALTA':
+        return renderIcon('alert-triangle', { size: 14, className: 'notifica-icon notifica-icon--high' });
+      case 'MEDIA':
+        return renderIcon('calendar-check', { size: 14, className: 'notifica-icon notifica-icon--medium' });
+      case 'BASSA':
+        return renderIcon('leaf', { size: 14, className: 'notifica-icon notifica-icon--low' });
+      default:
+        return renderIcon('info', { size: 14, className: 'notifica-icon notifica-icon--default' });
     }
+  };
+
+  const getEntityLink = (scadenza) => {
+    if (!scadenza?.modulo || !scadenza?.entity_type || !scadenza?.entity_id) return null;
+    const params = new URLSearchParams({
+      modulo: scadenza.modulo,
+      entity_type: scadenza.entity_type,
+      entity_id: String(scadenza.entity_id),
+      scadenza_id: String(scadenza.id),
+    });
+    return `/scadenze/resolve?${params.toString()}`;
   };
 
   const renderGroup = (title, items, icon) => {
@@ -185,19 +223,39 @@ const NotifichePanel = ({
                 </div>
               </div>
               <div className="notifica-item__actions">
+                {getEntityLink(scadenza) && (
                 <button
                   className="btn-notifica-quick"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(getEntityLink(scadenza));
+                    onClose();
+                  }}
+                  title="Apri"
+                >
+                    {renderIcon('link', { size: 12, className: 'notifica-icon' })}
+                </button>
+                )}
+                <button
+                  className="btn-notifica-quick btn-notifica-quick--success"
                   onClick={(e) => handleCompleta(e, scadenza)}
                   title="Completa"
                 >
-                  ✅
+                  {renderIcon('check-circle', { size: 12, className: 'notifica-icon' })}
                 </button>
                 <button
-                  className="btn-notifica-quick"
+                  className="btn-notifica-quick btn-notifica-quick--warning"
                   onClick={(e) => handlePosticipa(e, scadenza)}
                   title="Posticipa"
                 >
-                  ⏭️
+                  {renderIcon('calendar', { size: 12, className: 'notifica-icon' })}
+                </button>
+                <button
+                  className="btn-notifica-quick btn-notifica-quick--danger"
+                  onClick={(e) => handleDelete(e, scadenza)}
+                  title="Cancella"
+                >
+                  {renderIcon('trash', { size: 12, className: 'notifica-icon' })}
                 </button>
               </div>
             </div>
@@ -218,30 +276,38 @@ const NotifichePanel = ({
       <div className="notifiche-panel">
         {/* Header */}
         <div className="notifiche-panel__header">
-          <h3 className="notifiche-panel__title">🔔 Notifiche</h3>
+          <h3 className="notifiche-panel__title">
+            {renderIcon('bell', { size: 16, className: 'notifiche-title-icon' })}
+            Notifiche
+          </h3>
           <button className="notifiche-panel__close" onClick={onClose}>✖</button>
         </div>
 
         {/* Body */}
         <div className="notifiche-panel__body">
           {loading && (
-            <div className="notifiche-loading">⏳ Caricamento...</div>
+            <div className="notifiche-loading">
+              {renderIcon('calendar', { size: 16, className: 'notifica-icon' })}
+              Caricamento...
+            </div>
           )}
 
           {!loading && totalCount === 0 && (
             <div className="notifiche-empty">
-              ✅ Nessuna notifica!<br/>
+              {renderIcon('check-circle', { size: 16, className: 'notifica-icon' })}
+              Nessuna notifica!
+              <br/>
               <span>Tutte le scadenze sono gestite.</span>
             </div>
           )}
 
           {!loading && totalCount > 0 && (
             <>
-              {renderGroup('Scadute', groups.overdue, '🔴')}
-              {renderGroup('Oggi', groups.today, '📅')}
-              {renderGroup('Domani', groups.tomorrow, '➡️')}
-              {renderGroup('Questa Settimana', groups.thisWeek, '📆')}
-              {renderGroup('Successivi', groups.later, '⏰')}
+              {renderGroup('Scadute', groups.overdue, renderIcon('alert-triangle', { size: 14, className: 'notifica-icon notifica-icon--high' }))}
+              {renderGroup('Oggi', groups.today, renderIcon('calendar', { size: 14, className: 'notifica-icon' }))}
+              {renderGroup('Domani', groups.tomorrow, renderIcon('calendar-check', { size: 14, className: 'notifica-icon' }))}
+              {renderGroup('Questa Settimana', groups.thisWeek, renderIcon('calendar-alt', { size: 14, className: 'notifica-icon' }))}
+              {renderGroup('Successivi', groups.later, renderIcon('clock', { size: 14, className: 'notifica-icon' }))}
             </>
           )}
         </div>
@@ -250,7 +316,8 @@ const NotifichePanel = ({
         {!loading && totalCount > 0 && (
           <div className="notifiche-panel__footer">
             <button className="btn-notifiche-view-all" onClick={handleViewAll}>
-              Vedi tutte le scadenze →
+              {renderIcon('list', { size: 14, className: 'notifica-icon' })}
+              Vedi tutte le scadenze
             </button>
           </div>
         )}

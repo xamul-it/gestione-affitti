@@ -20,7 +20,15 @@ import httpx
 
 from app.core.config import settings
 from app.core.file_storage import file_storage
-from app.core.platform.models import DocumentJob, JobStatus, Scadenza, PrioritaScadenza, StatoScadenza
+from app.core.platform.models import (
+    DocumentJob,
+    JobStatus,
+    Scadenza,
+    PrioritaScadenza,
+    StatoScadenza,
+    DocumentParsingLog,
+    ParsingServiceConfig,
+)
 from app.core.platform_services.document_type_registry import document_type_registry
 
 logger = logging.getLogger(__name__)
@@ -42,12 +50,10 @@ class DocumentParsingService:
     # Parsing service configurations
     PARSING_SERVICES = {
         "mrz": {
-            "url_template": "{base_url}/mrz",
             "timeout": 300,
             "supported_formats": ["td1", "td3"]
         },
         "contract_parser": {
-            "url_template": "{base_url}/parse-contract",
             "timeout": 600,
             "supported_formats": ["pdf"]
         }
@@ -70,7 +76,10 @@ class DocumentParsingService:
         document_type_key: str,
         entity_type: Optional[str] = None,
         entity_id: Optional[int] = None,
-        user_id: Optional[int] = None
+        user_id: Optional[int] = None,
+        parsing_service_override: Optional[str] = None,
+        parsing_config_override: Optional[Dict[str, Any]] = None,
+        callback_url_override: Optional[str] = None
     ) -> DocumentJob:
         """
         Upload document to temp storage and initiate parsing.
@@ -103,7 +112,7 @@ class DocumentParsingService:
                 detail=f"Tipo documento non valido: {document_type_key}"
             )
 
-        if not doc_type.parsing_service:
+        if not doc_type.parsing_service and not parsing_service_override:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Tipo documento '{doc_type.nome}' non supporta parsing automatico"
@@ -134,6 +143,13 @@ class DocumentParsingService:
 
         # 3. Create DocumentJob record
         try:
+            parsing_service = parsing_service_override or doc_type.parsing_service
+            parsing_config = dict(doc_type.parsing_config or {})
+            if parsing_config_override:
+                parsing_config.update(parsing_config_override)
+            if callback_url_override:
+                parsing_config["callback_url"] = callback_url_override
+
             job = DocumentJob(
                 job_uuid=job_uuid,
                 tenant_schema=self.tenant_schema,
@@ -141,8 +157,8 @@ class DocumentParsingService:
                 original_filename=file.filename,
                 mime_type=file.content_type if hasattr(file, 'content_type') else None,
                 document_type_key=document_type_key,
-                parsing_service=doc_type.parsing_service,
-                parsing_config=doc_type.parsing_config or {},
+                parsing_service=parsing_service,
+                parsing_config=parsing_config,
                 entity_type=entity_type,
                 entity_id=entity_id,
                 status=JobStatus.PENDING,
@@ -193,17 +209,15 @@ class DocumentParsingService:
         if not service_config:
             raise ValueError(f"Parsing service sconosciuto: {job.parsing_service}")
 
-        # Build service URL
-        if job.parsing_service == "mrz":
-            service_url = settings.MRZ_SERVICE_URL
-        else:
-            base_url = settings.API_BASE_URL.rsplit('/api/', 1)[0]  # Remove /api/v1
-            service_url = service_config["url_template"].format(base_url=base_url)
+        service_endpoint = self._get_service_endpoint(job.parsing_service)
+        transport_type = service_endpoint.get("transport_type")
+        service_url = service_endpoint.get("endpoint_url")
+        timeout = service_endpoint.get("timeout_seconds") or service_config.get("timeout", 300)
+        redis_queue = service_endpoint.get("redis_queue")
 
-        # Build callback URL
-        callback_url = f"{settings.API_BASE_URL}/document-parsing/callback/{job.job_uuid}"
+        callback_url = self._resolve_callback_url(job)
 
-        logger.info(f"[DocumentParsing] Submitting job {job.job_uuid} to {service_url}")
+        logger.info(f"[DocumentParsing] Submitting job {job.job_uuid} to {service_url or transport_type}")
 
         # Read file from temp storage
         file_path = file_storage.get_file_path(job.file_path, self.tenant_schema)
@@ -214,23 +228,46 @@ class DocumentParsingService:
                 files = {'file': (job.original_filename, f, job.mime_type or 'application/octet-stream')}
 
                 # Add callback_url and config
+                parsing_config = dict(job.parsing_config or {})
+                parsing_config.pop("callback_url", None)
                 data = {
                     'callback_url': callback_url,
-                    **job.parsing_config
+                    **parsing_config
                 }
 
-                # Submit async request (non-blocking)
-                with httpx.Client(timeout=service_config["timeout"]) as client:
-                    response = client.post(
-                        service_url,
-                        files=files,
-                        data=data
+                if transport_type == "REDIS":
+                    self._enqueue_redis_job(job, data, redis_queue)
+                elif transport_type == "WS":
+                    raise Exception("Trasporto WS non supportato")
+                else:
+                    self._log_parsing_event(
+                        job=job,
+                        direction="REQUEST",
+                        url=service_url,
+                        request_payload={
+                            "callback_url": callback_url,
+                            **parsing_config
+                        },
                     )
-                    response.raise_for_status()
+                    # Submit async request (non-blocking)
+                    with httpx.Client(timeout=timeout) as client:
+                        response = client.post(
+                            service_url,
+                            files=files,
+                            data=data
+                        )
+                        response.raise_for_status()
 
-                    # Parse response
-                    result = response.json()
-                    logger.debug(f"[DocumentParsing] Service response: {result}")
+                        # Parse response
+                        result = response.json()
+                        logger.debug(f"[DocumentParsing] Service response: {result}")
+                        self._log_parsing_event(
+                            job=job,
+                            direction="RESPONSE",
+                            url=service_url,
+                            status_code=response.status_code,
+                            response_payload=result,
+                        )
 
             # Update job status to QUEUED
             job.status = JobStatus.QUEUED
@@ -241,9 +278,21 @@ class DocumentParsingService:
 
         except httpx.HTTPError as e:
             logger.error(f"[DocumentParsing] HTTP error submitting job {job.job_uuid}: {e}")
+            self._log_parsing_event(
+                job=job,
+                direction="ERROR",
+                url=service_url,
+                error_text=str(e),
+            )
             raise Exception(f"Errore comunicazione con servizio parsing: {str(e)}")
         except Exception as e:
             logger.error(f"[DocumentParsing] Error submitting job {job.job_uuid}: {e}")
+            self._log_parsing_event(
+                job=job,
+                direction="ERROR",
+                url=service_url,
+                error_text=str(e),
+            )
             raise
 
     def handle_callback(self, job_uuid: str, callback_data: Dict[str, Any]) -> DocumentJob:
@@ -282,6 +331,13 @@ class DocumentParsingService:
 
         logger.info(f"[DocumentParsing] Callback for job {job_uuid}, status={callback_data.get('status')}")
 
+        self._log_parsing_event(
+            job=job,
+            direction="CALLBACK",
+            url=None,
+            request_payload=callback_data,
+        )
+
         # Handle different callback statuses
         callback_status = callback_data.get("status")
 
@@ -297,6 +353,9 @@ class DocumentParsingService:
             job.needs_review = result.get("needs_review", False)
 
             self.db.commit()
+
+            # Update DocumentoFile and merge metadata into Documento (if linked)
+            self._update_documento_metadata(job, result)
 
             # Create notification for user action
             self._create_notification(job, result)
@@ -358,11 +417,19 @@ class DocumentParsingService:
                 titolo = f"Documento elaborato: {job.original_filename}"
                 descrizione = "Un documento è stato elaborato. Rivedi i dati estratti e aggiorna l'entità se necessario."
 
+            # Derive module from document_type_key (module.CODE)
+            modulo = None
+            if job.document_type_key and "." in job.document_type_key:
+                modulo = job.document_type_key.split(".", 1)[0]
+
+            scadenza_entity_type = job.entity_type or "document_job"
+            scadenza_entity_id = job.entity_id or job.id
+
             # Create Scadenza
             scadenza = Scadenza(
-                modulo="anagrafica_italiana",
-                entity_type="document_job",
-                entity_id=job.id,
+                modulo=modulo,
+                entity_type=scadenza_entity_type,
+                entity_id=scadenza_entity_id,
                 titolo=titolo,
                 descrizione=descrizione,
                 data_scadenza=date.today() + timedelta(days=7),  # Due in 7 days
@@ -386,6 +453,100 @@ class DocumentParsingService:
         except Exception as e:
             logger.error(f"[DocumentParsing] Failed to create notification for job {job.job_uuid}: {e}")
             # Non-critical: job is still completed
+
+    def _log_parsing_event(
+        self,
+        job: DocumentJob,
+        direction: str,
+        url: Optional[str],
+        request_payload: Optional[Dict[str, Any]] = None,
+        response_payload: Optional[Dict[str, Any]] = None,
+        status_code: Optional[int] = None,
+        error_text: Optional[str] = None,
+    ) -> None:
+        try:
+            log_entry = DocumentParsingLog(
+                job_uuid=job.job_uuid,
+                tenant_schema=job.tenant_schema,
+                parsing_service=job.parsing_service,
+                direction=direction,
+                url=url,
+                status_code=status_code,
+                request_payload=request_payload,
+                response_payload=response_payload,
+                error_text=error_text,
+            )
+            self.db.add(log_entry)
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+
+    def _get_service_endpoint(self, service_key: str) -> Dict[str, Any]:
+        record = self.db.query(ParsingServiceConfig).filter(
+            ParsingServiceConfig.service_key == service_key
+        ).first()
+        if not record or record.enabled != "true":
+            raise Exception(
+                f"Servizio parsing '{service_key}' non configurato nel core"
+            )
+        if record.transport_type in {"HTTP", "WS"} and not record.endpoint_url:
+            raise Exception(
+                f"Servizio parsing '{service_key}' senza endpoint URL configurato"
+            )
+        if record.transport_type == "REDIS" and not record.redis_queue:
+            raise Exception(
+                f"Servizio parsing '{service_key}' senza redis_queue configurata"
+            )
+        return {
+            "transport_type": record.transport_type,
+            "endpoint_url": record.endpoint_url,
+            "redis_queue": record.redis_queue,
+            "timeout_seconds": record.timeout_seconds,
+        }
+
+    def _enqueue_redis_job(self, job: DocumentJob, data: Dict[str, Any], redis_queue: Optional[str]) -> None:
+        try:
+            import os
+            import json
+            import redis  # type: ignore
+
+            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+            queue_name = redis_queue or "document_parsing_jobs"
+            payload = {
+                "job_uuid": job.job_uuid,
+                "tenant_schema": job.tenant_schema,
+                "service": job.parsing_service,
+                "file_path": job.file_path,
+                "original_filename": job.original_filename,
+                "mime_type": job.mime_type,
+                "callback_url": data.get("callback_url"),
+                "config": data,
+            }
+            client = redis.Redis.from_url(redis_url)
+            client.rpush(queue_name, json.dumps(payload))
+            self._log_parsing_event(
+                job=job,
+                direction="REQUEST",
+                url=f"redis://{queue_name}",
+                request_payload=payload,
+            )
+        except Exception as exc:
+            raise Exception(f"Errore invio job su Redis: {exc}")
+
+    def _resolve_callback_url(self, job: DocumentJob) -> str:
+        default_url = f"{settings.API_BASE_URL}/document-parsing/callback/{job.job_uuid}"
+        parsing_config = job.parsing_config or {}
+        override = parsing_config.get("callback_url")
+        if not override:
+            return default_url
+        return self._format_callback_url(override, job.job_uuid)
+
+    def _format_callback_url(self, template: str, job_uuid: str) -> str:
+        return (
+            template
+            .replace("{job_uuid}", job_uuid)
+            .replace("{api_base_url}", settings.API_BASE_URL)
+        )
 
     def get_job(self, job_uuid: str) -> Optional[DocumentJob]:
         """
@@ -422,6 +583,15 @@ class DocumentParsingService:
                 detail=f"Job non trovato: {job_uuid}"
             )
         return job
+
+    def get_job_by_id(self, job_id: int) -> Optional[DocumentJob]:
+        """
+        Get job by numeric ID.
+        """
+        return self.db.query(DocumentJob).filter(
+            DocumentJob.id == job_id,
+            DocumentJob.tenant_schema == self.tenant_schema
+        ).first()
 
     def get_user_jobs(
         self,
@@ -466,3 +636,132 @@ class DocumentParsingService:
             DocumentJob.status == JobStatus.COMPLETED,
             DocumentJob.entity_id.is_(None)
         ).order_by(DocumentJob.completed_at.desc()).all()
+
+    def get_entity_jobs(
+        self,
+        entity_type: str,
+        entity_id: int,
+        status_filter: Optional[JobStatus] = None,
+        created_by: Optional[int] = None,
+        pending_only: bool = True,
+    ):
+        """
+        Get jobs for a specific entity, optionally filtered by status and creator.
+
+        Args:
+            entity_type: Target entity type
+            entity_id: Target entity ID
+            status_filter: Optional status filter
+            created_by: Optional creator filter
+            pending_only: If True, only jobs with active scadenza are returned
+
+        Returns:
+            List of DocumentJob
+        """
+        query = self.db.query(DocumentJob).filter(
+            DocumentJob.tenant_schema == self.tenant_schema,
+            DocumentJob.entity_type == entity_type,
+            DocumentJob.entity_id == entity_id,
+        )
+
+        if created_by is not None:
+            query = query.filter(DocumentJob.created_by == created_by)
+
+        if status_filter:
+            query = query.filter(DocumentJob.status == status_filter)
+        elif pending_only:
+            query = query.filter(DocumentJob.status == JobStatus.COMPLETED)
+
+        if pending_only:
+            query = query.join(
+                Scadenza,
+                DocumentJob.scadenza_id == Scadenza.id,
+            ).filter(Scadenza.stato == StatoScadenza.ATTIVA)
+
+        return query.order_by(DocumentJob.created_at.desc()).all()
+
+    def _update_documento_metadata(self, job: DocumentJob, parsed_data: Dict[str, Any]) -> None:
+        """
+        Update DocumentoFile and merge metadata into Documento parent.
+
+        Multi-file documents aggregate parsed data from all files.
+
+        Args:
+            job: Completed DocumentJob
+            parsed_data: Parsed data from service
+
+        Side Effects:
+            - Updates DocumentoFile.parsing_result and confidence_score
+            - Merges all files' data into Documento.metadata_parsato
+            - Calculates average confidence_score for Documento
+        """
+        try:
+            # Import here to avoid circular dependency
+            from modules.anagrafica_italiana.models import DocumentoFile, Documento
+
+            # 1. Find DocumentoFile linked to this job
+            doc_file = self.db.query(DocumentoFile).filter(
+                DocumentoFile.parsing_job_id == job.id
+            ).first()
+
+            if doc_file:
+                # 2. Update DocumentoFile with parsing results
+                doc_file.parsing_result = parsed_data
+                doc_file.confidence_score = job.confidence_score
+
+                logger.info(
+                    f"[DocumentParsing] Updated DocumentoFile #{doc_file.id} with parsing results "
+                    f"(confidence={doc_file.confidence_score})"
+                )
+
+                # 3. Get parent Documento
+                documento = self.db.query(Documento).filter(
+                    Documento.id == doc_file.documento_id
+                ).first()
+
+                if documento:
+                    # 4. Merge all files' parsing results into Documento.metadata_parsato
+                    all_files = self.db.query(DocumentoFile).filter(
+                        DocumentoFile.documento_id == documento.id
+                    ).order_by(DocumentoFile.ordine).all()
+
+                    merged_metadata = {}
+                    confidence_scores = []
+
+                    for f in all_files:
+                        if f.parsing_result:
+                            # Merge results - later files override earlier ones for same keys
+                            merged_metadata.update(f.parsing_result)
+
+                            if f.confidence_score is not None:
+                                confidence_scores.append(f.confidence_score)
+
+                    # Calculate average confidence
+                    avg_confidence = None
+                    if confidence_scores:
+                        avg_confidence = int(sum(confidence_scores) / len(confidence_scores))
+
+                    # Update Documento
+                    documento.metadata_parsato = merged_metadata if merged_metadata else None
+                    documento.confidence_score = avg_confidence
+
+                    self.db.commit()
+
+                    logger.info(
+                        f"[DocumentParsing] Updated Documento #{documento.id} metadata_parsato "
+                        f"(avg_confidence={avg_confidence}, num_files={len(all_files)})"
+                    )
+
+            else:
+                logger.debug(
+                    f"[DocumentParsing] Job {job.id} not linked to DocumentoFile "
+                    "(might be legacy single-file document)"
+                )
+
+        except Exception as e:
+            logger.error(
+                f"[DocumentParsing] Failed to update documento metadata for job {job.id}: {e}",
+                exc_info=True
+            )
+            # Non-critical: job is still completed even if metadata update fails
+            self.db.rollback()

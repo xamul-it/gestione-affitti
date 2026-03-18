@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { getSoggettoById, deleteSoggetto, getSoggettoRuoli } from '../../services/anagraficaAPI';
 import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
-import { DocumentoUpload, DocumentoList } from '../Documenti';
+import { DocumentoUpload, DocumentoList, DocumentoParsingPending } from '../Documenti';
 import RuoliAziendaSection from '../RuoliAzienda/RuoliAziendaSection';
 import '../SoggettiAnagrafici/SoggettoDetail.css';
 
@@ -16,6 +16,7 @@ import '../SoggettiAnagrafici/SoggettoDetail.css';
 function PersonaFisicaDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [persona, setPersona] = useState(null);
   const [ruoli, setRuoli] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,14 @@ function PersonaFisicaDetail() {
     loadPersona();
     loadRuoli();
   }, [id]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
   const loadPersona = async () => {
     try {
@@ -494,6 +503,13 @@ function PersonaFisicaDetail() {
             )}
 
             <div className="documents-section">
+              <DocumentoParsingPending
+                soggettoId={parseInt(id)}
+                onCompleted={() => {
+                  setRefreshDocumenti(prev => prev + 1);
+                  loadPersona();
+                }}
+              />
               <DocumentoList
                 soggettoId={parseInt(id)}
                 onDocumentDeleted={handleDocumentDeleted}

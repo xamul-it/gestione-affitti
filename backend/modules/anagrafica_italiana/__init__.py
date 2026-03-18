@@ -35,6 +35,44 @@ from .seeds import seed_public, seed_tenant
 
 logger = logging.getLogger(__name__)
 
+
+def _register_table_definitions() -> None:
+    try:
+        from app.core.platform_services.table_registry import register_table
+
+        register_table({
+            "module_name": "anagrafica_italiana",
+            "entity_name": "TipoDocumento",
+            "title": "Tipi Documento",
+            "columns": [
+                {"field": "codice", "label": "Codice", "type": "text", "sortable": True, "filterable": True},
+                {"field": "nome", "label": "Nome", "type": "text", "sortable": True, "filterable": True},
+                {"field": "categoria", "label": "Categoria", "type": "text", "sortable": True, "filterable": True},
+                {"field": "richiede_scadenza", "label": "Scadenza", "type": "boolean", "sortable": True},
+                {"field": "attivo", "label": "Attivo", "type": "boolean", "sortable": True},
+                {"field": "parsing_service", "label": "Parsing Service", "type": "text", "sortable": False, "visible": False},
+                {"field": "parsing_callback_url", "label": "Callback URL", "type": "text", "sortable": False, "visible": False},
+                {"field": "parsing_config", "label": "Parsing Config", "type": "text", "sortable": False, "visible": False},
+            ],
+            "default_visible": [
+                "codice",
+                "nome",
+                "categoria",
+                "richiede_scadenza",
+                "attivo",
+            ],
+            "default_sort_field": "nome",
+            "default_sort_order": "asc",
+            "default_page_size": 50,
+            "selectable": False,
+            "searchable": True,
+            "exportable": False,
+            "row_actions": [],
+            "bulk_actions": [],
+        })
+    except Exception as exc:
+        logger.warning("Table definitions registration failed: %s", exc)
+
 def get_routers():
     """
     Lazily import routers to avoid circular imports at module import time.
@@ -197,6 +235,7 @@ def register_module(app):
     from app.core.config import settings
 
     logger.info("[ANAG] Module registered via legacy register_module()")
+    _register_table_definitions()
     routers = get_routers()
     for router in routers:
         app.include_router(router, prefix=settings.API_V1_STR)

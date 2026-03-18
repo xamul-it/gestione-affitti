@@ -350,6 +350,14 @@ function TopBar() {
                   Debug ruoli
                 </Link>
                 <Link
+                  to="/admin/document-parsing-debug"
+                  className="topbar-switcher-item"
+                  onClick={() => setDebugMenuOpen(false)}
+                  role="menuitem"
+                >
+                  Debug parsing documenti
+                </Link>
+                <Link
                   to="/admin/tenant-maintenance"
                   className="topbar-switcher-item"
                   onClick={() => setDebugMenuOpen(false)}
@@ -499,6 +507,17 @@ function TopBar() {
                       >
                         <span className="dropdown-icon" aria-hidden="true"><Users size={16} /></span>
                         Utenti e Permessi
+                      </Link>
+                    )}
+                    {(user?.is_superuser || hasPermission('platform.admin')) && (
+                      <Link
+                        to="/admin/parsing-services"
+                        className="user-dropdown-item"
+                        onClick={() => setDropdownOpen(false)}
+                        role="menuitem"
+                      >
+                        <span className="dropdown-icon" aria-hidden="true"><Settings size={16} /></span>
+                        Servizi Parsing
                       </Link>
                     )}
                     {(user?.is_superuser || hasPermission('platform.admin')) && (

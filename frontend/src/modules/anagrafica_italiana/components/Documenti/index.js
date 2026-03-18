@@ -5,3 +5,4 @@
  */
 export { DocumentoUpload } from './DocumentoUpload';
 export { DocumentoList } from './DocumentoList';
+export { default as DocumentoParsingPending } from './DocumentoParsingPending';

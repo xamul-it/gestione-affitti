@@ -12,6 +12,8 @@ import LoginPage from './pages/LoginPage';
 import UsersManagement from './pages/UsersManagement';
 import Settings from './pages/Settings';
 import ScadenzeTestPage from './pages/ScadenzeTestPage';
+import ScadenzaResolve from './pages/ScadenzaResolve';
+import AnagraficaScadenzaResolve from './pages/AnagraficaScadenzaResolve';
 import ImmobiliHome from './pages/ImmobiliHome';
 // Immobili module components
 import {
@@ -63,6 +65,8 @@ import DataAdmin from './pages/Admin/DataAdmin';
 import DatabaseManagement from './pages/Admin/DatabaseManagement';
 import TenantModules from './pages/Tenant/TenantModules';
 import RolesPermissionsDebug from './pages/Admin/RolesPermissionsDebug';
+import DocumentParsingDebug from './pages/Admin/DocumentParsingDebug';
+import ParsingServices from './pages/Admin/ParsingServices';
 import TenantMaintenance from './pages/Admin/TenantMaintenance';
 import CoreCleanup from './pages/Admin/CoreCleanup';
 
@@ -169,12 +173,16 @@ function App() {
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute requiredRole="Admin"><UsersManagement /></ProtectedRoute>} />
                 <Route path="/admin/roles-debug" element={<ProtectedRoute requiredRole="Admin"><RolesPermissionsDebug /></ProtectedRoute>} />
+                <Route path="/admin/document-parsing-debug" element={<ProtectedRoute requiredRole="Admin"><DocumentParsingDebug /></ProtectedRoute>} />
+                <Route path="/admin/parsing-services" element={<ProtectedRoute requiredRole="Admin"><ParsingServices /></ProtectedRoute>} />
                 <Route path="/admin/tenant-maintenance" element={<ProtectedRoute requiredRole="Admin"><TenantMaintenance /></ProtectedRoute>} />
                 <Route path="/admin/core-cleanup" element={<ProtectedRoute requiredRole="Admin"><CoreCleanup /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
                 {/* Scadenze Test Page */}
                 <Route path="/test/scadenze" element={<ProtectedRoute><ScadenzeTestPage /></ProtectedRoute>} />
+                <Route path="/scadenze/resolve" element={<ProtectedRoute><ScadenzaResolve /></ProtectedRoute>} />
+                <Route path="/anagrafiche/scadenze/resolve" element={<ProtectedRoute><AnagraficaScadenzaResolve /></ProtectedRoute>} />
 
                 {/* Anagrafica routes */}
                 <Route path="/anagrafiche" element={<ProtectedRoute><AnagraficaDashboard /></ProtectedRoute>} />

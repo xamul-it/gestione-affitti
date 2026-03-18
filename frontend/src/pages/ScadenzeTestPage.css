@@ -21,6 +21,18 @@
   color: #333;
 }
 
+.page-title,
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-inline {
+  display: inline-flex;
+  align-items: center;
+}
+
 /* Statistics Panel */
 .statistics-panel {
   background: white;
@@ -272,6 +284,27 @@
   font-size: 20px;
 }
 
+.priority-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.priority-icon--high {
+  color: #e11d48;
+}
+
+.priority-icon--medium {
+  color: #f59e0b;
+}
+
+.priority-icon--low {
+  color: #16a34a;
+}
+
+.priority-icon--default {
+  color: #6b7280;
+}
+
 .scadenza-card__stato {
   font-size: 12px;
   font-weight: 700;
@@ -308,6 +341,12 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .scadenza-card__entity {

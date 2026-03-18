@@ -7,6 +7,8 @@
 import React, { useState, useEffect } from 'react';
 import { useScadenze } from '../components/Platform/Scadenze/hooks/useScadenze';
 import ScadenzaBadge from '../components/Platform/Scadenze/ScadenzaBadge';
+import { renderIcon } from '../components/Navigation/iconRegistry.jsx';
+import ScadenzeModal from '../components/Platform/Scadenze/ScadenzeModal';
 import './ScadenzeTestPage.css';
 
 const ScadenzeTestPage = () => {
@@ -40,6 +42,7 @@ const ScadenzeTestPage = () => {
 
   const [statistics, setStatistics] = useState(null);
   const [selectedScadenza, setSelectedScadenza] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   // Load statistics
   useEffect(() => {
@@ -153,24 +156,44 @@ const ScadenzeTestPage = () => {
 
   const getPrioritaIcon = (priorita) => {
     switch (priorita) {
-      case 'ALTA': return '🔴';
-      case 'MEDIA': return '🟡';
-      case 'BASSA': return '🟢';
-      default: return '⚪';
+      case 'ALTA':
+        return renderIcon('alert-triangle', { size: 18, className: 'priority-icon priority-icon--high' });
+      case 'MEDIA':
+        return renderIcon('calendar', { size: 18, className: 'priority-icon priority-icon--medium' });
+      case 'BASSA':
+        return renderIcon('leaf', { size: 18, className: 'priority-icon priority-icon--low' });
+      default:
+        return renderIcon('info', { size: 18, className: 'priority-icon priority-icon--default' });
     }
+  };
+
+  const handleScadenzaClick = (scadenza) => {
+    setSelectedScadenza(scadenza);
+    setModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setSelectedScadenza(null);
   };
 
   return (
     <div className="scadenze-test-page">
       <div className="test-page-header">
-        <h1>🧪 Test Scadenzario</h1>
+        <h1 className="page-title">
+          {renderIcon('badge-check', { size: 24, className: 'icon-inline' })}
+          Test Scadenzario
+        </h1>
         <ScadenzaBadge autoLoad={true} />
       </div>
 
       {/* Statistics */}
       {statistics && (
         <div className="statistics-panel">
-          <h2>📊 Statistiche</h2>
+          <h2 className="section-title">
+            {renderIcon('chart-line', { size: 20, className: 'icon-inline' })}
+            Statistiche
+          </h2>
           <div className="stats-grid">
             <div className="stat-card stat-card--green">
               <div className="stat-value">{statistics.attive}</div>
@@ -194,25 +217,29 @@ const ScadenzeTestPage = () => {
           className="btn btn-primary"
           onClick={() => setShowForm(!showForm)}
         >
-          {showForm ? '✖ Chiudi Form' : '➕ Nuova Scadenza'}
+          {renderIcon(showForm ? 'info' : 'plus', { size: 16, className: 'icon-inline' })}
+          {showForm ? 'Chiudi Form' : 'Nuova Scadenza'}
         </button>
         <button
           className="btn btn-secondary"
           onClick={() => loadScadenze()}
         >
-          🔄 Ricarica
+          {renderIcon('list', { size: 16, className: 'icon-inline' })}
+          Ricarica
         </button>
         <button
           className="btn btn-secondary"
           onClick={() => loadMyScadenze(false, true)}
         >
-          ⚠️ Solo Scadute
+          {renderIcon('alert-triangle', { size: 16, className: 'icon-inline' })}
+          Solo Scadute
         </button>
         <button
           className="btn btn-secondary"
           onClick={() => loadMyScadenze(true, false)}
         >
-          📋 Tutte (+ Completate)
+          {renderIcon('list', { size: 16, className: 'icon-inline' })}
+          Tutte (+ Completate)
         </button>
       </div>
 
@@ -325,16 +352,17 @@ const ScadenzeTestPage = () => {
                   value={formData.priorita}
                   onChange={handleInputChange}
                 >
-                  <option value="BASSA">🟢 Bassa</option>
-                  <option value="MEDIA">🟡 Media</option>
-                  <option value="ALTA">🔴 Alta</option>
+                  <option value="BASSA">Bassa</option>
+                  <option value="MEDIA">Media</option>
+                  <option value="ALTA">Alta</option>
                 </select>
               </label>
             </div>
 
             <div className="form-actions">
               <button type="submit" className="btn btn-primary">
-                ✅ Crea Scadenza
+                {renderIcon('check-circle', { size: 16, className: 'icon-inline' })}
+                Crea Scadenza
               </button>
               <button
                 type="button"
@@ -351,19 +379,23 @@ const ScadenzeTestPage = () => {
       {/* Error Display */}
       {error && (
         <div className="error-panel">
-          ❌ Errore: {error}
+          {renderIcon('alert-triangle', { size: 16, className: 'icon-inline' })}
+          Errore: {error}
         </div>
       )}
 
       {/* Scadenze List */}
       <div className="scadenze-list-panel">
-        <h2>📋 Scadenze ({scadenze.length})</h2>
+        <h2 className="section-title">
+          {renderIcon('list', { size: 18, className: 'icon-inline' })}
+          Scadenze ({scadenze.length})
+        </h2>
 
-        {loading && <div className="loading">⏳ Caricamento...</div>}
+        {loading && <div className="loading">Caricamento...</div>}
 
         {!loading && scadenze.length === 0 && (
           <div className="empty-state">
-            Nessuna scadenza trovata. Creane una per iniziare! 🎯
+            Nessuna scadenza trovata. Creane una per iniziare.
           </div>
         )}
 
@@ -372,7 +404,7 @@ const ScadenzeTestPage = () => {
             <div
               key={scadenza.id}
               className={`scadenza-card ${scadenza.is_scaduta ? 'scadenza-card--overdue' : ''}`}
-              onClick={() => setSelectedScadenza(scadenza)}
+              onClick={() => handleScadenzaClick(scadenza)}
             >
               <div className="scadenza-card__header">
                 <span className="scadenza-card__priority">
@@ -398,7 +430,10 @@ const ScadenzeTestPage = () => {
               )}
 
               <div className="scadenza-card__meta">
-                <div>📅 {scadenza.data_scadenza}</div>
+                <div className="meta-row">
+                  {renderIcon('calendar', { size: 14, className: 'icon-inline' })}
+                  {scadenza.data_scadenza}
+                </div>
                 {!scadenza.is_todo && (
                   <div className="scadenza-card__entity">
                     {scadenza.modulo}/{scadenza.entity_type}#{scadenza.entity_id}
@@ -415,7 +450,7 @@ const ScadenzeTestPage = () => {
                       handleCompleta(scadenza.id);
                     }}
                   >
-                    ✅
+                    {renderIcon('check-circle', { size: 16, className: 'icon-inline' })}
                   </button>
                   <button
                     className="btn-small btn-warning"
@@ -424,7 +459,7 @@ const ScadenzeTestPage = () => {
                       handlePosticipa(scadenza.id);
                     }}
                   >
-                    ⏭️
+                    {renderIcon('calendar', { size: 16, className: 'icon-inline' })}
                   </button>
                   <button
                     className="btn-small btn-danger"
@@ -433,7 +468,7 @@ const ScadenzeTestPage = () => {
                       handleDelete(scadenza.id);
                     }}
                   >
-                    🗑️
+                    {renderIcon('trash', { size: 16, className: 'icon-inline' })}
                   </button>
                 </div>
               )}
@@ -443,23 +478,14 @@ const ScadenzeTestPage = () => {
       </div>
 
       {/* Selected Scadenza Detail */}
-      {selectedScadenza && (
-        <div className="modal-overlay" onClick={() => setSelectedScadenza(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Dettaglio Scadenza #{selectedScadenza.id}</h2>
-              <button
-                className="modal-close"
-                onClick={() => setSelectedScadenza(null)}
-              >
-                ✖
-              </button>
-            </div>
-            <div className="modal-body">
-              <pre>{JSON.stringify(selectedScadenza, null, 2)}</pre>
-            </div>
-          </div>
-        </div>
+      {modalOpen && (
+        <ScadenzeModal
+          isOpen={modalOpen}
+          onClose={handleModalClose}
+          mode="view"
+          scadenza={selectedScadenza}
+          onSaved={loadScadenze}
+        />
       )}
     </div>
   );

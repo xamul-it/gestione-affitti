@@ -70,8 +70,8 @@ export const DocumentoList = ({ soggettoId, onDocumentDeleted, refreshTrigger })
       { headers: getAuthHeader() }
     );
 
-    if (tableRef) {
-      tableRef.refresh();
+    if (tableRef.current) {
+      tableRef.current.refresh();
     }
     await loadScadenzario();
 

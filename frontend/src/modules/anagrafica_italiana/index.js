@@ -37,6 +37,8 @@ export { default as RuoliAziendaList } from './components/RuoliAzienda/RuoliAzie
 
 // Document Components
 export { DocumentoUpload, DocumentoList } from './components/Documenti';
+export { DocumentViewer } from './components/DocumentViewer';
+export { SimilarityMatchDialog } from './components/SimilarityMatch';
 
 // Dashboard Widgets
 export { default as StatsSoggettiWidget } from './components/Dashboard/StatsSoggettiWidget';

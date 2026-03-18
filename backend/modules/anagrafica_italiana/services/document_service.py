@@ -5,7 +5,8 @@ Owned by anagrafica_italiana to avoid cyclic dependencies.
 """
 from typing import BinaryIO, Optional, List, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, inspect
+from sqlalchemy.exc import ProgrammingError
 from pathlib import Path
 from fastapi import HTTPException, status, UploadFile
 import mimetypes
@@ -51,6 +52,76 @@ class DocumentService:
         if self.tenant_schema:
             if self.tenant_schema.replace('_', '').replace('-', '').isalnum():
                 self.db.execute(text(f"SET search_path TO {self.tenant_schema}, public"))
+
+    def ensure_documenti_table(self) -> None:
+        if not self.tenant_schema:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tenant schema mancante"
+            )
+
+        self._ensure_tenant_context()
+
+        inspector = inspect(self.db.get_bind())
+        has_table = inspector.has_table("anag_documenti", schema=self.tenant_schema)
+
+        if not has_table:
+            try:
+                self.db.execute(text(f"""
+                    CREATE TABLE IF NOT EXISTS "{self.tenant_schema}"."anag_documenti" (
+                        id SERIAL PRIMARY KEY,
+                        entity_type VARCHAR(50) NOT NULL,
+                        entity_id INTEGER NOT NULL,
+                        tipo_documento VARCHAR(50) NOT NULL,
+                        nome_file VARCHAR(255) NOT NULL,
+                        file_path VARCHAR(500) NOT NULL,
+                        mime_type VARCHAR(100),
+                        dimensione BIGINT,
+                        descrizione VARCHAR(500),
+                        note VARCHAR(500),
+                        data_scadenza DATE,
+                        tipo_documento_id INTEGER REFERENCES public.anag_tipi_documento(id),
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ
+                    )
+                """))
+                self.db.execute(text(
+                    f'CREATE INDEX IF NOT EXISTS ix_anag_documenti_entity_type '
+                    f'ON "{self.tenant_schema}"."anag_documenti"(entity_type)'
+                ))
+                self.db.execute(text(
+                    f'CREATE INDEX IF NOT EXISTS ix_anag_documenti_entity_id '
+                    f'ON "{self.tenant_schema}"."anag_documenti"(entity_id)'
+                ))
+                self.db.execute(text(
+                    f'CREATE INDEX IF NOT EXISTS ix_anag_documenti_data_scadenza '
+                    f'ON "{self.tenant_schema}"."anag_documenti"(data_scadenza)'
+                ))
+                self.db.commit()
+                return
+            except Exception as exc:
+                self.db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=(
+                        "Tabella anag_documenti non presente. "
+                        f"Reinstalla il modulo anagrafica per il tenant. ({exc})"
+                    ),
+                )
+
+        try:
+            self.db.execute(text(
+                f'SELECT 1 FROM "{self.tenant_schema}"."anag_documenti" LIMIT 1'
+            ))
+        except ProgrammingError as exc:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Tabella anag_documenti non presente. "
+                    f"Reinstalla il modulo anagrafica per il tenant. ({exc})"
+                ),
+            )
 
     def validate_file(
         self,

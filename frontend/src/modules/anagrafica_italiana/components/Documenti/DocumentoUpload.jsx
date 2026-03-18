@@ -62,9 +62,11 @@ export const DocumentoUpload = ({ soggettoId, soggettoTipo, onUploadSuccess, onC
       return;
     }
 
-    // Validate data scadenza if tipo requires it
     const selectedTipo = tipiDocumento.find(t => t.id === parseInt(tipoDocumentoId));
-    if (selectedTipo?.richiede_scadenza && !dataScadenza) {
+    const usesParsing = Boolean(selectedTipo?.parsing_service);
+
+    // Validate data scadenza only for manual uploads
+    if (!usesParsing && selectedTipo?.richiede_scadenza && !dataScadenza) {
       setError(`Il tipo documento "${selectedTipo.nome}" richiede una data di scadenza`);
       return;
     }
@@ -76,27 +78,53 @@ export const DocumentoUpload = ({ soggettoId, soggettoTipo, onUploadSuccess, onC
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      formData.append('soggetto_id', soggettoId);
-      formData.append('tipo_documento_id', tipoDocumentoId);
-      if (dataScadenza) formData.append('data_scadenza', dataScadenza);
-      if (note) formData.append('note', note);
 
-      const response = await axios.post(
-        `${API_BASE_URL}/anagrafica/documenti/upload`,
-        formData,
-        {
-          headers: {
-            ...getAuthHeader(),
-            'Content-Type': 'multipart/form-data'
-          },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            setUploadProgress(percentCompleted);
+      let response;
+      if (usesParsing) {
+        const documentTypeKey = `anagrafica_italiana.${selectedTipo.codice}`;
+        formData.append('document_type_key', documentTypeKey);
+        formData.append('entity_type', 'SOGGETTO_ANAGRAFICO');
+        formData.append('entity_id', soggettoId);
+
+        response = await axios.post(
+          `${API_BASE_URL}/document-parsing/upload-and-parse`,
+          formData,
+          {
+            headers: {
+              ...getAuthHeader(),
+              'Content-Type': 'multipart/form-data'
+            },
+            onUploadProgress: (progressEvent) => {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              setUploadProgress(percentCompleted);
+            }
           }
-        }
-      );
+        );
+      } else {
+        formData.append('soggetto_id', soggettoId);
+        formData.append('tipo_documento_id', tipoDocumentoId);
+        if (dataScadenza) formData.append('data_scadenza', dataScadenza);
+        if (note) formData.append('note', note);
+
+        response = await axios.post(
+          `${API_BASE_URL}/anagrafica/documenti/upload`,
+          formData,
+          {
+            headers: {
+              ...getAuthHeader(),
+              'Content-Type': 'multipart/form-data'
+            },
+            onUploadProgress: (progressEvent) => {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              setUploadProgress(percentCompleted);
+            }
+          }
+        );
+      }
 
       // Reset form
       setSelectedFile(null);

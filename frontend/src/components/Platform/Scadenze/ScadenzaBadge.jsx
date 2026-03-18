@@ -12,6 +12,7 @@
  */
 import React, { useEffect } from 'react';
 import { useScadenze } from './hooks/useScadenze';
+import { renderIcon } from '../../Navigation/iconRegistry.jsx';
 import './ScadenzaBadge.css';
 
 const ScadenzaBadge = ({
@@ -31,7 +32,13 @@ const ScadenzaBadge = ({
         loadBadgeInfo();
       }, 5 * 60 * 1000);
 
-      return () => clearInterval(interval);
+      const handleScadenzeUpdated = () => loadBadgeInfo();
+      window.addEventListener('scadenze:updated', handleScadenzeUpdated);
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('scadenze:updated', handleScadenzeUpdated);
+      };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoLoad]);
@@ -39,7 +46,9 @@ const ScadenzaBadge = ({
   if (loading || !badgeInfo) {
     return (
       <div className={`scadenza-badge scadenza-badge--loading ${className}`}>
-        <span className="scadenza-badge__icon">⏱️</span>
+        <span className="scadenza-badge__icon">
+          {renderIcon('calendar', { size: 14, className: 'scadenza-badge__icon-svg' })}
+        </span>
         <span className="scadenza-badge__count">-</span>
       </div>
     );
@@ -53,9 +62,13 @@ const ScadenzaBadge = ({
   }
 
   const getIcon = () => {
-    if (count_scadute > 0) return '🔴';
-    if (count_alta_priorita > 0) return '⚠️';
-    return '📅';
+    if (count_scadute > 0) {
+      return renderIcon('alert-triangle', { size: 14, className: 'scadenza-badge__icon-svg' });
+    }
+    if (count_alta_priorita > 0) {
+      return renderIcon('calendar-check', { size: 14, className: 'scadenza-badge__icon-svg' });
+    }
+    return renderIcon('bell', { size: 14, className: 'scadenza-badge__icon-svg' });
   };
 
   const getBadgeClass = () => {

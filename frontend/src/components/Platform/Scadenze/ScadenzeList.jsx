@@ -11,6 +11,7 @@
  */
 import React, { useState, useMemo } from 'react';
 import { useScadenze } from './hooks/useScadenze';
+import { useNavigate } from 'react-router-dom';
 import './ScadenzeList.css';
 
 const ScadenzeList = ({
@@ -22,6 +23,7 @@ const ScadenzeList = ({
   pageSize = 20,
   enableBatchActions = true,
 }) => {
+  const navigate = useNavigate();
   const {
     scadenze,
     loading,
@@ -248,6 +250,17 @@ const ScadenzeList = ({
     }
   };
 
+  const getEntityLink = (scadenza) => {
+    if (!scadenza?.modulo || !scadenza?.entity_type || !scadenza?.entity_id) return null;
+    const params = new URLSearchParams({
+      modulo: scadenza.modulo,
+      entity_type: scadenza.entity_type,
+      entity_id: String(scadenza.entity_id),
+      scadenza_id: String(scadenza.id),
+    });
+    return `/scadenze/resolve?${params.toString()}`;
+  };
+
   // Get unique values for filter dropdowns
   const uniqueModuli = [...new Set(scadenze.map(s => s.modulo).filter(Boolean))];
   const uniqueEntityTypes = [...new Set(scadenze.map(s => s.entity_type).filter(Boolean))];
@@ -466,6 +479,19 @@ const ScadenzeList = ({
                   {!scadenza.is_todo && viewMode !== 'compact' && (
                     <div className="scadenza-item__entity">
                       {scadenza.modulo}/{scadenza.entity_type}#{scadenza.entity_id}
+                      {getEntityLink(scadenza) && (
+                        <button
+                          className="btn-action btn-action--link"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(getEntityLink(scadenza));
+                          }}
+                          title="Apri scheda"
+                          type="button"
+                        >
+                          🔗
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

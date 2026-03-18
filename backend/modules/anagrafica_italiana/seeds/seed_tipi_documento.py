@@ -18,21 +18,41 @@ def seed_tipi_documento(db: Session):
             "nome": "Carta d'Identità",
             "descrizione": "Documento di identità italiano",
             "categoria": "identita",
-            "richiede_scadenza": True
+            "richiede_scadenza": True,
+            "parsing_service": "mrz",
+            "parsing_config": {
+                "mrz_format": "td1",
+                "rotate_mode": "auto",
+                "extract_photo": True,
+            },
+            "parsing_callback_url": "{api_base_url}/document-parsing/callback/{job_uuid}",
         },
         {
             "codice": "PASSAPORTO",
             "nome": "Passaporto",
             "descrizione": "Documento di identità per viaggi internazionali",
             "categoria": "identita",
-            "richiede_scadenza": True
+            "richiede_scadenza": True,
+            "parsing_service": "mrz",
+            "parsing_config": {
+                "mrz_format": "td3",
+                "rotate_mode": "auto",
+                "extract_photo": True,
+            },
+            "parsing_callback_url": "{api_base_url}/document-parsing/callback/{job_uuid}",
         },
         {
             "codice": "PATENTE",
             "nome": "Patente di Guida",
             "descrizione": "Patente di guida",
             "categoria": "identita",
-            "richiede_scadenza": True
+            "richiede_scadenza": True,
+            "parsing_service": "mrz",
+            "parsing_config": {
+                "mrz_format": "td1",
+                "rotate_mode": "auto",
+            },
+            "parsing_callback_url": "{api_base_url}/document-parsing/callback/{job_uuid}",
         },
 
         # Documenti fiscali
@@ -147,6 +167,9 @@ def seed_tipi_documento(db: Session):
             existing.descrizione = tipo_data["descrizione"]
             existing.categoria = tipo_data["categoria"]
             existing.richiede_scadenza = tipo_data["richiede_scadenza"]
+            existing.parsing_service = tipo_data.get("parsing_service")
+            existing.parsing_config = tipo_data.get("parsing_config")
+            existing.parsing_callback_url = tipo_data.get("parsing_callback_url")
             existing.attivo = True
             updated += 1
         else:

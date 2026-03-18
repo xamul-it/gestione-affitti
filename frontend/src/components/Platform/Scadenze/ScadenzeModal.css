@@ -58,6 +58,9 @@
   font-size: 24px;
   color: #333;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .modal-close {
@@ -138,6 +141,44 @@
 
 .status-badge--danger {
   background: #f44336;
+}
+
+.scadenza-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.scadenza-icon--high {
+  color: #ef4444;
+}
+
+.scadenza-icon--medium {
+  color: #f59e0b;
+}
+
+.scadenza-icon--low {
+  color: #22c55e;
+}
+
+.scadenza-icon--default {
+  color: #94a3b8;
+}
+
+.scadenza-logs__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scadenza-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scadenza-btn__icon {
+  display: inline-flex;
+  align-items: center;
 }
 
 /* Form */

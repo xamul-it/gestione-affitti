@@ -415,6 +415,17 @@
   background: #d32f2f;
 }
 
+.btn-action--link {
+  background: transparent;
+  color: #2563eb;
+  padding: 0 6px;
+}
+
+.btn-action--link:hover {
+  transform: none;
+  color: #1d4ed8;
+}
+
 /* Pagination */
 .scadenze-list__pagination {
   display: flex;

@@ -251,6 +251,9 @@ def list_tipi_documento(
             "categoria": o.categoria if o and o.categoria is not None else t.categoria,
             "richiede_scadenza": o.richiede_scadenza if o and o.richiede_scadenza is not None else t.richiede_scadenza,
             "attivo": o.attivo if o and o.attivo is not None else t.attivo,
+            "parsing_service": t.parsing_service,
+            "parsing_config": t.parsing_config,
+            "parsing_callback_url": t.parsing_callback_url,
         })
 
     return result
@@ -292,6 +295,9 @@ def get_tipo_documento(
         "categoria": override.categoria if override and override.categoria is not None else tipo.categoria,
         "richiede_scadenza": override.richiede_scadenza if override and override.richiede_scadenza is not None else tipo.richiede_scadenza,
         "attivo": override.attivo if override and override.attivo is not None else tipo.attivo,
+        "parsing_service": tipo.parsing_service,
+        "parsing_config": tipo.parsing_config,
+        "parsing_callback_url": tipo.parsing_callback_url,
     }
 
 

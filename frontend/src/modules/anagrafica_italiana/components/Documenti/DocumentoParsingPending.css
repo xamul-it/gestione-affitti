@@ -1,0 +1,114 @@
+.doc-parsing-pending {
+  margin-bottom: 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fff;
+}
+
+.doc-parsing-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.doc-parsing-header h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.doc-parsing-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.doc-parsing-loading,
+.doc-parsing-empty {
+  color: #6b7280;
+  padding: 10px 0;
+}
+
+.doc-parsing-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.doc-parsing-list {
+  display: grid;
+  gap: 14px;
+}
+
+.doc-parsing-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
+  background: #f9fafb;
+}
+
+.doc-parsing-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.doc-parsing-sub {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.doc-parsing-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.doc-parsing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.doc-parsing-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #374151;
+  gap: 6px;
+}
+
+.doc-parsing-grid input {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.doc-parsing-note {
+  grid-column: 1 / -1;
+}
+
+.doc-parsing-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.doc-parsing-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #374151;
+}
