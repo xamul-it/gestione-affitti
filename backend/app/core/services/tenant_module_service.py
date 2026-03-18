@@ -163,6 +163,38 @@ class TenantModuleService:
     }
 
     @staticmethod
+    def _get_tenant_tables(module_id: str, module_record=None) -> List[str]:
+        """
+        Return the list of tenant schema tables for a module.
+
+        Priority:
+        1. manifest['tenant_tables'] (if module_record provided and manifest has it)
+        2. MODULE_TABLES legacy fallback
+        """
+        if module_record is not None:
+            manifest = module_record.manifest or {}
+            tables = manifest.get("tenant_tables")
+            if tables is not None:
+                return tables
+        return TenantModuleService.MODULE_TABLES.get(module_id, [])
+
+    @staticmethod
+    def _get_override_tables_ddl(module_record=None) -> Dict[str, str]:
+        """
+        Return the override tables DDL dict for a module.
+
+        Priority:
+        1. manifest['override_tables_ddl'] (if module_record provided and manifest has it)
+        2. OVERRIDE_TABLES legacy fallback (all override tables)
+        """
+        if module_record is not None:
+            manifest = module_record.manifest or {}
+            ddl = manifest.get("override_tables_ddl")
+            if ddl is not None:
+                return ddl
+        return TenantModuleService.OVERRIDE_TABLES
+
+    @staticmethod
     def _config_column_exists(db: Session) -> bool:
         """Check if config column exists in tenant_modules table."""
         inspector = inspect(db.get_bind())
@@ -300,22 +332,26 @@ class TenantModuleService:
             return False
 
     @staticmethod
-    def create_override_tables(schema_name: str, db: Session) -> Dict[str, bool]:
+    def create_override_tables(schema_name: str, db: Session, module_record=None) -> Dict[str, bool]:
         """
-        Create all override tables in a tenant schema.
+        Create override tables in a tenant schema for a given module.
 
         Override tables store tenant-specific customizations of domain data.
+        DDL is read from manifest['override_tables_ddl'] when available,
+        falling back to the legacy OVERRIDE_TABLES dict.
 
         Args:
             schema_name: The tenant schema name
             db: Database session
+            module_record: Optional Module record; if provided, reads DDL from manifest
 
         Returns:
             Dict mapping table name to success status
         """
         results = {}
+        override_ddl = TenantModuleService._get_override_tables_ddl(module_record)
 
-        for table_name, ddl_template in TenantModuleService.OVERRIDE_TABLES.items():
+        for table_name, ddl_template in override_ddl.items():
             try:
                 ddl = ddl_template.format(schema=schema_name)
                 db.execute(text(ddl))
@@ -349,7 +385,7 @@ class TenantModuleService:
                 module_id,
                 exc,
             )
-        table_names = TenantModuleService.MODULE_TABLES.get(module_id, [])
+        table_names = TenantModuleService._get_tenant_tables(module_id, module_record)
         if not table_names:
             return []
 
@@ -406,10 +442,6 @@ class TenantModuleService:
         if not tenant:
             raise ValueError(f"Tenant {tenant_id} not found")
 
-        # Check if module exists
-        if module_id not in TenantModuleService.MODULE_TABLES:
-            raise ValueError(f"Unknown module: {module_id}")
-
         module_record = db.query(Module).filter(Module.technical_name == module_id).first()
         if not module_record:
             raise ValueError(f"Module '{module_id}' is not registered in the platform")
@@ -442,7 +474,7 @@ class TenantModuleService:
                 )
 
         schema_name = tenant.schema_name
-        table_names = TenantModuleService.MODULE_TABLES[module_id]
+        table_names = TenantModuleService._get_tenant_tables(module_id, module_record)
         results = {
             "tenant_id": tenant_id,
             "module_id": module_id,
@@ -493,7 +525,7 @@ class TenantModuleService:
         # 3b. Verify tenant tables exist after install
         inspector = inspect(db.get_bind())
         schema_tables = set(inspector.get_table_names(schema=schema_name))
-        expected_tables = TenantModuleService.MODULE_TABLES.get(module_id, [])
+        expected_tables = TenantModuleService._get_tenant_tables(module_id, module_record)
         missing_tables = [table for table in expected_tables if table not in schema_tables]
         if missing_tables:
             try:
@@ -711,20 +743,22 @@ class TenantModuleService:
         if not tenant:
             raise ValueError(f"Tenant {tenant_id} not found")
 
-        if module_id not in TenantModuleService.MODULE_TABLES:
+        module_record = db.query(Module).filter(Module.technical_name == module_id).first()
+        if not module_record:
             raise ValueError(f"Unknown module: {module_id}")
 
         schema_name = tenant.schema_name
-        table_names = TenantModuleService.MODULE_TABLES[module_id]
+        table_names = TenantModuleService._get_tenant_tables(module_id, module_record)
+        override_ddl = TenantModuleService._get_override_tables_ddl(module_record)
 
         # First, ensure override tables exist
-        TenantModuleService.create_override_tables(schema_name, db)
+        TenantModuleService.create_override_tables(schema_name, db, module_record)
 
         inspector = inspect(db.get_bind())
 
         for table_name in table_names:
             # Skip override tables (handled above)
-            if table_name in TenantModuleService.OVERRIDE_TABLES:
+            if table_name in override_ddl:
                 continue
 
             if not inspector.has_table(table_name, schema=schema_name):
@@ -952,12 +986,13 @@ class TenantModuleService:
         if not tenant:
             raise ValueError(f"Tenant {tenant_id} not found")
 
-        if module_id not in TenantModuleService.MODULE_TABLES:
+        module_record = db.query(Module).filter(Module.technical_name == module_id).first()
+        if not module_record:
             raise ValueError(f"Unknown module: {module_id}")
 
         if drop_tables:
             schema_name = tenant.schema_name
-            table_names = TenantModuleService.MODULE_TABLES[module_id]
+            table_names = TenantModuleService._get_tenant_tables(module_id, module_record)
 
             # Drop in reverse order to handle FK dependencies
             for table_name in reversed(table_names):
@@ -1091,23 +1126,24 @@ class TenantModuleService:
 
     @staticmethod
     def _get_tenant_tables_for_module(module_id: str, module_record: Optional[Module], schema_tables: set) -> List[str]:
-        if not module_record:
-            expected_tables = TenantModuleService.MODULE_TABLES.get(module_id, [])
+        # 1. Try manifest tenant_tables first
+        expected_tables = TenantModuleService._get_tenant_tables(module_id, module_record)
+        if expected_tables:
             return [table for table in expected_tables if table in schema_tables]
 
-        manifest = module_record.manifest or {}
-        prefix = manifest.get("table_prefix") or manifest.get("module_short_code") or ""
-        prefix = prefix.lower()
-        if prefix and not prefix.endswith("_"):
-            prefix = f"{prefix}_"
+        # 2. Fallback: discover by module prefix
+        if module_record:
+            manifest = module_record.manifest or {}
+            prefix = manifest.get("table_prefix") or manifest.get("module_short_code") or ""
+            prefix = prefix.lower()
+            if prefix and not prefix.endswith("_"):
+                prefix = f"{prefix}_"
+            if prefix:
+                prefixed_tables = sorted([table for table in schema_tables if table.startswith(prefix)])
+                if prefixed_tables:
+                    return prefixed_tables
 
-        if prefix:
-            prefixed_tables = sorted([table for table in schema_tables if table.startswith(prefix)])
-            if prefixed_tables:
-                return prefixed_tables
-
-        expected_tables = TenantModuleService.MODULE_TABLES.get(module_id, [])
-        return [table for table in expected_tables if table in schema_tables]
+        return []
 
     @staticmethod
     def update_module_config(

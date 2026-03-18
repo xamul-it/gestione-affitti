@@ -483,7 +483,7 @@ def update_module_config(
             "name": tenant_module.module_id.replace('_', ' ').title(),
             "enabled": tenant_module.enabled,
             "installed_at": tenant_module.installed_at.isoformat() if tenant_module.installed_at else None,
-            "table_count": len(TenantModuleService.MODULE_TABLES.get(tenant_module.module_id, [])),
+            "table_count": len(TenantModuleService._get_tenant_tables(tenant_module.module_id)),
             "config": tenant_module.config or {}
         }
     except ValueError as e:

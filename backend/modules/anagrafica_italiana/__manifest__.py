@@ -41,6 +41,86 @@ manifest = {
         "anag_ruoli_azienda_tipi",
     ],
 
+    # Tenant schema tables (created during tenant install)
+    "tenant_tables": [
+        "anag_soggetti_anagrafici",
+        "anag_ruoli_azienda",
+        "anag_tipi_documento_overrides",
+        "anag_stati_documento_overrides",
+        "anag_comuni_italia_overrides",
+        "anag_ruoli_azienda_tipi_overrides",
+        "anag_documenti",
+    ],
+
+    # DDL for override tables (reference public domain tables, created directly in tenant schema)
+    "override_tables_ddl": {
+        "anag_tipi_documento_overrides": """
+            CREATE TABLE IF NOT EXISTS {schema}.anag_tipi_documento_overrides (
+                id SERIAL PRIMARY KEY,
+                tipo_documento_id INTEGER NOT NULL REFERENCES public.anag_tipi_documento(id) ON DELETE CASCADE,
+                codice VARCHAR(50),
+                nome VARCHAR(100),
+                descrizione VARCHAR(255),
+                categoria VARCHAR(50),
+                richiede_scadenza BOOLEAN,
+                attivo BOOLEAN,
+                is_deleted BOOLEAN NOT NULL DEFAULT false,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ,
+                UNIQUE(tipo_documento_id)
+            )
+        """,
+        "anag_stati_documento_overrides": """
+            CREATE TABLE IF NOT EXISTS {schema}.anag_stati_documento_overrides (
+                id SERIAL PRIMARY KEY,
+                stato_documento_id INTEGER NOT NULL REFERENCES public.anag_stati_documento(id) ON DELETE CASCADE,
+                codice VARCHAR(20),
+                nome VARCHAR(100),
+                descrizione VARCHAR(255),
+                attivo BOOLEAN,
+                is_deleted BOOLEAN NOT NULL DEFAULT false,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ,
+                UNIQUE(stato_documento_id)
+            )
+        """,
+        "anag_comuni_italia_overrides": """
+            CREATE TABLE IF NOT EXISTS {schema}.anag_comuni_italia_overrides (
+                id SERIAL PRIMARY KEY,
+                comune_id INTEGER NOT NULL REFERENCES public.anag_comuni_italia(id) ON DELETE CASCADE,
+                nome VARCHAR(100),
+                nome_normalized VARCHAR(100),
+                codice_istat VARCHAR(10),
+                codice_catastale VARCHAR(10),
+                cap VARCHAR(10),
+                provincia_sigla VARCHAR(2),
+                provincia_nome VARCHAR(100),
+                regione VARCHAR(100),
+                latitudine NUMERIC(10, 7),
+                longitudine NUMERIC(10, 7),
+                is_deleted BOOLEAN NOT NULL DEFAULT false,
+                deleted_at TIMESTAMPTZ,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ,
+                UNIQUE(comune_id)
+            )
+        """,
+        "anag_ruoli_azienda_tipi_overrides": """
+            CREATE TABLE IF NOT EXISTS {schema}.anag_ruoli_azienda_tipi_overrides (
+                id SERIAL PRIMARY KEY,
+                ruolo_tipo_id INTEGER NOT NULL REFERENCES public.anag_ruoli_azienda_tipi(id) ON DELETE CASCADE,
+                nome VARCHAR(100),
+                descrizione VARCHAR(500),
+                attivo BOOLEAN,
+                is_deleted BOOLEAN NOT NULL DEFAULT false,
+                deleted_at TIMESTAMPTZ,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ,
+                UNIQUE(ruolo_tipo_id)
+            )
+        """,
+    },
+
     # API routes
     "api_prefix": "/anagrafica",
 

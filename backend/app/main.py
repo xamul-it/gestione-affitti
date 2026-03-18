@@ -64,7 +64,7 @@ from app.core.routes.tenants import router as tenants_router
 # Import platform routes
 from app.core.platform.routes import menu as platform_menu_router
 from app.core.platform.routes import dashboard as platform_dashboard_router
-from affitti_lungo.routes.modules_api import router as modules_api_router
+from app.core.routes.modules_api import router as modules_api_router
 
 # Configure logging
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -86,12 +86,26 @@ def create_core_tables():
 # Crea le tabelle core nel database (evita tabelle moduli in public)
 create_core_tables()
 
-# IMPORTANT: Import modules in dependency order AFTER core tables are created
+# IMPORTANT: Import module models AFTER core tables are created
 # to avoid creating tenant tables in public schema via create_all.
-import anagrafica_italiana.models
-import immobili.models
-import affitti_lungo.models
-import esempio_componenti.models
+# Dynamic: discover all modules in MODULES_DIR and import their models.
+def _import_all_module_models():
+    modules_path = Path(__file__).parent.parent / settings.MODULE_DIR
+    if not modules_path.exists():
+        return
+    for module_dir in sorted(modules_path.iterdir()):
+        if not module_dir.is_dir() or module_dir.name.startswith('_'):
+            continue
+        if not (module_dir / "__manifest__.py").exists():
+            continue
+        try:
+            mod = __import__(module_dir.name)
+            if hasattr(mod, 'models'):
+                pass  # models already imported as side-effect of __import__
+        except Exception as e:
+            logger.warning(f"Could not import models for module '{module_dir.name}': {e}")
+
+_import_all_module_models()
 
 # Initialize module system and seed data
 logger.info("Initializing module system...")
@@ -148,17 +162,32 @@ try:
     # Reload registered modules
     module_loader.reload_registered_modules()
 
-    # Register module roles (dynamic role system)
+    # Register module roles (dynamic: reads endpoints.register_roles from each module manifest)
     logger.info("Registering module roles...")
-    try:
-        from affitti_lungo.roles import register_roles as register_affitti_roles
-        result = register_affitti_roles(db)
-        logger.info(
-            f"Affitti Lungo roles: {result['created']} created, "
-            f"{result['skipped']} skipped, {len(result['errors'])} errors"
-        )
-    except Exception as e:
-        logger.error(f"Error registering affitti_lungo roles: {e}")
+    import importlib, inspect as _inspect
+    modules_path = Path(__file__).parent.parent / settings.MODULE_DIR
+    for manifest_file in sorted(modules_path.glob("*/__manifest__.py")):
+        try:
+            manifest_ns: dict = {}
+            exec(manifest_file.read_text(), manifest_ns)
+            mf = manifest_ns.get("manifest", {})
+            module_name = mf.get("technical_name") or manifest_file.parent.name
+            endpoint = (mf.get("endpoints") or {}).get("register_roles")
+            if not endpoint:
+                continue
+            mod_path, _, func_name = endpoint.partition(":")
+            func_name = func_name or "register_roles"
+            try:
+                mod_obj = importlib.import_module(f"{module_name}.{mod_path}" if mod_path else module_name)
+                fn = getattr(mod_obj, func_name, None)
+                if callable(fn):
+                    sig = _inspect.signature(fn)
+                    result = fn(db) if sig.parameters else fn()
+                    logger.info(f"[{module_name}] register_roles: {result}")
+            except Exception as e:
+                logger.error(f"Error registering roles for '{module_name}': {e}")
+        except Exception as e:
+            logger.warning(f"Could not read manifest at {manifest_file}: {e}")
 
 except Exception as e:
     logger.error(f"Failed to initialize module system: {e}")
@@ -343,205 +372,60 @@ async def register_module_resources():
         except Exception as e:
             logger.warning(f"⚠️  Could not register platform menu items: {e}")
 
-        # Registra modulo ANAGRAFICA_ITALIANA
-        try:
-            from anagrafica_italiana import MENU_ITEMS as ANAGRAFICA_MENU, WIDGETS as ANAGRAFICA_WIDGETS
+        # Registra menu items e widget per ogni modulo installato (dinamico)
+        import importlib as _importlib
+        modules_path = Path(__file__).parent.parent / settings.MODULE_DIR
+        for manifest_file in sorted(modules_path.glob("*/__manifest__.py")):
+            try:
+                manifest_ns: dict = {}
+                exec(manifest_file.read_text(), manifest_ns)
+                mf = manifest_ns.get("manifest", {})
+                module_name = mf.get("technical_name") or manifest_file.parent.name
 
-            logger.info("Registering menu items for anagrafica_italiana module...")
-            response = await client.post(
-                f"http://localhost:8000{settings.API_V1_STR}/platform/menu/register",
-                json={
-                    "module_id": "anagrafica_italiana",
-                    "items": ANAGRAFICA_MENU
-                },
-                timeout=5.0
-            )
+                # Ottieni menu_items e widgets: prima dal modulo Python, poi dal manifest
+                menu_items = mf.get("menu_items", [])
+                widgets = mf.get("widgets", [])
+                try:
+                    mod_obj = _importlib.import_module(module_name)
+                    if hasattr(mod_obj, "MENU_ITEMS") and mod_obj.MENU_ITEMS:
+                        menu_items = mod_obj.MENU_ITEMS
+                    if hasattr(mod_obj, "WIDGETS") and mod_obj.WIDGETS:
+                        widgets = mod_obj.WIDGETS
+                except Exception:
+                    pass  # usa i valori del manifest
 
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Registered {result['items_registered']} menu items for anagrafica_italiana")
-            else:
-                logger.error(f"❌ Failed to register menu items: HTTP {response.status_code}")
+                if menu_items:
+                    try:
+                        response = await client.post(
+                            f"http://localhost:8000{settings.API_V1_STR}/platform/menu/register",
+                            json={"module_id": module_name, "items": menu_items},
+                            timeout=5.0,
+                        )
+                        if response.status_code == 200:
+                            r = response.json()
+                            logger.info(f"✅ [{module_name}] menu: {r.get('items_registered', 0)} items")
+                        else:
+                            logger.error(f"❌ [{module_name}] menu register: HTTP {response.status_code}")
+                    except Exception as e:
+                        logger.warning(f"⚠️  [{module_name}] menu register failed: {e}")
 
-            # Registra widget anagrafica
-            logger.info("Registering widgets for anagrafica_italiana module...")
-            response = await client.post(
-                f"http://localhost:8000{settings.API_V1_STR}/platform/dashboard/register-widgets",
-                json={
-                    "module_id": "anagrafica_italiana",
-                    "widgets": ANAGRAFICA_WIDGETS
-                },
-                timeout=5.0
-            )
+                if widgets:
+                    try:
+                        response = await client.post(
+                            f"http://localhost:8000{settings.API_V1_STR}/platform/dashboard/register-widgets",
+                            json={"module_id": module_name, "widgets": widgets},
+                            timeout=5.0,
+                        )
+                        if response.status_code == 200:
+                            r = response.json()
+                            logger.info(f"✅ [{module_name}] widgets: {r.get('widgets_registered', 0)} registered")
+                        else:
+                            logger.error(f"❌ [{module_name}] widget register: HTTP {response.status_code}")
+                    except Exception as e:
+                        logger.warning(f"⚠️  [{module_name}] widget register failed: {e}")
 
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Registered {result['widgets_registered']} widgets for anagrafica_italiana")
-            else:
-                logger.error(f"❌ Failed to register widgets: HTTP {response.status_code}")
-
-        except Exception as e:
-            logger.warning(f"⚠️  Could not register anagrafica_italiana resources: {e}")
-
-        # Registra modulo IMMOBILI
-        try:
-            from immobili import MENU_ITEMS as IMMOBILI_MENU, WIDGETS as IMMOBILI_WIDGETS
-
-            logger.info("Registering menu items for immobili module...")
-            response = await client.post(
-                f"http://localhost:8000{settings.API_V1_STR}/platform/menu/register",
-                json={
-                    "module_id": "immobili",
-                    "items": IMMOBILI_MENU
-                },
-                timeout=5.0
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Registered {result['items_registered']} menu items for immobili")
-            else:
-                logger.error(f"❌ Failed to register menu items: HTTP {response.status_code}")
-
-            # Registra widget immobili
-            logger.info("Registering widgets for immobili module...")
-            response = await client.post(
-                f"http://localhost:8000{settings.API_V1_STR}/platform/dashboard/register-widgets",
-                json={
-                    "module_id": "immobili",
-                    "widgets": IMMOBILI_WIDGETS
-                },
-                timeout=5.0
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Registered {result['widgets_registered']} widgets for immobili")
-            else:
-                logger.error(f"❌ Failed to register widgets: HTTP {response.status_code}")
-
-        except Exception as e:
-            logger.warning(f"⚠️  Could not register immobili menu items: {e}")
-
-        # Registra modulo AFFITTI_LUNGO
-        try:
-            from affitti_lungo import MENU_ITEMS as AFFITTI_MENU, WIDGETS as AFFITTI_WIDGETS
-
-            logger.info("Registering menu items for affitti_lungo module...")
-            response = await client.post(
-                f"http://localhost:8000{settings.API_V1_STR}/platform/menu/register",
-                json={
-                    "module_id": "affitti_lungo",
-                    "items": AFFITTI_MENU
-                },
-                timeout=5.0
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Registered {result['items_registered']} menu items for affitti_lungo")
-            else:
-                logger.error(f"❌ Failed to register menu items: HTTP {response.status_code}")
-
-            # Registra widget affitti
-            logger.info("Registering widgets for affitti_lungo module...")
-            response = await client.post(
-                f"http://localhost:8000{settings.API_V1_STR}/platform/dashboard/register-widgets",
-                json={
-                    "module_id": "affitti_lungo",
-                    "widgets": AFFITTI_WIDGETS
-                },
-                timeout=5.0
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Registered {result['widgets_registered']} widgets for affitti_lungo")
-            else:
-                logger.error(f"❌ Failed to register widgets: HTTP {response.status_code}")
-
-        except Exception as e:
-            logger.warning(f"⚠️  Could not register affitti_lungo resources: {e}")
-
-        # Registra modulo AFFITTI_BREVI
-        try:
-            from affitti_brevi import MENU_ITEMS as AFFITTI_BREVI_MENU, WIDGETS as AFFITTI_BREVI_WIDGETS
-
-            logger.info("Registering menu items for affitti_brevi module...")
-            response = await client.post(
-                f"http://localhost:8000{settings.API_V1_STR}/platform/menu/register",
-                json={
-                    "module_id": "affitti_brevi",
-                    "items": AFFITTI_BREVI_MENU
-                },
-                timeout=5.0
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Registered {result['items_registered']} menu items for affitti_brevi")
-            else:
-                logger.error(f"❌ Failed to register menu items: HTTP {response.status_code}")
-
-            # Registra widget affitti_brevi
-            logger.info("Registering widgets for affitti_brevi module...")
-            response = await client.post(
-                f"http://localhost:8000{settings.API_V1_STR}/platform/dashboard/register-widgets",
-                json={
-                    "module_id": "affitti_brevi",
-                    "widgets": AFFITTI_BREVI_WIDGETS
-                },
-                timeout=5.0
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Registered {result['widgets_registered']} widgets for affitti_brevi")
-            else:
-                logger.error(f"❌ Failed to register widgets: HTTP {response.status_code}")
-
-        except Exception as e:
-            logger.warning(f"⚠️  Could not register affitti_brevi resources: {e}")
-
-        # Registra modulo ESEMPIO_COMPONENTI
-        try:
-            from esempio_componenti import MENU_ITEMS as ESEMPIO_MENU, WIDGETS as ESEMPIO_WIDGETS
-
-            logger.info("Registering menu items for esempio_componenti module...")
-            response = await client.post(
-                f"http://localhost:8000{settings.API_V1_STR}/platform/menu/register",
-                json={
-                    "module_id": "esempio_componenti",
-                    "items": ESEMPIO_MENU
-                },
-                timeout=5.0
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Registered {result['items_registered']} menu items for esempio_componenti")
-            else:
-                logger.error(f"❌ Failed to register menu items: HTTP {response.status_code}")
-
-            # Registra widget esempio_componenti
-            logger.info("Registering widgets for esempio_componenti module...")
-            response = await client.post(
-                f"http://localhost:8000{settings.API_V1_STR}/platform/dashboard/register-widgets",
-                json={
-                    "module_id": "esempio_componenti",
-                    "widgets": ESEMPIO_WIDGETS
-                },
-                timeout=5.0
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Registered {result['widgets_registered']} widgets for esempio_componenti")
-            else:
-                logger.error(f"❌ Failed to register widgets: HTTP {response.status_code}")
-
-        except Exception as e:
-            logger.warning(f"⚠️  Could not register esempio_componenti resources: {e}")
+            except Exception as e:
+                logger.warning(f"⚠️  Could not process manifest {manifest_file}: {e}")
 
 
 @app.get("/")
@@ -586,11 +470,14 @@ app.include_router(document_parsing_router, prefix=settings.API_V1_STR)
 # AUTO-DISCOVERY: Register all module routers dynamically
 # ====================================================================
 logger.info("🔍 Auto-discovering module routers...")
-module_names = ["anagrafica_italiana", "immobili", "affitti_lungo", "affitti_brevi", "esempio_componenti"]
-total_routers_registered = 0
 modules_dir = Path(__file__).parent.parent / settings.MODULE_DIR
 if str(modules_dir) not in sys.path:
     sys.path.insert(0, str(modules_dir))
+module_names = [
+    d.name for d in sorted(modules_dir.iterdir())
+    if d.is_dir() and not d.name.startswith('_') and (d / "__manifest__.py").exists()
+] if modules_dir.exists() else []
+total_routers_registered = 0
 
 for module_name in module_names:
     try:

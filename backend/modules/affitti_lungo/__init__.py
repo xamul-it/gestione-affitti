@@ -22,7 +22,6 @@ def get_routers():
         millesimi_immobile_router,
         ripartizione_spesa_router,
         search_router,
-        modules_api_router,
     )
     return [
         immobili_router,
@@ -40,7 +39,6 @@ def get_routers():
         millesimi_immobile_router,
         ripartizione_spesa_router,
         search_router,
-        modules_api_router,
     ]
 
 
@@ -198,7 +196,6 @@ __all__ = [
     "millesimi_immobile_router",
     "ripartizione_spesa_router",
     "search_router",
-    "modules_api_router",
     "MENU_ITEMS",
     "WIDGETS",
 ]

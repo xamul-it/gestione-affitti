@@ -54,6 +54,38 @@ manifest = {
         "immo_tipologie_terreno",
     ],
 
+    # Tenant schema tables (created during tenant install)
+    "tenant_tables": [
+        "immo_condomini",
+        "immo_unita_immobiliari",
+        "immo_proprietari",
+        "immo_diritti_immobile",
+        "immo_certificati_energetici",
+        "immo_tabelle_millesimali",
+        "immo_millesimi_unita",
+        "immo_tipologie_terreno_overrides",
+        "immo_terreni",
+        "immo_tipo_immobile_categoria_map",
+    ],
+
+    # DDL for override tables (reference public domain tables, created directly in tenant schema)
+    "override_tables_ddl": {
+        "immo_tipologie_terreno_overrides": """
+            CREATE TABLE IF NOT EXISTS {schema}.immo_tipologie_terreno_overrides (
+                id SERIAL PRIMARY KEY,
+                tipologia_id INTEGER NOT NULL REFERENCES public.immo_tipologie_terreno(id) ON DELETE CASCADE,
+                codice VARCHAR(20),
+                nome VARCHAR(100),
+                descrizione TEXT,
+                attivo BOOLEAN,
+                is_deleted BOOLEAN NOT NULL DEFAULT false,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ,
+                UNIQUE(tipologia_id)
+            )
+        """,
+    },
+
     # API prefix
     "api_prefix": "/immobili",
 

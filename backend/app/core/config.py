@@ -35,8 +35,18 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: Union[str, list] = ["http://localhost:3000", "http://localhost:5173"]
 
     # Module System
-    MODULE_DIR: str = "modules"  # Relative to backend/
+    MODULE_DIR: str = "modules"  # Relative to backend/ (used when MODULES_DIR_ABSOLUTE is not set)
+    MODULES_DIR_ABSOLUTE: Optional[str] = None  # Absolute path override (e.g. /opt/gestione-affitti/modules)
     MODULE_UPLOAD_DIR: str = "uploads/modules"
+    FRONTEND_MODULES_DIR: Optional[str] = None  # Absolute path to frontend/src/modules/ for manage.py
+
+    @property
+    def resolved_module_dir(self) -> Path:
+        """Return the absolute path to the modules directory."""
+        if self.MODULES_DIR_ABSOLUTE:
+            return Path(self.MODULES_DIR_ABSOLUTE)
+        backend_root = Path(__file__).resolve().parents[2]
+        return backend_root / self.MODULE_DIR
 
     # Document Parsing Services
     MRZ_SERVICE_URL: str = "http://localhost:8008"
