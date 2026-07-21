@@ -1,0 +1,19 @@
+.ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.ds-field__label {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.ds-field__error {
+  font-size: var(--font-size-small);
+  color: var(--color-danger-dark);
+  margin: 0;
+}
