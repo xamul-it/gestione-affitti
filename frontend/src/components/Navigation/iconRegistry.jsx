@@ -11,6 +11,7 @@ import {
   CheckCircle,
   CircleDollarSign,
   Clock,
+  Contact2,
   Database,
   Download,
   Euro,
@@ -19,6 +20,7 @@ import {
   FileText,
   FileUp,
   IdCard,
+  Landmark,
   Leaf,
   Link,
   Info,
@@ -29,6 +31,7 @@ import {
   Package,
   Pencil,
   Plus,
+  Puzzle,
   Upload,
   Receipt,
   Save,
@@ -36,6 +39,7 @@ import {
   Settings,
   ShieldCheck,
   AlertTriangle,
+  Tag,
   Trash2,
   User,
   Users,
@@ -88,6 +92,10 @@ const ICONS = {
   wrench: Wrench,
   'money-bill-wave': CircleDollarSign,
   cog: Settings,
+  'user-tie': Contact2,
+  'building-columns': Landmark,
+  tag: Tag,
+  puzzle: Puzzle,
 };
 
 export function renderIcon(iconName, options = {}) {
