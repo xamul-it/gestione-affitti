@@ -69,6 +69,7 @@ import DocumentParsingDebug from './pages/Admin/DocumentParsingDebug';
 import ParsingServices from './pages/Admin/ParsingServices';
 import TenantMaintenance from './pages/Admin/TenantMaintenance';
 import CoreCleanup from './pages/Admin/CoreCleanup';
+import StyleGuide from './pages/Admin/StyleGuide';
 
 // Auth
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -185,6 +186,7 @@ function App() {
                 <Route path="/admin/parsing-services" element={<ProtectedRoute requiredRole="Admin"><ParsingServices /></ProtectedRoute>} />
                 <Route path="/admin/tenant-maintenance" element={<ProtectedRoute requiredRole="Admin"><TenantMaintenance /></ProtectedRoute>} />
                 <Route path="/admin/core-cleanup" element={<ProtectedRoute requiredRole="Admin"><CoreCleanup /></ProtectedRoute>} />
+                <Route path="/admin/style-guide" element={<ProtectedRoute requiredRole="Admin"><StyleGuide /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
                 {/* Scadenze Test Page */}
