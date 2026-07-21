@@ -88,6 +88,14 @@ import { getDynamicRouteComponents, registerModuleComponent } from './core/modul
 import HelloPage from './modules/hello_module/HelloPage';
 registerModuleComponent('@modules/hello_module/HelloPage', HelloPage);
 
+// Gestione PEC module
+import {
+  PecInboxPage,
+  PecAdminPage,
+  PecSummaryWidget,
+} from './modules/gestione_pec';
+registerModuleComponent('PecSummaryWidget', PecSummaryWidget);
+
 // Affitti Brevi module components (dynamic routes)
 import {
   CalendarioMultiPiattaforma,
@@ -243,6 +251,10 @@ function App() {
                 <Route path="/admin/database" element={<ProtectedRoute requiredRole="Admin"><DatabaseManagement /></ProtectedRoute>} />
                 <Route path="/modules" element={<ProtectedRoute requiredRole="Admin"><ModulesAdmin /></ProtectedRoute>} />
                 <Route path="/tenant/modules" element={<ProtectedRoute requiredPermission="tenant.admin"><TenantModules /></ProtectedRoute>} />
+
+                {/* PEC routes */}
+                <Route path="/pec" element={<ProtectedRoute requiredPermission="pec.read"><PecInboxPage /></ProtectedRoute>} />
+                <Route path="/pec/admin" element={<ProtectedRoute requiredPermission="pec.admin"><PecAdminPage /></ProtectedRoute>} />
 
                 {/* Esempio Componenti routes - Demo module */}
                 <Route path="/esempio/elementi" element={<ProtectedRoute><ElementiEsempioList /></ProtectedRoute>} />
