@@ -1,0 +1,82 @@
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.ds-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.ds-btn--sm {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-small);
+  min-height: 36px;
+}
+
+.ds-btn--md {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-body);
+}
+
+.ds-btn--lg {
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--font-size-h4);
+}
+
+.ds-btn--primary {
+  background-color: var(--color-ink);
+  color: #fff;
+}
+.ds-btn--primary:hover:not(:disabled) {
+  background-color: var(--color-ink-hover);
+}
+
+.ds-btn--brand {
+  background-color: var(--color-brand);
+  color: #fff;
+}
+.ds-btn--brand:hover:not(:disabled) {
+  background-color: var(--color-brand-dark);
+}
+
+.ds-btn--secondary {
+  background-color: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--gray-400);
+}
+.ds-btn--secondary:hover:not(:disabled) {
+  background-color: var(--gray-100);
+}
+
+.ds-btn--danger {
+  background-color: var(--color-danger);
+  color: #fff;
+}
+.ds-btn--danger:hover:not(:disabled) {
+  background-color: var(--color-danger-dark);
+}
+
+.ds-btn__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: ds-btn-spin 0.6s linear infinite;
+}
+
+@keyframes ds-btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
