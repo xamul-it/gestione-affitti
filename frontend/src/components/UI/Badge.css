@@ -1,0 +1,36 @@
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ds-badge--neutral {
+  background-color: var(--gray-200);
+  color: var(--gray-800);
+}
+
+.ds-badge--success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.ds-badge--warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.ds-badge--danger {
+  background-color: #fde3d8;
+  color: var(--color-danger-dark);
+}
+
+.ds-badge--brand {
+  background-color: #fbdad8;
+  color: var(--color-brand-dark);
+}
