@@ -1,3 +1,5 @@
+@import './styles/tokens.css';
+
 * {
   margin: 0;
   padding: 0;
@@ -220,7 +222,7 @@ tr:hover {
 
 /* Quick Fix #4: Consistent focus indicators (WCAG 2.4.7) */
 *:focus {
-  outline: 3px solid #3498db;
+  outline: 3px solid var(--color-brand);
   outline-offset: 2px;
 }
 
@@ -230,15 +232,15 @@ tr:hover {
 }
 
 *:focus-visible {
-  outline: 3px solid #3498db;
+  outline: 3px solid var(--color-brand);
   outline-offset: 2px;
 }
 
 /* Special styling for buttons */
 button:focus-visible, .btn:focus-visible {
-  outline: 3px solid #3498db;
+  outline: 3px solid var(--color-brand);
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 /* Links in navigation */
