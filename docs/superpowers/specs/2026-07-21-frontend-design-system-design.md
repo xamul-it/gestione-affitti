@@ -62,14 +62,41 @@ Scala: h1 28px/h2 22px/h3 18px/h4 16px, body 15px, small 13px — pesi 400/500/6
 
 ## 3. Spaziatura e forme
 
-- Scala 4px: `4·8·12·16·24·32·48·64` (token `--space-1` … `--space-8`)
+Verifica quantitativa sul codice attuale: i valori di padding/gap in uso vanno
+da 2px a **80px** per ruoli equivalenti (una "card" usa 20px, un'altra 40px,
+un'altra ancora 60-80px) — nessuna scala, nessun criterio. Da qui la sensazione
+di eccesso di spazio in alcuni pannelli: non è impressione, sono blocchi con
+padding da pagina marketing (40-80px) applicati a un'interfaccia operativa
+densa di dati.
+
+**Principio:** questo è un gestionale, non un sito di marketing — di default
+si sceglie il valore più stretto della scala che resta leggibile. Spaziatura
+generosa (32px+) è riservata a stati vuoti/onboarding, mai a schermate dati
+regolari (tabelle, liste, form, dashboard).
+
+Scala token: `--space-1: 4px · --space-2: 8px · --space-3: 12px ·
+--space-4: 16px · --space-5: 24px · --space-6: 32px`. **Nessun valore sopra
+32px** nei componenti applicativi — tetto duro, non un'opzione stilistica.
+
+Regole per componente (sostituiscono i valori ad-hoc odierni):
+
+| Elemento | Valore | Sostituisce |
+|---|---|---|
+| Padding card/pannello | `--space-4` (16px) | i 20-40-60-80px odierni |
+| Padding cella tabella | `--space-2 --space-3` (8px 12px) | i 12-16px odierni |
+| Padding bottone (md) | `--space-2 --space-4` (8px 16px), min-height 44px | i 12px 20px odierni (l'altezza min. resta per il touch target, si stringe solo l'aria orizzontale interna) |
+| Gap tra campi form | `--space-3` (12px) | i 15-20px odierni |
+| Gap in toolbar/gruppi azioni | `--space-2` (8px) | valori misti 10-20px odierni |
+| Padding contenitore pagina | `--space-4`/`--space-5` (16-24px) | mai oltre, contro i 40-80px trovati in alcuni pannelli |
+
 - Border radius bottoni/input/card: **8px** (`--radius-md`). Non il pill-shape
   10rem del sito sorgente: in un pannello dati denso con azioni affiancate il
   pill ovunque affollerebbe visivamente.
 - Badge/pill di stato: pill-shape (`--radius-full`) — qui la convenzione
   pill è consolidata e riprende comunque lo spirito brand.
 - Touch target minimo 44px (già presente in `index.css`, buona pratica
-  esistente): **non si tocca**, resta come vincolo per bottoni/input.
+  esistente): **non si tocca**, resta come vincolo per bottoni/input (si
+  interviene solo sul padding orizzontale interno, non sull'altezza minima).
 
 ## 4. Componenti condivisi
 
@@ -121,6 +148,8 @@ sistemano solo i manifest, che pilotano la navigazione/dashboard core.
 - Contenuto:
   - Swatch di tutti i colori-token con nome e hex
   - Scala tipografica (h1-h4, body, small)
+  - Scala di spaziatura (`--space-1`…`--space-6`) con blocchi visivi in scala,
+    per verificare a colpo d'occhio che la densità sia quella giusta
   - Tutti i bottoni: variante × size × stato
   - Tutti i badge
   - Card di esempio
