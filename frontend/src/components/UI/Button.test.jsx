@@ -16,6 +16,12 @@ describe('Button', () => {
     expect(btn).toHaveClass('ds-btn--danger', 'ds-btn--lg');
   });
 
+  it('applies the ghost variant class', () => {
+    render(<Button variant="ghost" size="lg">Annulla</Button>);
+    const btn = screen.getByRole('button', { name: 'Annulla' });
+    expect(btn).toHaveClass('ds-btn--ghost', 'ds-btn--lg');
+  });
+
   it('disables the button while loading and does not fire onClick', async () => {
     const onClick = vi.fn();
     render(<Button loading onClick={onClick}>Salva</Button>);

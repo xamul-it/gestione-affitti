@@ -27,7 +27,7 @@ const SPACING_STEPS = [
   { name: '--space-6', value: 32 },
 ];
 
-const BUTTON_VARIANTS = ['primary', 'brand', 'secondary', 'danger'];
+const BUTTON_VARIANTS = ['primary', 'brand', 'secondary', 'danger', 'ghost'];
 const BUTTON_SIZES = ['sm', 'md', 'lg'];
 const BADGE_VARIANTS = ['neutral', 'success', 'warning', 'danger', 'brand'];
 

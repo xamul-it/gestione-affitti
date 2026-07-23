@@ -246,7 +246,7 @@ button:focus-visible, .btn:focus-visible {
 /* Links in navigation */
 .navbar-link:focus-visible,
 .menu-link:focus-visible {
-  outline: 3px solid #3498db;
+  outline: 3px solid var(--color-brand);
   outline-offset: -3px;
 }
 
