@@ -3,7 +3,7 @@ Tenant fixtures for multi-tenancy testing.
 """
 
 import pytest
-from app.core.auth.models import Tenant
+from app.core.models.tenant import Tenant
 
 
 @pytest.fixture

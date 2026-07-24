@@ -13,7 +13,7 @@ from jose import jwt
 
 from app.core.config import settings
 from app.core.auth.models import User
-from app.core.auth.utils import get_password_hash
+from app.core.auth.security import get_password_hash
 
 
 @pytest.fixture
