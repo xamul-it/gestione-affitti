@@ -16,6 +16,13 @@ Multi-tenancy is a key architectural feature that enables the platform to suppor
 ### Status & Management
 - **MULTI_TENANT_STATUS.md** - Current status of multi-tenancy implementation
 
+### Migration Lifecycle (current, 2026-07)
+- **MODULE_MIGRATION_LIFECYCLE.md** - Core vs module migration lifecycle,
+  tenant activation gate, sample-data reseeding. The four documents above are
+  dated December 2025 and predate the current `core_`-prefixed schema and
+  manifest-based module system — this document reflects the codebase as it
+  is today and is the current reference for migration-lifecycle questions.
+
 ## Key Concepts
 
 ### Schema-Based Multi-Tenancy
