@@ -390,11 +390,32 @@ class TenantModuleService:
             return []
 
         target_metadata = MetaData()
+        copied: Dict[tuple, object] = {}
+
+        def _copy_table(lookup_key: str, table_name: str, target_schema: str):
+            """
+            Copy a table into target_metadata under target_schema, recursively
+            copying any FK-referenced tables first under THEIR OWN original
+            schema (e.g. public domain tables referenced by a tenant table
+            must stay in 'public', not be remapped to the tenant schema).
+            """
+            cache_key = (target_schema, table_name)
+            if cache_key in copied:
+                return copied[cache_key]
+            source_table = Base.metadata.tables.get(lookup_key)
+            if source_table is None:
+                return None
+            for fk in source_table.foreign_keys:
+                ref_table = fk.column.table
+                if ref_table.key == lookup_key:
+                    continue
+                _copy_table(ref_table.key, ref_table.name, ref_table.schema or target_schema)
+            copied_table = source_table.to_metadata(target_metadata, schema=target_schema)
+            copied[cache_key] = copied_table
+            return copied_table
+
         for table_name in table_names:
-            table = Base.metadata.tables.get(table_name)
-            if table is None:
-                continue
-            table.to_metadata(target_metadata, schema=schema_name)
+            _copy_table(table_name, table_name, schema_name)
 
         created = []
         bind = db.get_bind()
