@@ -76,6 +76,7 @@ class TenantModule(Base):
     enabled = Column(Boolean, default=True, nullable=False, index=True)
     installed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     disabled_at = Column(DateTime, nullable=True)
+    installed_version = Column(String(20), nullable=True)
     config = deferred(Column(JSONB, nullable=True))
 
     # Relationships
