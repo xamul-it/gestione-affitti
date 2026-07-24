@@ -19,15 +19,15 @@ target_schema = "public"
 
 def upgrade() -> None:
     op.add_column(
-        "modules",
+        "core_modules",
         sa.Column("registered", sa.Boolean(), nullable=False, server_default=sa.text("false")),
     )
     op.add_column(
-        "modules",
+        "core_modules",
         sa.Column("registered_at", sa.DateTime(timezone=True), nullable=True),
     )
 
 
 def downgrade() -> None:
-    op.drop_column("modules", "registered_at")
-    op.drop_column("modules", "registered")
+    op.drop_column("core_modules", "registered_at")
+    op.drop_column("core_modules", "registered")
