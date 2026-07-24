@@ -409,6 +409,49 @@ def disable_module(
     }
 
 
+@router.post("/{tenant_id}/modules/{module_id}/force-update")
+def force_update_module(
+    tenant_id: int,
+    module_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Force-sync a tenant's module tables to match the module's current
+    version - PLATFORM ADMIN ONLY. Non-destructive: only adds missing
+    columns/indexes, never drops data.
+    """
+    ensure_tenant_admin_access(tenant_id, current_user, db)
+    try:
+        TenantModuleService.sync_module_tables_for_tenant(tenant_id, module_id, db)
+        return {"status": "updated", "module_id": module_id}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Update failed: {str(e)}")
+
+
+@router.post("/{tenant_id}/modules/{module_id}/reseed")
+def reseed_module_test_data(
+    tenant_id: int,
+    module_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Re-run a module's sample-data seeding for a tenant where it is already
+    installed - PLATFORM ADMIN ONLY.
+    """
+    ensure_tenant_admin_access(tenant_id, current_user, db)
+    try:
+        success = TenantModuleService.reseed_test_data_for_tenant(tenant_id, module_id, db)
+        if not success:
+            raise HTTPException(status_code=500, detail="Reseed failed. Check server logs.")
+        return {"status": "reseeded", "module_id": module_id}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/{tenant_id}/clear-tables")
 def clear_tenant_tables(
     tenant_id: int,

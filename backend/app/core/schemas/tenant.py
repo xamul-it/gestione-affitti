@@ -91,6 +91,8 @@ class TenantModuleResponse(BaseModel):
     enabled: bool
     needs_install: bool = False
     installed_at: Optional[str]  # ISO format string
+    installed_version: Optional[str] = None
+    needs_update: bool = False
     tenant_tables: List[str] = Field(default_factory=list)
     table_count: int
     config: Optional[Dict[str, Any]] = None
