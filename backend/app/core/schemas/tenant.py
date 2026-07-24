@@ -2,7 +2,7 @@
 Pydantic schemas for Tenant operations.
 """
 from pydantic import BaseModel, Field, validator
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 
@@ -82,8 +82,16 @@ class TenantModuleResponse(BaseModel):
     """Schema for tenant module status."""
     module_id: str
     name: str
+    version: Optional[str] = None
+    description: Optional[str] = None
+    author: Optional[str] = None
+    icon: Optional[str] = None
+    category: Optional[str] = None
+    dependencies: List[str] = Field(default_factory=list)
     enabled: bool
+    needs_install: bool = False
     installed_at: Optional[str]  # ISO format string
+    tenant_tables: List[str] = Field(default_factory=list)
     table_count: int
     config: Optional[Dict[str, Any]] = None
 
