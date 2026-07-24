@@ -105,6 +105,37 @@ export default function TenantModules() {
     }
   };
 
+  const forceUpdateModule = async (moduleId) => {
+    if (!currentTenant) return;
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.post(
+        `${API_BASE_URL}/tenants/${currentTenant.id}/modules/${moduleId}/force-update`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await loadTenantModules(currentTenant.id);
+      await loadMenu();
+    } catch (err) {
+      alert(`Errore aggiornamento: ${err.response?.data?.detail || 'Operazione fallita'}`);
+    }
+  };
+
+  const reseedModule = async (moduleId) => {
+    if (!currentTenant) return;
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.post(
+        `${API_BASE_URL}/tenants/${currentTenant.id}/modules/${moduleId}/reseed`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert('Dati di esempio caricati.');
+    } catch (err) {
+      alert(`Errore caricamento dati di esempio: ${err.response?.data?.detail || 'Operazione fallita'}`);
+    }
+  };
+
   const openConfigEditor = (module) => {
     setConfigEditor({ moduleId: module.module_id });
     setConfigValue(JSON.stringify(module.config || {}, null, 2));
@@ -236,6 +267,11 @@ export default function TenantModules() {
                           <span className={`status-badge ${module.enabled ? 'active' : 'inactive'}`}>
                             {module.enabled ? 'Attivo' : 'Disattivo'}
                           </span>
+                          {module.needs_update && (
+                            <span className="status-badge needs-update">
+                              Aggiornamento richiesto
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -283,53 +319,85 @@ export default function TenantModules() {
                         </div>
 
                         <div className="tenant-module-actions">
-                          {!module.enabled && (
-                            <label className="tenant-module-testdata-toggle">
-                              <input
-                                type="checkbox"
-                                checked={!!seedTestDataByModule[module.module_id]}
-                                onChange={(event) =>
-                                  setSeedTestDataByModule((prev) => ({
-                                    ...prev,
-                                    [module.module_id]: event.target.checked,
-                                  }))
-                                }
-                              />
-                              Carica dati di test
-                            </label>
+                          {module.needs_update ? (
+                            <>
+                              <p className="tenant-module-update-notice">
+                                Le tabelle di questo tenant non sono allineate alla versione
+                                corrente del modulo ({module.installed_version} → {module.version}).
+                                Disabilita il modulo oppure forza l'aggiornamento delle tabelle.
+                              </p>
+                              <button
+                                className="btn btn-sm btn-outline"
+                                onClick={() => toggleTenantModule(module.module_id, true, false, false)}
+                              >
+                                Disabilita
+                              </button>
+                              <button
+                                className="btn btn-sm btn-primary"
+                                onClick={() => forceUpdateModule(module.module_id)}
+                              >
+                                Forza aggiornamento
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              {!module.enabled && (
+                                <label className="tenant-module-testdata-toggle">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!seedTestDataByModule[module.module_id]}
+                                    onChange={(event) =>
+                                      setSeedTestDataByModule((prev) => ({
+                                        ...prev,
+                                        [module.module_id]: event.target.checked,
+                                      }))
+                                    }
+                                  />
+                                  Carica dati di test
+                                </label>
+                              )}
+                              {module.enabled && (
+                                <label className="tenant-module-drop-toggle">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!dropTablesByModule[module.module_id]}
+                                    onChange={(event) =>
+                                      setDropTablesByModule((prev) => ({
+                                        ...prev,
+                                        [module.module_id]: event.target.checked,
+                                      }))
+                                    }
+                                  />
+                                  Cancella tabelle tenant
+                                </label>
+                              )}
+                              <button
+                                className={`btn btn-sm ${module.enabled ? 'btn-outline' : 'btn-primary'}`}
+                                onClick={() => toggleTenantModule(
+                                  module.module_id,
+                                  module.enabled,
+                                  !!dropTablesByModule[module.module_id],
+                                  !!seedTestDataByModule[module.module_id]
+                                )}
+                              >
+                                {module.enabled ? 'Disabilita' : 'Abilita'}
+                              </button>
+                              <button
+                                className="btn btn-sm btn-secondary"
+                                onClick={() => openConfigEditor(module)}
+                              >
+                                Config
+                              </button>
+                              {module.enabled && (
+                                <button
+                                  className="btn btn-sm btn-secondary"
+                                  onClick={() => reseedModule(module.module_id)}
+                                >
+                                  Carica dati di esempio
+                                </button>
+                              )}
+                            </>
                           )}
-                          {module.enabled && (
-                            <label className="tenant-module-drop-toggle">
-                              <input
-                                type="checkbox"
-                                checked={!!dropTablesByModule[module.module_id]}
-                                onChange={(event) =>
-                                  setDropTablesByModule((prev) => ({
-                                    ...prev,
-                                    [module.module_id]: event.target.checked,
-                                  }))
-                                }
-                              />
-                              Cancella tabelle tenant
-                            </label>
-                          )}
-                          <button
-                            className={`btn btn-sm ${module.enabled ? 'btn-outline' : 'btn-primary'}`}
-                            onClick={() => toggleTenantModule(
-                              module.module_id,
-                              module.enabled,
-                              !!dropTablesByModule[module.module_id],
-                              !!seedTestDataByModule[module.module_id]
-                            )}
-                          >
-                            {module.enabled ? 'Disabilita' : 'Abilita'}
-                          </button>
-                          <button
-                            className="btn btn-sm btn-secondary"
-                            onClick={() => openConfigEditor(module)}
-                          >
-                            Config
-                          </button>
                         </div>
                       </div>
                     </div>
