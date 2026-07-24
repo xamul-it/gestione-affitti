@@ -576,7 +576,7 @@ class TenantModuleService:
                 )
 
         # 4. Register module as installed
-        TenantModuleService._register_module(tenant_id, module_id, db)
+        TenantModuleService._register_module(tenant_id, module_id, db, version=module_record.version)
 
         return results
 
@@ -729,7 +729,7 @@ class TenantModuleService:
             return False
 
     @staticmethod
-    def _register_module(tenant_id: int, module_id: str, db: Session) -> TenantModule:
+    def _register_module(tenant_id: int, module_id: str, db: Session, version: Optional[str] = None) -> TenantModule:
         """Register or re-enable a module for a tenant."""
         existing = db.query(TenantModule).filter_by(
             tenant_id=tenant_id,
@@ -749,6 +749,9 @@ class TenantModuleService:
                 tenant_module.config = {}
             db.add(tenant_module)
             existing = tenant_module
+
+        if version is not None:
+            existing.installed_version = version
 
         db.commit()
         return existing
@@ -795,8 +798,32 @@ class TenantModuleService:
             TenantModuleService._sync_table_columns(schema_name, table_name, db)
             TenantModuleService._sync_table_indexes(schema_name, table_name, db)
 
-        # Register module
-        TenantModuleService._register_module(tenant_id, module_id, db)
+        # Register module (bumps installed_version to the module's current version)
+        TenantModuleService._register_module(tenant_id, module_id, db, version=module_record.version)
+
+    @staticmethod
+    def reseed_test_data_for_tenant(tenant_id: int, module_id: str, db: Session) -> bool:
+        """
+        Re-run a module's install entry point with seed_test_data=True for a
+        tenant where the module is already installed. Does not touch table
+        structure — only re-invokes whatever seeding logic the module's
+        install() function runs when seed_test_data is True.
+        """
+        tenant = db.query(Tenant).get(tenant_id)
+        if not tenant:
+            raise ValueError(f"Tenant {tenant_id} not found")
+
+        module_record = db.query(Module).filter(Module.technical_name == module_id).first()
+        if not module_record:
+            raise ValueError(f"Unknown module: {module_id}")
+
+        return TenantModuleService._run_module_install(
+            module_record,
+            tenant_id,
+            tenant.schema_name,
+            db,
+            seed_test_data=True,
+        )
 
     @staticmethod
     def _sync_table_columns(schema_name: str, table_name: str, db: Session):
@@ -1126,10 +1153,18 @@ class TenantModuleService:
                 needs_install = True
                 effective_enabled = False
 
+            installed_version = module_map[module_id].installed_version if module_id in module_map else None
+            current_version = module_record.version if module_record else None
+            needs_update = bool(
+                installed_version is not None
+                and current_version is not None
+                and installed_version != current_version
+            )
+
             modules_payload.append({
                 "module_id": module_id,
                 "name": (module_record.name if module_record else module_id.replace('_', ' ').title()),
-                "version": module_record.version if module_record else None,
+                "version": current_version,
                 "description": (module_record.description or (manifest or {}).get("description", "")) if module_record else "",
                 "author": (manifest or {}).get("author") if module_record else None,
                 "icon": (module_record.icon or (manifest or {}).get("icon")) if module_record else None,
@@ -1138,6 +1173,8 @@ class TenantModuleService:
                 "enabled": effective_enabled,
                 "needs_install": needs_install,
                 "installed_at": module_map[module_id].installed_at.isoformat() if module_id in module_map else None,
+                "installed_version": installed_version,
+                "needs_update": needs_update,
                 "tenant_tables": tenant_tables,
                 "table_count": len(tenant_tables),
                 "config": module_map[module_id].config if has_config and module_id in module_map else {}
