@@ -319,7 +319,7 @@ export default function TenantModules() {
                         </div>
 
                         <div className="tenant-module-actions">
-                          {module.needs_update ? (
+                          {module.needs_update && module.enabled ? (
                             <>
                               <p className="tenant-module-update-notice">
                                 Le tabelle di questo tenant non sono allineate alla versione
