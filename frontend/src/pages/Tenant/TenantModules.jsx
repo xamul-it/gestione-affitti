@@ -123,6 +123,12 @@ export default function TenantModules() {
 
   const reseedModule = async (moduleId) => {
     if (!currentTenant) return;
+    const confirmed = window.confirm(
+      `Confermi il caricamento dei dati di esempio nel tenant «${currentTenant.nome_display}»? Potrebbe creare righe duplicate se eseguito più volte.`
+    );
+    if (!confirmed) {
+      return;
+    }
     try {
       const token = localStorage.getItem('access_token');
       await axios.post(
