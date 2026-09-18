@@ -35,7 +35,8 @@ from app.core.models.tenant import Tenant, UserTenant, TenantModule
 from app.core.platform.models import (
     MenuItem, Widget, UserDashboard,
     Scadenza, ScadenzaDestinatario, ScadenzaLog,
-    DocumentJob, JobStatus
+    DocumentJob, JobStatus,
+    Notifica, CanaleNotifica, StatoEmailNotifica
 )
 
 # Import module system

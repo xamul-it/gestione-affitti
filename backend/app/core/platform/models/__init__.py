@@ -12,6 +12,7 @@ from .scadenza_log import ScadenzaLog
 from .document_job import DocumentJob, JobStatus
 from .document_parsing_log import DocumentParsingLog
 from .parsing_service_config import ParsingServiceConfig
+from .notifica import Notifica, CanaleNotifica, StatoEmailNotifica
 
 __all__ = [
     'MenuItem',
@@ -26,4 +27,7 @@ __all__ = [
     'JobStatus',
     'DocumentParsingLog',
     'ParsingServiceConfig',
+    'Notifica',
+    'CanaleNotifica',
+    'StatoEmailNotifica',
 ]
