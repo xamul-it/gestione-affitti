@@ -10,6 +10,12 @@ For new fixture implementations, see tests/fixtures/ directory.
 import pytest
 from app.core.database import get_db
 
+# Register custom markers
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "no_db: mark test as not requiring database fixtures"
+    )
+
 # Import all enhanced fixtures from fixtures/ directory
 from tests.fixtures.database import (
     db_engine,
@@ -59,13 +65,21 @@ def auth_headers(client, user_token_with_tenant):
 
 # Database dependency override for integration tests
 @pytest.fixture(autouse=True, scope="function")
-def override_get_db(db_session):
+def override_get_db(request):
     """
     Automatically override database dependency for all tests.
 
     This ensures all tests use the test database session.
+
+    Skip this fixture for tests marked with @pytest.mark.no_db
     """
+    # Skip for tests marked with no_db
+    if request.node.get_closest_marker("no_db"):
+        yield
+        return
+
     from app.main import app
+    db_session = request.getfixturevalue("db_session")
 
     def _get_test_db():
         try:

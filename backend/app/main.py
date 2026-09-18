@@ -71,16 +71,32 @@ log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
 logger = logging.getLogger(__name__)
 
+# Tables prefixed "core_" that are tenant-scoped business data (like any
+# module's tables), NOT shared platform data. They must be created only
+# inside each tenant schema via a dedicated Alembic migration
+# (target_schema="tenant"), never here. create_core_tables() must never
+# recreate them in `public` — that was the root cause of a tenant-isolation
+# bug where core_scadenze ended up as a single table shared by every
+# tenant (see docs/superpowers/plans/2026-09-18-notification-service.md).
+TENANT_ONLY_CORE_TABLES = {
+    "core_scadenze",
+    "core_scadenza_destinatari",
+    "core_scadenza_log",
+    "core_notifiche",
+}
+
+
 def create_core_tables():
     """
-    Create only core tables (prefix core_) in public schema.
-    Avoids creating module tables outside tenant install.
+    Create only shared-platform core tables (prefix core_) in public schema.
+    Avoids creating module tables, and tenant-only core tables, outside
+    tenant install/migration.
     """
     core_metadata = MetaData()
     for table in Base.metadata.tables.values():
-        if table.name.startswith("core_"):
+        if table.name.startswith("core_") and table.name not in TENANT_ONLY_CORE_TABLES:
             table.to_metadata(core_metadata)
-    core_metadata.create_all(bind=engine)
+    core_metadata.create_all(bind=engine, checkfirst=True)
 
 
 # Crea le tabelle core nel database (evita tabelle moduli in public)
@@ -138,7 +154,10 @@ try:
     # Seed platform-level permissions (multi-tenant)
     logger.info("Seeding platform permissions...")
     try:
-        from app.core.auth.seed_platform_permissions import seed_all_platform_permissions
+        from app.core.auth.seed_platform_permissions import (
+            seed_all_platform_permissions,
+            sync_module_permissions,
+        )
         seed_all_platform_permissions(db)
         logger.info("Platform permissions seeded successfully")
     except Exception as e:
@@ -172,6 +191,13 @@ try:
             exec(manifest_file.read_text(), manifest_ns)
             mf = manifest_ns.get("manifest", {})
             module_name = mf.get("technical_name") or manifest_file.parent.name
+
+            try:
+                perm_result = sync_module_permissions(db, mf)
+                logger.info(f"[{module_name}] sync_permissions: {perm_result}")
+            except Exception as e:
+                logger.error(f"Error syncing permissions for '{module_name}': {e}")
+
             endpoint = (mf.get("endpoints") or {}).get("register_roles")
             if not endpoint:
                 continue
