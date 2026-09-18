@@ -154,10 +154,7 @@ try:
     # Seed platform-level permissions (multi-tenant)
     logger.info("Seeding platform permissions...")
     try:
-        from app.core.auth.seed_platform_permissions import (
-            seed_all_platform_permissions,
-            sync_module_permissions,
-        )
+        from app.core.auth.seed_platform_permissions import seed_all_platform_permissions
         seed_all_platform_permissions(db)
         logger.info("Platform permissions seeded successfully")
     except Exception as e:
@@ -191,12 +188,6 @@ try:
             exec(manifest_file.read_text(), manifest_ns)
             mf = manifest_ns.get("manifest", {})
             module_name = mf.get("technical_name") or manifest_file.parent.name
-
-            try:
-                perm_result = sync_module_permissions(db, mf)
-                logger.info(f"[{module_name}] sync_permissions: {perm_result}")
-            except Exception as e:
-                logger.error(f"Error syncing permissions for '{module_name}': {e}")
 
             endpoint = (mf.get("endpoints") or {}).get("register_roles")
             if not endpoint:

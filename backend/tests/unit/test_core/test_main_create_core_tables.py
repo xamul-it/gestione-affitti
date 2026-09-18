@@ -3,13 +3,10 @@ Verifies that tenant-only core tables (scadenzario, notifiche) are never
 created in the public schema by create_core_tables() — they must only
 exist per-tenant, via their dedicated Alembic migrations.
 """
-import pytest
 from sqlalchemy import MetaData
 
 from app.core.database import Base
 from app.main import TENANT_ONLY_CORE_TABLES
-
-pytestmark = pytest.mark.no_db
 
 
 def test_tenant_only_tables_excluded_from_public_creation():
