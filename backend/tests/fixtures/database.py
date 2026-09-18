@@ -9,7 +9,7 @@ Provides fixtures for:
 """
 
 import pytest
-from sqlalchemy import create_engine, text, event, MetaData
+from sqlalchemy import create_engine, text, event
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 
@@ -33,31 +33,13 @@ def db_engine():
         poolclass=StaticPool,
     )
 
-    # Create all tables (SQLite ignores schema prefixes, but may fail on schema-qualified DDL)
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception:
-        # If create_all fails due to schema issues, create tables selectively
-        # This can happen with models that declare schema='public' (like Tenant)
-        for table_name, table in Base.metadata.tables.items():
-            try:
-                table.create(bind=engine, checkfirst=True)
-            except Exception:
-                # Skip tables that can't be created (e.g., with schema-qualified FKs)
-                pass
+    # Create all tables
+    Base.metadata.create_all(bind=engine)
 
     yield engine
 
     # Cleanup
-    try:
-        Base.metadata.drop_all(bind=engine)
-    except Exception:
-        # If drop_all fails, try dropping tables individually
-        for table in Base.metadata.tables.values():
-            try:
-                table.drop(bind=engine, checkfirst=True)
-            except Exception:
-                pass
+    Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
 
