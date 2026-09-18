@@ -79,6 +79,7 @@ from .address_normalizer_service import AddressNormalizerService, AddressParseRe
 from .scadenzario_service import ScadenzarioService
 from .scadenza_service import ScadenzaService
 from .document_parsing_service import DocumentParsingService
+from .notification_service import NotificationService
 
 # Note: DocumentService was moved to affitti_lungo.services.document_service
 # It's business-specific and not part of the generic platform layer
@@ -100,4 +101,5 @@ __all__ = [
     "ScadenzarioService",
     "ScadenzaService",
     "DocumentParsingService",
+    "NotificationService",
 ]
