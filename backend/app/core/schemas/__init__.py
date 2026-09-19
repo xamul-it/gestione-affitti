@@ -23,6 +23,13 @@ from .scadenza import (
     ScadenzaCompletaRequest,
     ScadenzaPosticipaRequest,
 )
+from .notifica import (
+    CanaleNotifica as CanaleNotificaSchema,
+    StatoEmailNotifica as StatoEmailNotificaSchema,
+    NotificaResponse,
+    NotificaBadgeResponse,
+    SegnaTutteLetteResponse,
+)
 
 __all__ = [
     "PrioritaScadenza",
@@ -40,4 +47,7 @@ __all__ = [
     "ScadenzaBadgeResponse",
     "ScadenzaCompletaRequest",
     "ScadenzaPosticipaRequest",
+    "NotificaResponse",
+    "NotificaBadgeResponse",
+    "SegnaTutteLetteResponse",
 ]

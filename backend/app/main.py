@@ -49,6 +49,7 @@ from app.core.routes.unified_search import router as unified_search_router
 from app.core.routes.admin_comuni import router as admin_comuni_router
 from app.core.routes.admin_core import router as admin_core_router
 from app.core.routes.scadenze import router as scadenze_router
+from app.core.routes.notifiche import router as notifiche_router
 from app.core.routes.document_parsing import router as document_parsing_router
 
 # Import auth routes
@@ -482,6 +483,7 @@ app.include_router(unified_search_router, prefix=settings.API_V1_STR, tags=["Sea
 app.include_router(admin_comuni_router, prefix=settings.API_V1_STR, tags=["Admin"])
 app.include_router(admin_core_router, prefix=settings.API_V1_STR, tags=["Admin"])
 app.include_router(scadenze_router, prefix=settings.API_V1_STR)
+app.include_router(notifiche_router, prefix=settings.API_V1_STR)
 app.include_router(document_parsing_router, prefix=settings.API_V1_STR)
 
 # ====================================================================
