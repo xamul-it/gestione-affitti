@@ -7,6 +7,7 @@ import SearchBar from '../Search/SearchBar';
 import ModuleTabs from '../Navigation/ModuleTabs';
 import ScadenzaBadge from '../Platform/Scadenze/ScadenzaBadge';
 import NotifichePanel from '../Platform/Scadenze/NotifichePanel';
+import NotificationBell from '../Notifications/NotificationBell';
 import { Bug, Database, HardDrive, HelpCircle, Home, List, LogOut, Package, RefreshCw, Settings, ToggleRight, User, Users } from 'lucide-react';
 import './TopBar.css';
 
@@ -287,6 +288,12 @@ function TopBar() {
               autoLoad={true}
               onClick={() => setNotificheOpen(!notificheOpen)}
             />
+          </div>
+        )}
+
+        {isAuthenticated && (
+          <div className="top-bar-notifications">
+            <NotificationBell />
           </div>
         )}
 

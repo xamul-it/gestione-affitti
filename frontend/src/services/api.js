@@ -337,4 +337,12 @@ export const scadenzeAPI = {
   getLogs: (id) => api.get(`/scadenze/${id}/logs`),
 };
 
+// Notifiche API (platform-level - Generic Notification System)
+export const notificheAPI = {
+  list: (params = {}) => api.get('/notifiche', { params }),
+  segnaLetta: (id) => api.post(`/notifiche/${id}/segna-letta`),
+  segnaTutteLette: () => api.post('/notifiche/segna-tutte-lette'),
+  getBadge: () => api.get('/notifiche/badge'),
+};
+
 export default api;
