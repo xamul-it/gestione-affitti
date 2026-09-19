@@ -22,7 +22,7 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.core.database import SessionLocal
+from app.core.database import SessionLocal, engine
 from app.core.platform.models import Scadenza, ScadenzaDestinatario, StatoScadenza, CanaleNotifica
 from app.core.platform_services.scadenza_service import ScadenzaService
 from app.core.platform_services.notification_service import NotificationService
@@ -133,21 +133,41 @@ def _check_scadenze_scadute(db: Session) -> None:
 
 
 def run_reminder_check(tenant_schema: str) -> None:
-    """Entry point called once per active tenant by ReminderScheduler."""
+    """
+    Entry point called once per active tenant by ReminderScheduler.
+
+    Binds the session to one dedicated Connection for its entire lifetime,
+    rather than the engine directly: a Session bound to the engine returns
+    its connection to the pool on every commit/rollback, and the next
+    statement can then check out a DIFFERENT pooled connection that still
+    carries a stale search_path from a previous tenant's run — a real
+    cross-tenant hazard (see gestione_pec's polling_scheduler.py, which
+    hit the same class of bug and re-asserts search_path after rollback).
+    Binding to one Connection keeps the same physical connection for every
+    statement this function runs, so search_path never needs re-asserting.
+    """
     from app.core.config import settings
 
-    db = SessionLocal()
-    try:
-        db.execute(text(f"SET search_path TO {tenant_schema}, public"))
-        db.commit()
+    if not tenant_schema.replace('_', '').replace('-', '').isalnum():
+        logger.error("[ReminderJob] schema non valido, job saltato: %s", tenant_schema)
+        return
 
-        ScadenzaService(db).update_overdue_status()
-        _check_scadenze_in_avvicinamento(db, giorni_prima=settings.REMINDER_GIORNI_PRIMA)
-        _check_scadenze_scadute(db)
+    connection = engine.connect()
+    try:
+        connection.execute(text(f"SET search_path TO {tenant_schema}, public"))
+        connection.commit()
+
+        db = Session(bind=connection)
+        try:
+            ScadenzaService(db).update_overdue_status()
+            _check_scadenze_in_avvicinamento(db, giorni_prima=settings.REMINDER_GIORNI_PRIMA)
+            _check_scadenze_scadute(db)
+        finally:
+            db.close()
     except Exception as exc:
         logger.error("[ReminderJob] %s: errore durante il check: %s", tenant_schema, exc, exc_info=True)
     finally:
-        db.close()
+        connection.close()
 
 
 def _run_for_all_tenants() -> None:

@@ -105,9 +105,14 @@ def create_core_tables():
 create_core_tables()
 
 # Avvia lo scheduler del reminder scadenzario (core, non un modulo — gira
-# sempre, indipendentemente da quali moduli business sono installati)
+# sempre, indipendentemente da quali moduli business sono installati).
+# Avvolto in try/except: un problema nello scheduler non deve impedire
+# il boot dell'intera API (stesso pattern di gestione_pec/__init__.py).
 from app.core.platform_services.scadenza_reminder_job import get_reminder_scheduler
-get_reminder_scheduler().start()
+try:
+    get_reminder_scheduler().start()
+except Exception:
+    logger.error("Impossibile avviare il reminder scheduler", exc_info=True)
 
 # IMPORTANT: Import module models AFTER core tables are created
 # to avoid creating tenant tables in public schema via create_all.
@@ -296,6 +301,16 @@ app.add_middleware(
 # SQLAlchemy event listener in database.py applies search_path automatically
 from app.core.middleware.tenant_middleware import TenantMiddleware
 app.add_middleware(TenantMiddleware)
+
+
+@app.on_event("shutdown")
+async def stop_background_schedulers():
+    """Ferma lo scheduler del reminder scadenzario all'arresto dell'app."""
+    from app.core.platform_services.scadenza_reminder_job import get_reminder_scheduler
+    try:
+        get_reminder_scheduler().stop()
+    except Exception:
+        logger.error("Errore durante l'arresto del reminder scheduler", exc_info=True)
 
 
 # Startup event: registra menu e widget del modulo Affitti

@@ -90,6 +90,7 @@ class NotificationService:
         from sqlalchemy import text
 
         if not settings.NOTIFICHE_SMTP_HOST:
+            logger.debug("[NotificationService] NOTIFICHE_SMTP_HOST non configurato, invio email disabilitato")
             notifica.stato_email = StatoEmailNotifica.NON_RICHIESTA.value
             return
 

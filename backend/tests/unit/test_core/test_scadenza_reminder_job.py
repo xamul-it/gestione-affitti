@@ -165,6 +165,38 @@ def test_check_scadenze_scadute_notifies_and_does_not_renotify(pg_session, user_
         _cleanup(pg_session, [(scadenza, destinatario)])
 
 
+def test_run_reminder_check_search_path_survives_a_commit():
+    """
+    Regression test for the search_path/connection-pooling bug: binds to
+    the SAME physical connection run_reminder_check uses, and confirms
+    search_path is still tenant_qa_test even after a commit happens
+    mid-function (the whole point of binding to one Connection instead of
+    the engine).
+    """
+    from unittest.mock import patch
+    from app.core.platform_services.scadenza_reminder_job import run_reminder_check
+
+    captured_search_paths = []
+
+    from sqlalchemy.orm import Session as OrmSession
+
+    original_init = OrmSession.__init__
+
+    def spying_init(self, *args, **kwargs):
+        original_init(self, *args, **kwargs)
+        # After each statement this session runs, record the connection's
+        # actual search_path — proves the connection never changed under us.
+        conn = self.connection()
+        result = conn.execute(text("SHOW search_path")).scalar()
+        captured_search_paths.append(result)
+
+    with patch.object(OrmSession, "__init__", spying_init):
+        run_reminder_check("tenant_qa_test")
+
+    assert captured_search_paths, "expected the Session to have been constructed at least once"
+    assert all("tenant_qa_test" in sp for sp in captured_search_paths), captured_search_paths
+
+
 def test_one_bad_scadenza_does_not_block_others(pg_session, user_a):
     pair1 = _make_scadenza(pg_session, user_a.id, giorni_da_oggi=1)
     pair2 = _make_scadenza(pg_session, user_a.id, giorni_da_oggi=2)
