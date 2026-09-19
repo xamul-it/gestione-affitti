@@ -118,7 +118,7 @@ def test_marks_recipients_notified_after_sending(pg_session, user_a):
         _cleanup(pg_session, [(scadenza, destinatario)])
 
 
-def test_notifies_creator_when_no_explicit_recipients(pg_session, user_a):
+def test_notifies_creator_when_no_explicit_recipients_and_does_not_renotify(pg_session, user_a):
     scadenza = Scadenza(
         titolo="TODO senza destinatari",
         data_scadenza=date.today() + timedelta(days=1),
@@ -130,12 +130,39 @@ def test_notifies_creator_when_no_explicit_recipients(pg_session, user_a):
     try:
         with patch("app.core.platform_services.scadenza_reminder_job.NotificationService") as MockService:
             _check_scadenze_in_avvicinamento(pg_session, giorni_prima=3)
+            _, kwargs = MockService.return_value.notify.call_args
+            assert user_a.id in kwargs["user_ids"]
 
-        _, kwargs = MockService.return_value.notify.call_args
-        assert user_a.id in kwargs["user_ids"]
+            # second run: must NOT re-notify — a ScadenzaDestinatario row
+            # for the creator should now exist and be marked notified
+            MockService.reset_mock()
+            _check_scadenze_in_avvicinamento(pg_session, giorni_prima=3)
+            MockService.return_value.notify.assert_not_called()
     finally:
+        pg_session.query(ScadenzaDestinatario).filter_by(scadenza_id=scadenza.id).delete()
         pg_session.query(Scadenza).filter_by(id=scadenza.id).delete()
         pg_session.commit()
+
+
+def test_check_scadenze_scadute_notifies_and_does_not_renotify(pg_session, user_a):
+    from app.core.platform_services.scadenza_reminder_job import _check_scadenze_scadute
+
+    scadenza, destinatario = _make_scadenza(pg_session, user_a.id, giorni_da_oggi=-1)
+    scadenza.stato = StatoScadenza.SCADUTA
+    pg_session.commit()
+    try:
+        with patch("app.core.platform_services.scadenza_reminder_job.NotificationService") as MockService:
+            _check_scadenze_scadute(pg_session)
+            MockService.return_value.notify.assert_called_once()
+
+            pg_session.refresh(destinatario)
+            assert destinatario.notificato is True
+
+            MockService.reset_mock()
+            _check_scadenze_scadute(pg_session)
+            MockService.return_value.notify.assert_not_called()
+    finally:
+        _cleanup(pg_session, [(scadenza, destinatario)])
 
 
 def test_one_bad_scadenza_does_not_block_others(pg_session, user_a):
