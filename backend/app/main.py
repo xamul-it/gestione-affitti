@@ -104,6 +104,11 @@ def create_core_tables():
 # Crea le tabelle core nel database (evita tabelle moduli in public)
 create_core_tables()
 
+# Avvia lo scheduler del reminder scadenzario (core, non un modulo — gira
+# sempre, indipendentemente da quali moduli business sono installati)
+from app.core.platform_services.scadenza_reminder_job import get_reminder_scheduler
+get_reminder_scheduler().start()
+
 # IMPORTANT: Import module models AFTER core tables are created
 # to avoid creating tenant tables in public schema via create_all.
 # Dynamic: discover all modules in MODULES_DIR and import their models.

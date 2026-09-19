@@ -63,6 +63,18 @@ class Settings(BaseSettings):
     DOCUMENT_JOB_MAX_RETRIES: int = 3
     DOCUMENT_JOB_RETRY_DELAY_SECONDS: int = 60
 
+    # Notifiche — SMTP applicativo (usato da gestione_pec e dal reminder scadenzario)
+    # Se NOTIFICHE_SMTP_HOST è vuoto le notifiche email sono disabilitate.
+    NOTIFICHE_SMTP_HOST: Optional[str] = None
+    NOTIFICHE_SMTP_PORT: int = 587
+    NOTIFICHE_SMTP_USER: Optional[str] = None
+    NOTIFICHE_SMTP_PASSWORD: Optional[str] = None
+    NOTIFICHE_SMTP_FROM_EMAIL: Optional[str] = None
+    NOTIFICHE_SMTP_TLS: str = "STARTTLS"  # "SSL" | "STARTTLS" | "none"
+
+    # Scadenzario — reminder automatico
+    REMINDER_GIORNI_PRIMA: int = 3  # notifica quando data_scadenza è tra oggi e oggi+N
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):

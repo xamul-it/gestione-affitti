@@ -458,7 +458,10 @@ class ScadenzaService:
     def update_overdue_status(self):
         """
         Update stato for all ATTIVA scadenze that are past due.
-        Sets stato to SCADUTA automatically.
+        Sets stato to SCADUTA automatically, and resets the notificato flag
+        on every recipient so the reminder job (which only notifies once per
+        "event") sends a fresh "scaduta" notification distinct from the
+        earlier "in avvicinamento" one.
 
         Should be called periodically (e.g., daily cron job).
         """
@@ -472,6 +475,10 @@ class ScadenzaService:
         for scadenza in overdue:
             scadenza.stato = StatoScadenza.SCADUTA
             scadenza.modificato_il = datetime.utcnow()
+
+            for destinatario in scadenza.destinatari:
+                destinatario.notificato = False
+                destinatario.notificato_il = None
 
             # Log automatic state change
             log = ScadenzaLog.log_state_change(
