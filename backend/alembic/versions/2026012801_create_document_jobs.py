@@ -18,7 +18,12 @@ target_schema = "public"
 
 
 def upgrade() -> None:
-    # Create JobStatus enum
+    # Create JobStatus enum explicitly first (checkfirst=True). The column
+    # below MUST use create_type=False, or Alembic's create_table DDL will
+    # try to CREATE TYPE jobstatus a second time and fail with
+    # "type already exists" the first time this migration ever runs for
+    # real against a schema that doesn't already have it (verified via a
+    # standalone repro against this exact pattern).
     jobstatus_enum = postgresql.ENUM(
         'PENDING',
         'QUEUED',
@@ -46,7 +51,7 @@ def upgrade() -> None:
         sa.Column('parsing_config', postgresql.JSON(astext_type=sa.Text()), nullable=True),
         sa.Column('entity_type', sa.String(length=100), nullable=True),
         sa.Column('entity_id', sa.Integer(), nullable=True),
-        sa.Column('status', sa.Enum(
+        sa.Column('status', postgresql.ENUM(
             'PENDING',
             'QUEUED',
             'PROCESSING',
@@ -54,7 +59,8 @@ def upgrade() -> None:
             'FAILED',
             'TIMEOUT',
             'CANCELLED',
-            name='jobstatus'
+            name='jobstatus',
+            create_type=False,
         ), nullable=False, server_default='PENDING'),
         sa.Column('parsing_result', postgresql.JSON(astext_type=sa.Text()), nullable=True),
         sa.Column('parsing_error', sa.Text(), nullable=True),
