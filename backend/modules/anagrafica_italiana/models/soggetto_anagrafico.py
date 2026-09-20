@@ -56,6 +56,15 @@ class SoggettoAnagrafico(Base):
     codice_fiscale = Column(String(16), unique=True, index=True, nullable=True)
     partita_iva = Column(String(11), unique=True, index=True, nullable=True)
 
+    # Documento identità (per soggetti stranieri senza codice fiscale italiano,
+    # es. turisti stranieri in affitti brevi). Nessun vincolo di unicità DB
+    # deliberato: il match è a livello applicativo (SimilarityMatchingService),
+    # non a livello di constraint — un numero documento sporco/duplicato non
+    # deve mai bloccare una scrittura.
+    tipo_documento_identita = Column(String(50), nullable=True, index=True)
+    numero_documento_identita = Column(String(50), nullable=True, index=True)
+    stato_rilascio_documento = Column(String(100), nullable=True)
+
     # Persona fisica
     nome = Column(String(100), nullable=True)
     cognome = Column(String(100), nullable=True)

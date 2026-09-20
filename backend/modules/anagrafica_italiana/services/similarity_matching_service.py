@@ -55,6 +55,9 @@ class SimilarityMatchingService:
     def find_similar(
         self,
         codice_fiscale: Optional[str] = None,
+        tipo_documento_identita: Optional[str] = None,
+        numero_documento_identita: Optional[str] = None,
+        stato_rilascio_documento: Optional[str] = None,
         nome: Optional[str] = None,
         cognome: Optional[str] = None,
         data_nascita: Optional[date] = None,
@@ -66,6 +69,15 @@ class SimilarityMatchingService:
 
         Args:
             codice_fiscale: Optional CF for exact matching
+            tipo_documento_identita: Optional identity document type for exact
+                matching (used when codice_fiscale isn't available, e.g.
+                foreign tourists — see numero_documento_identita)
+            numero_documento_identita: Optional identity document number for
+                exact matching. Matched together with tipo_documento_identita
+                and, if given, stato_rilascio_documento (a document number
+                alone isn't globally unique across issuing countries).
+            stato_rilascio_documento: Optional issuing country, narrows the
+                document-number match
             nome: First name for fuzzy matching
             cognome: Last name for fuzzy matching
             data_nascita: Birth date for exact matching
@@ -108,6 +120,33 @@ class SimilarityMatchingService:
             # If CF exact match found, return immediately (no need for fuzzy)
             if candidates:
                 logger.info(f"[Similarity] CF exact match: {len(candidates)} candidates")
+                return candidates
+
+        # Strategy 1b: Documento identità exact match (per soggetti senza CF,
+        # es. turisti stranieri)
+        if tipo_documento_identita and numero_documento_identita:
+            doc_matches = self.db.query(SoggettoAnagrafico).filter(
+                SoggettoAnagrafico.tipo_documento_identita == tipo_documento_identita,
+                SoggettoAnagrafico.numero_documento_identita == numero_documento_identita.upper(),
+            )
+            if stato_rilascio_documento:
+                doc_matches = doc_matches.filter(
+                    SoggettoAnagrafico.stato_rilascio_documento == stato_rilascio_documento
+                )
+            if exclude_id:
+                doc_matches = doc_matches.filter(SoggettoAnagrafico.id != exclude_id)
+
+            for soggetto in doc_matches.all():
+                candidates.append({
+                    "soggetto_id": soggetto.id,
+                    "similarity_score": self.THRESHOLD_PERFECT,
+                    "match_reason": "Documento identità identico",
+                    "match_fields": ["numero_documento_identita"],
+                    "soggetto": self._soggetto_to_dict(soggetto)
+                })
+
+            if candidates:
+                logger.info(f"[Similarity] Document exact match: {len(candidates)} candidates")
                 return candidates
 
         # Strategy 2: Fuzzy matching on nome/cognome
@@ -302,6 +341,9 @@ class SimilarityMatchingService:
             "ragione_sociale": soggetto.ragione_sociale,
             "codice_fiscale": soggetto.codice_fiscale,
             "partita_iva": soggetto.partita_iva,
+            "tipo_documento_identita": soggetto.tipo_documento_identita,
+            "numero_documento_identita": soggetto.numero_documento_identita,
+            "stato_rilascio_documento": soggetto.stato_rilascio_documento,
             "data_nascita": soggetto.data_nascita.isoformat() if soggetto.data_nascita else None,
             "luogo_nascita": soggetto.luogo_nascita,
             "email": soggetto.email,

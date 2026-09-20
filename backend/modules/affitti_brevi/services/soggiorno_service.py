@@ -148,9 +148,25 @@ class SoggiornoService:
         if not soggiorno.ospiti and not principale:
             principale = True
 
+        # Link (or create) this guest in the shared anagrafica registry, so
+        # the same person is recognized across modules (e.g. a repeat guest
+        # who is also a professional elsewhere in the platform) — see
+        # docs/superpowers/specs/2026-09-14-module-communication-architecture-design.md
+        from ..clients.anagrafica_client import trova_o_crea_soggetto
+        soggetto_id = trova_o_crea_soggetto(
+            self.db,
+            nome=dati_ospite.get("nome", ""),
+            cognome=dati_ospite.get("cognome", ""),
+            data_nascita=dati_ospite.get("data_nascita"),
+            tipo_documento_identita=dati_ospite.get("tipo_documento"),
+            numero_documento_identita=dati_ospite.get("numero_documento"),
+            stato_rilascio_documento=dati_ospite.get("stato_rilascio"),
+        )
+
         # Create guest record
         ospite = OspiteSoggiorno(
             soggiorno_id=soggiorno_id,
+            soggetto_anagrafico_id=soggetto_id,
             principale=principale,
             ruolo=RuoloOspite.PRINCIPALE.value if principale else RuoloOspite.ACCOMPAGNATORE.value,
             cognome=dati_ospite.get("cognome", ""),
