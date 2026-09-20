@@ -143,7 +143,8 @@ class TestSimilarityMatchingService:
         # First query() call (document exact match): no rows.
         # Second query() call (fuzzy): returns the candidate.
         empty_query = MagicMock()
-        empty_query.filter.return_value.all.return_value = []
+        empty_query.filter.return_value = empty_query
+        empty_query.all.return_value = []
         fuzzy_query = MagicMock()
         fuzzy_query.filter.return_value = fuzzy_query
         fuzzy_query.limit.return_value.all.return_value = [mock_soggetto]
@@ -152,6 +153,7 @@ class TestSimilarityMatchingService:
         candidates = service.find_similar(
             tipo_documento_identita="CARTA_IDENTITA",
             numero_documento_identita="DOES_NOT_EXIST",
+            stato_rilascio_documento="GERMANIA",
             nome="Hans",
             cognome="Muller",
             data_nascita=date(1990, 5, 20),
@@ -266,7 +268,11 @@ class TestSimilarityMatchingService:
         assert candidates[0]["similarity_score"] <= 0.60
 
     def test_threshold_filtering_works(self):
-        """Only candidates above threshold should be returned."""
+        """Only candidates above threshold should be returned — verified both
+        ways (a low-scoring candidate is filtered out; a high-scoring one at
+        the same threshold is kept), so this can't pass by returning nothing
+        for every input (the previous version of this test did exactly that:
+        its mock never actually produced a candidate for ANY threshold)."""
         # Arrange
         mock_db = Mock()
         service = SimilarityMatchingService(mock_db)
@@ -280,25 +286,39 @@ class TestSimilarityMatchingService:
         mock_soggetto.data_nascita = date(1990, 12, 31)  # Different DOB
 
         mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = None
-        mock_query.filter.return_value.all.return_value = [mock_soggetto]
+        mock_query.filter.return_value = mock_query
+        mock_query.limit.return_value.all.return_value = [mock_soggetto]
         mock_db.query.return_value = mock_query
 
-        # Act
+        # Act — high threshold: this low-similarity candidate must be filtered out
         candidates = service.find_similar(
             nome="Mario",
             cognome="Rossi",
             data_nascita=date(1980, 1, 1),
             threshold=0.70  # High threshold
         )
-
-        # Assert
-        # With completely different names and DOB, score should be very low
-        # and filtered out by threshold
         assert len(candidates) == 0
 
+        # Act — low threshold: the SAME candidate must now be returned,
+        # proving the previous empty result came from the threshold, not
+        # from the mock silently returning nothing regardless of input.
+        candidates = service.find_similar(
+            nome="Mario",
+            cognome="Rossi",
+            data_nascita=date(1980, 1, 1),
+            threshold=0.0
+        )
+        assert len(candidates) == 1
+
     def test_exclude_id_parameter_works(self):
-        """exclude_id parameter should exclude specified ID from results."""
+        """exclude_id should add an extra filter clause when a CF match is found.
+
+        Mocks can't evaluate real SQL predicates, so this can't prove the
+        database would actually exclude id=6 — only that the code path
+        applies a second .filter() call for it, rather than silently
+        ignoring the parameter. DB-level exclusion semantics aren't
+        separately covered by an integration test today.
+        """
         # Arrange
         mock_db = Mock()
         service = SimilarityMatchingService(mock_db)
@@ -308,17 +328,19 @@ class TestSimilarityMatchingService:
         mock_soggetto.codice_fiscale = "RSSMRA80A01H501Z"
 
         mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_soggetto
+        mock_query.filter.return_value = mock_query
+        mock_query.all.return_value = [mock_soggetto]
         mock_db.query.return_value = mock_query
 
         # Act
         candidates = service.find_similar(
             codice_fiscale="RSSMRA80A01H501Z",
-            exclude_id=6  # Exclude the only match
+            exclude_id=6
         )
 
-        # Assert
-        assert len(candidates) == 0
+        # Assert: one .filter() for the CF match, one more for exclude_id
+        assert mock_query.filter.call_count == 2
+        assert len(candidates) == 1
 
     def test_get_match_quality_classification(self):
         """Test match quality classification logic."""

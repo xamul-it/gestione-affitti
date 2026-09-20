@@ -24,8 +24,13 @@ def trova_o_crea_soggetto(
     tipo_documento_identita: Optional[str] = None,
     numero_documento_identita: Optional[str] = None,
     stato_rilascio_documento: Optional[str] = None,
-) -> int:
-    """Finds-or-creates a SoggettoAnagrafico in the shared registry and returns its id."""
+) -> Optional[int]:
+    """
+    Finds-or-creates a SoggettoAnagrafico in the shared registry and returns
+    its id, or None if there was no identifier (codice fiscale or complete
+    identity document) to match/create on — callers should leave their own
+    FK to the registry unset in that case, not treat it as an error.
+    """
     from anagrafica_italiana.services.public_api import trova_o_crea_soggetto as _impl
 
     dto = _impl(
@@ -37,4 +42,4 @@ def trova_o_crea_soggetto(
         numero_documento_identita=numero_documento_identita,
         stato_rilascio_documento=stato_rilascio_documento,
     )
-    return dto.id
+    return dto.id if dto else None
