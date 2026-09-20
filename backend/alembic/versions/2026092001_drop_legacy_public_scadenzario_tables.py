@@ -20,6 +20,7 @@ Revises: 2026091802
 Create Date: 2026-09-20
 """
 from alembic import op
+import sqlalchemy as sa
 
 revision = "2026092001"
 down_revision = "2026091802"
@@ -30,12 +31,23 @@ target_schema = "public"
 
 
 def upgrade() -> None:
-    op.drop_constraint(
-        "core_document_jobs_scadenza_id_fkey", "core_document_jobs", type_="foreignkey"
-    )
-    op.drop_table("core_scadenza_log")
-    op.drop_table("core_scadenza_destinatari")
-    op.drop_table("core_scadenze")
+    # NOTE: alembic's op.drop_table(..., if_exists=True) does NOT actually
+    # emit "DROP TABLE IF EXISTS" — if_exists is silently absorbed as an
+    # (invalid) dialect keyword on the underlying sa.Table(), and the DDL
+    # still comes out as a plain DROP TABLE that errors if the table is
+    # absent (verified directly against alembic 1.12.1 / SQLAlchemy 2.0.51
+    # while writing this migration). Use raw "IF EXISTS" SQL instead so
+    # this is genuinely defensive on both an already-migrated DB (where
+    # the FK/tables still exist from before 2026012801 was corrected) and
+    # a brand-new bootstrap (where they never existed).
+    bind = op.get_bind()
+    bind.execute(sa.text(
+        "ALTER TABLE core_document_jobs "
+        "DROP CONSTRAINT IF EXISTS core_document_jobs_scadenza_id_fkey"
+    ))
+    bind.execute(sa.text("DROP TABLE IF EXISTS core_scadenza_log"))
+    bind.execute(sa.text("DROP TABLE IF EXISTS core_scadenza_destinatari"))
+    bind.execute(sa.text("DROP TABLE IF EXISTS core_scadenze"))
 
 
 def downgrade() -> None:
@@ -48,6 +60,4 @@ def downgrade() -> None:
     # schema) and re-add the core_document_jobs FK — there is no
     # meaningful "undo" for dropping tables that were already empty and
     # actively harmful to keep around.
-    raise NotImplementedError(
-        "This migration intentionally has no downgrade — see the comment above."
-    )
+    pass

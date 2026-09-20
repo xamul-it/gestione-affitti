@@ -165,48 +165,49 @@ def test_check_scadenze_scadute_notifies_and_does_not_renotify(pg_session, user_
         _cleanup(pg_session, [(scadenza, destinatario)])
 
 
-def test_run_reminder_check_uses_a_single_connection_throughout():
+def test_run_reminder_check_uses_a_single_connection_throughout(pg_session, user_a):
     """
     Regression test for the search_path/connection-pooling bug: proves
     run_reminder_check keeps the SAME physical connection for its entire
-    call (bound once, never returned to the pool and re-checked-out
-    mid-run), which is what guarantees search_path survives its own
-    internal commits without needing to be re-asserted after each one.
+    call, even across a REAL mid-work commit (not just the early
+    SET-search_path commit) — seeding a scadenza here means
+    _notify_and_mark's commit actually fires during the run, which is the
+    realistic scenario production hits (a naive fix that only commits
+    once early would pass a test that never exercises a later commit).
 
-    This checks connection IDENTITY rather than a sampled search_path
-    string, so it can't false-pass due to pool contamination from other
-    tests in this file that also set search_path to tenant_qa_test and
-    commit it — a connection-identity check is true regardless of what
-    value any given connection happens to carry.
-
-    Patches `Session._connection_for_bind` rather than the public
-    `Session.connection()` wrapper: every internal ORM operation (query,
-    execute, flush, ...) resolves its connection via
-    `_connection_for_bind` directly, never through the public `connection()`
-    method, so that's the only hook point that actually observes what
-    connection object each statement really used.
+    Checks connection IDENTITY (holding the objects themselves, not just
+    their ids, to rule out CPython id-reuse after an object is freed)
+    rather than a sampled search_path string, so it can't false-pass due
+    to pool contamination from other tests in this file that also set
+    search_path to tenant_qa_test and commit it.
     """
     from unittest.mock import patch
     from sqlalchemy.orm import Session as OrmSession
     from app.core.platform_services.scadenza_reminder_job import run_reminder_check
 
-    seen_connection_ids = []
+    scadenza, destinatario = _make_scadenza(pg_session, user_a.id, giorni_da_oggi=1)
+
+    seen_connections = []
     original_connection_for_bind = OrmSession._connection_for_bind
 
     def spying_connection_for_bind(self, *args, **kwargs):
         conn = original_connection_for_bind(self, *args, **kwargs)
-        seen_connection_ids.append(id(conn))
+        seen_connections.append(conn)
         return conn
 
-    with patch.object(OrmSession, "_connection_for_bind", spying_connection_for_bind):
-        run_reminder_check("tenant_qa_test")
+    try:
+        with patch.object(OrmSession, "_connection_for_bind", spying_connection_for_bind), \
+             patch("app.core.platform_services.scadenza_reminder_job.NotificationService"):
+            run_reminder_check("tenant_qa_test")
 
-    assert seen_connection_ids, "expected at least one statement to run during the call"
-    assert len(set(seen_connection_ids)) == 1, (
-        f"run_reminder_check used {len(set(seen_connection_ids))} distinct "
-        "connection objects during one call — search_path is not guaranteed "
-        "to survive across them"
-    )
+        assert seen_connections, "expected at least one statement to run during the call"
+        assert len(set(id(c) for c in seen_connections)) == 1, (
+            f"run_reminder_check used {len(set(id(c) for c in seen_connections))} distinct "
+            "connection objects during one call — search_path is not guaranteed "
+            "to survive across them"
+        )
+    finally:
+        _cleanup(pg_session, [(scadenza, destinatario)])
 
 
 def test_one_bad_scadenza_does_not_block_others(pg_session, user_a):

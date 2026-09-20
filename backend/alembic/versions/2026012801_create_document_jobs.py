@@ -68,7 +68,6 @@ def upgrade() -> None:
         sa.Column('created_by', sa.Integer(), nullable=False),
         sa.Column('scadenza_id', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(['created_by'], ['core_users.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['scadenza_id'], ['core_scadenze.id'], ondelete='SET NULL'),
         sa.PrimaryKeyConstraint('id')
     )
 

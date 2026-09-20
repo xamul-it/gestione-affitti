@@ -192,9 +192,13 @@ class DocumentJob(Base):
     # Notification integration
     scadenza_id = Column(
         Integer,
-        ForeignKey('core_scadenze.id', ondelete='SET NULL'),
         nullable=True,
-        comment="Linked notification/reminder"
+        comment="Linked notification/reminder. No FK constraint: Scadenza is "
+                "tenant-scoped (see 2026091801/2026092001 migrations), a "
+                "cross-schema FK from public.core_document_jobs isn't "
+                "possible in Postgres, and the one code path that joins "
+                "them (document_parsing_service.py) already filters by "
+                "tenant_schema explicitly.",
     )
 
     # Relationships
@@ -202,10 +206,11 @@ class DocumentJob(Base):
         "User",
         back_populates="document_jobs"
     )
-    notification = relationship(
-        "Scadenza",
-        foreign_keys=[scadenza_id]
-    )
+    # No `notification` relationship to Scadenza: it was only ever backed
+    # by the now-removed cross-schema FK (see scadenza_id above), had no
+    # real join condition SQLAlchemy could infer without one, and had no
+    # callers — document_parsing_service.py only ever does a plain
+    # `job.scadenza_id = scadenza.id` assignment, never an ORM traversal.
 
     # Indexes for performance
     __table_args__ = (
