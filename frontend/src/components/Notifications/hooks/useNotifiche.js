@@ -34,8 +34,7 @@ export const useNotifiche = () => {
       return response.data.count_non_lette;
     } catch (err) {
       console.error('Error loading notifiche badge:', err);
-      setError(err.response?.data?.detail || 'Errore nel caricamento badge notifiche');
-      throw err;
+      return null;
     }
   }, []);
 
