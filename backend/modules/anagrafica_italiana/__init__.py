@@ -12,17 +12,18 @@ Module Standard Compliance:
 Tables:
 PUBLIC SCHEMA (domain data):
 - anag_comuni_italia: Italian municipalities
-- anag_tipi_documento: Document types
-- anag_stati_documento: Document states
 - anag_ruoli_azienda_tipi: Business role types
 
 TENANT SCHEMA (business data):
 - anag_soggetti_anagrafici: Registry subjects (persons and companies)
 - anag_ruoli_azienda: Business roles (person-company associations)
 - anag_comuni_italia_overrides: Tenant customizations for municipalities
-- anag_tipi_documento_overrides: Tenant customizations for document types
-- anag_stati_documento_overrides: Tenant customizations for document states
 - anag_ruoli_azienda_tipi_overrides: Tenant customizations for role types
+
+The document registry (core_tipi_documento, core_stati_documento,
+core_documenti, core_documenti_files + their tenant overrides) is a core
+platform service (app/core/platform/models), not owned by this module —
+see docs/superpowers/specs/2026-09-14-module-communication-architecture-design.md.
 """
 from typing import Optional
 from sqlalchemy.orm import Session

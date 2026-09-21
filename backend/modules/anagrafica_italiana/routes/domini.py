@@ -232,7 +232,7 @@ def list_tipi_documento(
     if tenant_schema:
         try:
             inspector = inspect(db.get_bind())
-            if inspector.has_table("anag_tipi_documento_overrides", schema=tenant_schema):
+            if inspector.has_table("core_tipi_documento_overrides", schema=tenant_schema):
                 overrides = db.query(TipoDocumentoOverride).all()
                 overrides_by_id = {o.tipo_documento_id: o for o in overrides}
         except Exception:
@@ -277,7 +277,7 @@ def get_tipo_documento(
     if tenant_schema:
         try:
             inspector = inspect(db.get_bind())
-            if inspector.has_table("anag_tipi_documento_overrides", schema=tenant_schema):
+            if inspector.has_table("core_tipi_documento_overrides", schema=tenant_schema):
                 override = db.query(TipoDocumentoOverride).filter(
                     TipoDocumentoOverride.tipo_documento_id == tipo_id
                 ).first()
@@ -358,7 +358,7 @@ def list_stati_documento(
     if tenant_schema:
         try:
             inspector = inspect(db.get_bind())
-            if inspector.has_table("anag_stati_documento_overrides", schema=tenant_schema):
+            if inspector.has_table("core_stati_documento_overrides", schema=tenant_schema):
                 overrides = db.query(StatoDocumentoOverride).all()
                 overrides_by_id = {o.stato_documento_id: o for o in overrides}
         except Exception:
@@ -398,7 +398,7 @@ def get_stato_documento(
     if tenant_schema:
         try:
             inspector = inspect(db.get_bind())
-            if inspector.has_table("anag_stati_documento_overrides", schema=tenant_schema):
+            if inspector.has_table("core_stati_documento_overrides", schema=tenant_schema):
                 override = db.query(StatoDocumentoOverride).filter(
                     StatoDocumentoOverride.stato_documento_id == stato_id
                 ).first()

@@ -29,15 +29,22 @@ manifest = {
     "models": [
         "soggetto_anagrafico",
         "comune_italia",
-        "tipo_documento",
-        "documento",
     ],
 
     # Public domain tables required for registration
+    #
+    # NOTE: the document registry (Documento, DocumentoFile, TipoDocumento,
+    # StatoDocumento + their tenant overrides) moved to app/core/platform/models
+    # (now core_tipi_documento, core_stati_documento, core_documenti,
+    # core_documenti_files, core_tipi_documento_overrides,
+    # core_stati_documento_overrides) — it's a core platform service per
+    # docs/superpowers/specs/2026-09-14-module-communication-architecture-design.md,
+    # not anagrafica_italiana's. Those tables are created for every tenant by
+    # core Alembic migrations (2026092101/2026092102), not by this manifest,
+    # and are intentionally absent from public_tables/tenant_tables/
+    # override_tables_ddl below.
     "public_tables": [
         "anag_comuni_italia",
-        "anag_tipi_documento",
-        "anag_stati_documento",
         "anag_ruoli_azienda_tipi",
     ],
 
@@ -45,45 +52,12 @@ manifest = {
     "tenant_tables": [
         "anag_soggetti_anagrafici",
         "anag_ruoli_azienda",
-        "anag_tipi_documento_overrides",
-        "anag_stati_documento_overrides",
         "anag_comuni_italia_overrides",
         "anag_ruoli_azienda_tipi_overrides",
-        "anag_documenti",
     ],
 
     # DDL for override tables (reference public domain tables, created directly in tenant schema)
     "override_tables_ddl": {
-        "anag_tipi_documento_overrides": """
-            CREATE TABLE IF NOT EXISTS {schema}.anag_tipi_documento_overrides (
-                id SERIAL PRIMARY KEY,
-                tipo_documento_id INTEGER NOT NULL REFERENCES public.anag_tipi_documento(id) ON DELETE CASCADE,
-                codice VARCHAR(50),
-                nome VARCHAR(100),
-                descrizione VARCHAR(255),
-                categoria VARCHAR(50),
-                richiede_scadenza BOOLEAN,
-                attivo BOOLEAN,
-                is_deleted BOOLEAN NOT NULL DEFAULT false,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMPTZ,
-                UNIQUE(tipo_documento_id)
-            )
-        """,
-        "anag_stati_documento_overrides": """
-            CREATE TABLE IF NOT EXISTS {schema}.anag_stati_documento_overrides (
-                id SERIAL PRIMARY KEY,
-                stato_documento_id INTEGER NOT NULL REFERENCES public.anag_stati_documento(id) ON DELETE CASCADE,
-                codice VARCHAR(20),
-                nome VARCHAR(100),
-                descrizione VARCHAR(255),
-                attivo BOOLEAN,
-                is_deleted BOOLEAN NOT NULL DEFAULT false,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMPTZ,
-                UNIQUE(stato_documento_id)
-            )
-        """,
         "anag_comuni_italia_overrides": """
             CREATE TABLE IF NOT EXISTS {schema}.anag_comuni_italia_overrides (
                 id SERIAL PRIMARY KEY,

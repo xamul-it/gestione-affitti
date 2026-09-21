@@ -30,7 +30,7 @@ class DocumentoFile(Base):
         - documento: Parent Documento (many-to-one)
         - parsing_job: Optional DocumentJob if parsing was performed (many-to-one)
     """
-    __tablename__ = "anag_documenti_files"
+    __tablename__ = "core_documenti_files"
     __table_args__ = {"extend_existing": True}
 
     # Primary key
@@ -39,7 +39,7 @@ class DocumentoFile(Base):
     # Parent documento
     documento_id = Column(
         Integer,
-        ForeignKey("anag_documenti.id", ondelete="CASCADE"),
+        ForeignKey("core_documenti.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         comment="Parent Documento ID"

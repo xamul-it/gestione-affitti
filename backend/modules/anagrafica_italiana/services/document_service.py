@@ -63,12 +63,12 @@ class DocumentService:
         self._ensure_tenant_context()
 
         inspector = inspect(self.db.get_bind())
-        has_table = inspector.has_table("anag_documenti", schema=self.tenant_schema)
+        has_table = inspector.has_table("core_documenti", schema=self.tenant_schema)
 
         if not has_table:
             try:
                 self.db.execute(text(f"""
-                    CREATE TABLE IF NOT EXISTS "{self.tenant_schema}"."anag_documenti" (
+                    CREATE TABLE IF NOT EXISTS "{self.tenant_schema}"."core_documenti" (
                         id SERIAL PRIMARY KEY,
                         entity_type VARCHAR(50) NOT NULL,
                         entity_id INTEGER NOT NULL,
@@ -80,22 +80,22 @@ class DocumentService:
                         descrizione VARCHAR(500),
                         note VARCHAR(500),
                         data_scadenza DATE,
-                        tipo_documento_id INTEGER REFERENCES public.anag_tipi_documento(id),
+                        tipo_documento_id INTEGER REFERENCES public.core_tipi_documento(id),
                         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                         updated_at TIMESTAMPTZ
                     )
                 """))
                 self.db.execute(text(
-                    f'CREATE INDEX IF NOT EXISTS ix_anag_documenti_entity_type '
-                    f'ON "{self.tenant_schema}"."anag_documenti"(entity_type)'
+                    f'CREATE INDEX IF NOT EXISTS ix_core_documenti_entity_type '
+                    f'ON "{self.tenant_schema}"."core_documenti"(entity_type)'
                 ))
                 self.db.execute(text(
-                    f'CREATE INDEX IF NOT EXISTS ix_anag_documenti_entity_id '
-                    f'ON "{self.tenant_schema}"."anag_documenti"(entity_id)'
+                    f'CREATE INDEX IF NOT EXISTS ix_core_documenti_entity_id '
+                    f'ON "{self.tenant_schema}"."core_documenti"(entity_id)'
                 ))
                 self.db.execute(text(
-                    f'CREATE INDEX IF NOT EXISTS ix_anag_documenti_data_scadenza '
-                    f'ON "{self.tenant_schema}"."anag_documenti"(data_scadenza)'
+                    f'CREATE INDEX IF NOT EXISTS ix_core_documenti_data_scadenza '
+                    f'ON "{self.tenant_schema}"."core_documenti"(data_scadenza)'
                 ))
                 self.db.commit()
                 return
@@ -104,21 +104,21 @@ class DocumentService:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail=(
-                        "Tabella anag_documenti non presente. "
+                        "Tabella core_documenti non presente. "
                         f"Reinstalla il modulo anagrafica per il tenant. ({exc})"
                     ),
                 )
 
         try:
             self.db.execute(text(
-                f'SELECT 1 FROM "{self.tenant_schema}"."anag_documenti" LIMIT 1'
+                f'SELECT 1 FROM "{self.tenant_schema}"."core_documenti" LIMIT 1'
             ))
         except ProgrammingError as exc:
             self.db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=(
-                    "Tabella anag_documenti non presente. "
+                    "Tabella core_documenti non presente. "
                     f"Reinstalla il modulo anagrafica per il tenant. ({exc})"
                 ),
             )

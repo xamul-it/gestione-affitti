@@ -68,7 +68,7 @@ class Documento(Base):
         - files: NEW - Relationship to DocumentoFile (1:N)
         - Legacy fields (nome_file, file_path, etc.) are now nullable
     """
-    __tablename__ = "anag_documenti"
+    __tablename__ = "core_documenti"
     __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
@@ -77,7 +77,7 @@ class Documento(Base):
 
     tipo_documento_id = Column(
         Integer,
-        ForeignKey("public.anag_tipi_documento.id"),
+        ForeignKey("public.core_tipi_documento.id"),
         nullable=True,
         comment="Reference to TipoDocumento in public schema"
     )

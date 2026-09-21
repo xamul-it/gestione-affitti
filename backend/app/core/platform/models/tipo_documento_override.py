@@ -1,5 +1,5 @@
 """
-Tipo Documento Override - Tenant-specific overlay for anag_tipi_documento.
+Tipo Documento Override - Tenant-specific overlay for core_tipi_documento.
 
 Stores per-tenant overrides for document types seeded in public.
 """
@@ -10,21 +10,21 @@ from app.core.database import Base
 
 class TipoDocumentoOverride(Base):
     """
-    Tenant-specific overrides for core anag_tipi_documento.
+    Tenant-specific overrides for core_tipi_documento.
 
-    Stored in tenant schema; references public.anag_tipi_documento.
+    Stored in tenant schema; references public.core_tipi_documento.
     """
-    __tablename__ = "anag_tipi_documento_overrides"
+    __tablename__ = "core_tipi_documento_overrides"
 
     __table_args__ = (
-        Index("ix_anag_tipi_documento_overrides_tipo", "tipo_documento_id", unique=True),
+        Index("ix_core_tipi_documento_overrides_tipo", "tipo_documento_id", unique=True),
         {"extend_existing": True}
     )
 
     id = Column(Integer, primary_key=True, index=True)
     tipo_documento_id = Column(
         Integer,
-        ForeignKey("public.anag_tipi_documento.id", ondelete="CASCADE"),
+        ForeignKey("public.core_tipi_documento.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
