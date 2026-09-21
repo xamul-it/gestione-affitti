@@ -72,12 +72,12 @@ def main():
     # Test models
     print(f"{YELLOW}[3/5] Testing Models...{NC}")
     results.append(test_from_import(
-        "modules.anagrafica_italiana.models",
+        "app.core.platform.models",
         "Documento, DocumentoFile",
         "Documento & DocumentoFile models"
     ))
     results.append(test_from_import(
-        "modules.anagrafica_italiana.models.documento_file",
+        "app.core.platform.models.documento_file",
         "DocumentoFile",
         "DocumentoFile model (direct)"
     ))

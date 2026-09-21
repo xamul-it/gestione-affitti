@@ -9,7 +9,9 @@ for any row-creating test in this repo.
 This is the first automated coverage for this endpoint. It exists because
 a real, previously-undetected bug was found while wiring immobili's forms
 to it: upload_documento() called file_storage.save_file() without the
-required tenant_schema argument, so every upload would raise a TypeError.
+required tenant_schema argument. save_file()'s TypeError was caught by the
+route's own try/except and re-raised as HTTPException(500), so the failure
+was an opaque 500 rather than a crash, but every single upload failed.
 test_upload_creates_documento_and_saves_file guards against that bug
 reappearing.
 """
@@ -28,6 +30,8 @@ from app.core.routes.documenti import (
     get_documenti,
     upload_documento,
 )
+
+pytestmark = pytest.mark.integration
 
 TENANT = "tenant_qa_test"
 
@@ -58,6 +62,9 @@ def _cleanup(pg_session, documento_ids):
     ids = [i for i in documento_ids if i]
     if not ids:
         return
+    # A prior assertion failure can leave the session's transaction aborted;
+    # roll back first so the cleanup query itself doesn't raise and mask it.
+    pg_session.rollback()
     documenti = pg_session.query(Documento).filter(Documento.id.in_(ids)).all()
     for d in documenti:
         file_storage.delete_file(d.file_path)
@@ -184,10 +191,13 @@ async def test_delete_documento_removes_file_and_record(pg_session):
         db=pg_session,
         tenant_schema=TENANT,
     )
-    saved_path = file_storage.get_file_path(documento.file_path)
-    assert saved_path.exists()
+    try:
+        saved_path = file_storage.get_file_path(documento.file_path)
+        assert saved_path.exists()
 
-    delete_documento(documento.id, db=pg_session)
+        delete_documento(documento.id, db=pg_session)
 
-    assert not saved_path.exists()
-    assert pg_session.query(Documento).filter(Documento.id == documento.id).first() is None
+        assert not saved_path.exists()
+        assert pg_session.query(Documento).filter(Documento.id == documento.id).first() is None
+    finally:
+        _cleanup(pg_session, [documento.id])

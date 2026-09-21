@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { documentiAPI } from '../../../services/documentiAPI';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
@@ -86,19 +87,11 @@ export const ripartizioniSpeseAPI = {
   delete: (id) => api.delete(`/ripartizioni-spese/${id}`),
 };
 
-// Documenti API (shared across modules but primarily used in affitti_lungo)
-export const documentiAPI = {
-  getAll: (entityType, entityId) => api.get('/documenti/', {
-    params: { entity_type: entityType, entity_id: entityId }
-  }),
-  getById: (id) => api.get(`/documenti/${id}`),
-  upload: (formData) => api.post('/documenti/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
-  download: (id) => api.get(`/documenti/${id}/download`, { responseType: 'blob' }),
-  update: (id, data) => api.put(`/documenti/${id}`, data),
-  delete: (id) => api.delete(`/documenti/${id}`),
-};
+// documentiAPI is generic and core-owned (app/core/routes/documenti.py), not
+// affitti_lungo-specific — imported above and re-exported here only for
+// backward compatibility with existing imports of this file; new code
+// should import from services/documentiAPI directly.
+export { documentiAPI };
 
 export default {
   affittuariAPI,

@@ -3,10 +3,15 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.core.database import get_db, get_tenant_schema
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from app.core.file_storage import file_storage
 from app.core.platform.models import Documento, EntityType, TipoDocumentoEnum as TipoDocumento
 from app.core.schemas.documenti import DocumentoResponse, DocumentoUpdate
+import logging
 import mimetypes
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/documenti", tags=["Documenti"])
 
@@ -17,7 +22,8 @@ def get_documenti(
     entity_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("documenti.read")),
 ):
     """Ottieni lista documenti con filtri opzionali"""
     query = db.query(Documento)
@@ -32,7 +38,11 @@ def get_documenti(
 
 
 @router.get("/{documento_id}", response_model=DocumentoResponse)
-def get_documento(documento_id: int, db: Session = Depends(get_db)):
+def get_documento(
+    documento_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("documenti.read")),
+):
     """Ottieni dettagli di un documento"""
     documento = db.query(Documento).filter(Documento.id == documento_id).first()
     if not documento:
@@ -53,6 +63,7 @@ async def upload_documento(
     note: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
+    current_user: User = Depends(require_permission("documenti.write")),
 ):
     """
     Upload di un documento
@@ -77,9 +88,10 @@ async def upload_documento(
             tenant_schema=tenant_schema,
         )
     except Exception as e:
+        logger.exception("Errore nel salvataggio del documento (entity_type=%s, entity_id=%s)", entity_type, entity_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Errore nel salvataggio del file: {str(e)}"
+            detail="Errore nel salvataggio del file"
         )
 
     # Determina MIME type
@@ -106,7 +118,11 @@ async def upload_documento(
 
 
 @router.get("/{documento_id}/download")
-async def download_documento(documento_id: int, db: Session = Depends(get_db)):
+async def download_documento(
+    documento_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("documenti.read")),
+):
     """Download di un documento"""
     documento = db.query(Documento).filter(Documento.id == documento_id).first()
     if not documento:
@@ -133,7 +149,8 @@ async def download_documento(documento_id: int, db: Session = Depends(get_db)):
 def update_documento(
     documento_id: int,
     documento_update: DocumentoUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("documenti.write")),
 ):
     """Aggiorna metadata di un documento"""
     documento = db.query(Documento).filter(Documento.id == documento_id).first()
@@ -152,7 +169,11 @@ def update_documento(
 
 
 @router.delete("/{documento_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_documento(documento_id: int, db: Session = Depends(get_db)):
+def delete_documento(
+    documento_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("documenti.delete")),
+):
     """Elimina un documento (file + record database)"""
     documento = db.query(Documento).filter(Documento.id == documento_id).first()
     if not documento:
