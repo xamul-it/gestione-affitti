@@ -7,36 +7,22 @@ def get_routers():
     Lazily import routers to avoid circular imports at module import time.
     """
     from .routes import (
-        immobili_router,
         affittuari_router,
         contratti_router,
         spese_router,
         incassi_router,
         tecnici_router,
-        certificati_energetici_router,
         documenti_router,
-        proprietari_router,
-        diritti_immobile_router,
-        condomini_router,
-        tabelle_millesimali_router,
-        millesimi_immobile_router,
         ripartizione_spesa_router,
         search_router,
     )
     return [
-        immobili_router,
         affittuari_router,
         contratti_router,
         spese_router,
         incassi_router,
         tecnici_router,
-        certificati_energetici_router,
         documenti_router,
-        proprietari_router,
-        diritti_immobile_router,
-        condomini_router,
-        tabelle_millesimali_router,
-        millesimi_immobile_router,
         ripartizione_spesa_router,
         search_router,
     ]

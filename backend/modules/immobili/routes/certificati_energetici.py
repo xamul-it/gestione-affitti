@@ -3,7 +3,13 @@ from sqlalchemy.orm import Session
 from typing import List
 from datetime import date
 from app.core.database import get_db
-from ..models import CertificatoEnergetico, UnitaImmobiliare, Tecnico
+from ..models import CertificatoEnergetico, UnitaImmobiliare
+# Tecnico is owned by affitti_lungo; CertificatoEnergetico's own "Tecnico" relationship
+# (models/certificati_energetici.py) already resolves it lazily by class name across
+# modules, so this direct import preserves an existing cross-module coupling rather
+# than introducing a new one. Untangling it (e.g. via the shared anagrafica registry)
+# is out of scope for this move.
+from affitti_lungo.models import Tecnico
 from ..schemas.certificati_energetici import (
     CertificatoEnergeticoCreate,
     CertificatoEnergeticoUpdate,

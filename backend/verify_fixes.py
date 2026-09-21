@@ -38,7 +38,7 @@ except Exception as e:
 # Test 3: Check schema changes
 print("\n3. Testing Pydantic schema changes...")
 try:
-    from affitti_lungo.schemas.condomini import CondominioBase
+    from immobili.schemas.condomini import CondominioBase
     from pydantic import ValidationError
 
     # Test creating Condominio without nome

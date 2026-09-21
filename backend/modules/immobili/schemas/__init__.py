@@ -20,6 +20,52 @@ from .terreno import (
     TerrenoUpdate,
     TerrenoResponse,
 )
+from .immobili import (
+    UnitaImmobiliareBase,
+    UnitaImmobiliareCreate,
+    UnitaImmobiliareUpdate,
+    UnitaImmobiliareResponse,
+    ImmobileBase,
+    ImmobileCreate,
+    ImmobileUpdate,
+    ImmobileResponse,  # Backward compatibility
+)
+from .condomini import (
+    CondominioBase,
+    CondominioCreate,
+    CondominioUpdate,
+    CondominioResponse,
+)
+from .proprietari import (
+    ProprietarioBase,
+    ProprietarioCreate,
+    ProprietarioUpdate,
+    ProprietarioResponse,
+)
+from .diritti_immobile import (
+    DirittoImmobileBase,
+    DirittoImmobileCreate,
+    DirittoImmobileUpdate,
+    DirittoImmobileResponse,
+)
+from .certificati_energetici import (
+    CertificatoEnergeticoBase,
+    CertificatoEnergeticoCreate,
+    CertificatoEnergeticoUpdate,
+    CertificatoEnergeticoResponse,
+)
+from .tabelle_millesimali import (
+    TabellaMillesimaleBase,
+    TabellaMillesimaleCreate,
+    TabellaMillesimaleUpdate,
+    TabellaMillesimaleResponse,
+)
+from .millesimi_unita import (
+    MillesimiUnitaBase,
+    MillesimiUnitaCreate,
+    MillesimiUnitaUpdate,
+    MillesimiUnitaResponse,
+)
 
 __all__ = [
     # Categoria Catastale
@@ -38,4 +84,20 @@ __all__ = [
     "TerrenoCreate",
     "TerrenoUpdate",
     "TerrenoResponse",
+    # Unità Immobiliari (new naming)
+    "UnitaImmobiliareBase", "UnitaImmobiliareCreate", "UnitaImmobiliareUpdate", "UnitaImmobiliareResponse",
+    # Backward compatibility
+    "ImmobileBase", "ImmobileCreate", "ImmobileUpdate", "ImmobileResponse",
+    # Condomini
+    "CondominioBase", "CondominioCreate", "CondominioUpdate", "CondominioResponse",
+    # Proprietari
+    "ProprietarioBase", "ProprietarioCreate", "ProprietarioUpdate", "ProprietarioResponse",
+    # Diritti Immobile
+    "DirittoImmobileBase", "DirittoImmobileCreate", "DirittoImmobileUpdate", "DirittoImmobileResponse",
+    # Certificati Energetici
+    "CertificatoEnergeticoBase", "CertificatoEnergeticoCreate", "CertificatoEnergeticoUpdate", "CertificatoEnergeticoResponse",
+    # Tabelle Millesimali
+    "TabellaMillesimaleBase", "TabellaMillesimaleCreate", "TabellaMillesimaleUpdate", "TabellaMillesimaleResponse",
+    # Millesimi Unità
+    "MillesimiUnitaBase", "MillesimiUnitaCreate", "MillesimiUnitaUpdate", "MillesimiUnitaResponse",
 ]

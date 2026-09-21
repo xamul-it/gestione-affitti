@@ -40,8 +40,30 @@ def get_routers():
     """
     Lazily import routers to avoid circular imports at module import time.
     """
-    from .routes import categorie_catastali_router, terreni_router, tipologie_terreno_router
-    return [categorie_catastali_router, terreni_router, tipologie_terreno_router]
+    from .routes import (
+        categorie_catastali_router,
+        terreni_router,
+        tipologie_terreno_router,
+        immobili_router,
+        condomini_router,
+        proprietari_router,
+        diritti_immobile_router,
+        certificati_energetici_router,
+        tabelle_millesimali_router,
+        millesimi_immobile_router,
+    )
+    return [
+        categorie_catastali_router,
+        terreni_router,
+        tipologie_terreno_router,
+        immobili_router,
+        condomini_router,
+        proprietari_router,
+        diritti_immobile_router,
+        certificati_energetici_router,
+        tabelle_millesimali_router,
+        millesimi_immobile_router,
+    ]
 
 
 # Routers provided by this module (lazy)

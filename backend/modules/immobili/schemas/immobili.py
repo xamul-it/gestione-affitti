@@ -2,12 +2,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Optional, List
 from datetime import datetime
 
-# Cross-module import: affitti_lungo depends on immobili
-import sys, os
-modules_dir = os.path.join(os.path.dirname(__file__), "../../../modules")
-if modules_dir not in sys.path:
-    sys.path.insert(0, modules_dir)
-from immobili.schemas.categoria_catastale import CategoriaCatastale
+from .categoria_catastale import CategoriaCatastale
 
 
 class UnitaImmobiliareBase(BaseModel):
