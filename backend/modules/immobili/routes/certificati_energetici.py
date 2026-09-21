@@ -4,12 +4,17 @@ from typing import List
 from datetime import date
 from app.core.database import get_db
 from ..models import CertificatoEnergetico, UnitaImmobiliare
-# Tecnico is owned by affitti_lungo; CertificatoEnergetico's own "Tecnico" relationship
-# (models/certificati_energetici.py) already resolves it lazily by class name across
-# modules, so this direct import preserves an existing cross-module coupling rather
-# than introducing a new one. Untangling it (e.g. via the shared anagrafica registry)
-# is out of scope for this move.
-from affitti_lungo.models import Tecnico
+# Tecnico is owned by affitti_lungo, which immobili does NOT declare as a
+# dependency (__manifest__.py only lists anagrafica_italiana) — a tenant can
+# have immobili installed without affitti_lungo, which is exactly why
+# CertificatoEnergetico.tecnico_id has no DB-level FK to it (see
+# models/certificati_energetici.py). Import defensively so a deployment/tenant
+# without affitti_lungo doesn't lose ALL of immobili's routers to this one
+# optional cross-check.
+try:
+    from affitti_lungo.models import Tecnico
+except ImportError:
+    Tecnico = None
 from ..schemas.certificati_energetici import (
     CertificatoEnergeticoCreate,
     CertificatoEnergeticoUpdate,
@@ -86,13 +91,15 @@ def create_certificato(certificato: CertificatoEnergeticoCreate, db: Session = D
             detail=f"Unità immobiliare con ID {certificato.unita_immobiliare_id} non trovato"
         )
 
-    # Verifica che il tecnico esista
-    tecnico = db.query(Tecnico).filter(Tecnico.id == certificato.tecnico_id).first()
-    if not tecnico:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Tecnico con ID {certificato.tecnico_id} non trovato"
-        )
+    # Verifica che il tecnico esista, solo se affitti_lungo (che possiede Tecnico)
+    # è installato per questo deployment/tenant.
+    if Tecnico is not None:
+        tecnico = db.query(Tecnico).filter(Tecnico.id == certificato.tecnico_id).first()
+        if not tecnico:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Tecnico con ID {certificato.tecnico_id} non trovato"
+            )
 
     # Verifica che data_emissione < data_scadenza
     if certificato.data_emissione >= certificato.data_scadenza:

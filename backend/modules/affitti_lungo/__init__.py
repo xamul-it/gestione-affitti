@@ -166,22 +166,6 @@ __all__ = [
     # Routers (list for auto-discovery)
     "ROUTERS",
     "get_routers",
-    # Individual routers (backward compatibility)
-    "immobili_router",
-    "affittuari_router",
-    "contratti_router",
-    "spese_router",
-    "incassi_router",
-    "tecnici_router",
-    "certificati_energetici_router",
-    "documenti_router",
-    "proprietari_router",
-    "diritti_immobile_router",
-    "condomini_router",
-    "tabelle_millesimali_router",
-    "millesimi_immobile_router",
-    "ripartizione_spesa_router",
-    "search_router",
     "MENU_ITEMS",
     "WIDGETS",
 ]
