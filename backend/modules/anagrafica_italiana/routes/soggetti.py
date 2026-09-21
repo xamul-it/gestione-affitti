@@ -307,6 +307,11 @@ def create_soggetto(
 
     _ensure_soggetti_table(db, tenant_schema)
 
+    # Normalizza il CF prima di verificarne l'unicità e salvarlo, altrimenti
+    # un valore con case diverso da quello usato altrove (es. dal matching
+    # automatico affitti_brevi -> anagrafica) risulterebbe un falso "diverso".
+    soggetto.codice_fiscale = SimilarityMatchingService._normalizza(soggetto.codice_fiscale)
+
     # Verifica unicità CF
     if soggetto.codice_fiscale:
         existing = db.query(SoggettoAnagrafico).filter(
@@ -366,6 +371,10 @@ def update_soggetto(
 
     # Aggiorna solo i campi forniti
     update_data = soggetto_update.model_dump(exclude_unset=True)
+
+    # Stessa normalizzazione applicata in create_soggetto — vedi commento lì.
+    if "codice_fiscale" in update_data:
+        update_data["codice_fiscale"] = SimilarityMatchingService._normalizza(update_data["codice_fiscale"])
 
     # Verifica unicità CF se modificato
     if "codice_fiscale" in update_data and update_data["codice_fiscale"]:
