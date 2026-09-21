@@ -12,7 +12,7 @@ from fastapi import HTTPException, status, UploadFile
 import mimetypes
 
 from app.core.file_storage import file_storage
-from ..models.documento import Documento
+from ..models import Documento
 
 
 class DocumentService:

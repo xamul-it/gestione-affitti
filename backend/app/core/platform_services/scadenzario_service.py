@@ -9,7 +9,7 @@ Provides centralized deadline (scadenze) management for all modules:
 
 Usage:
     from app.core.platform_services import ScadenzarioService
-    from affitti_lungo.models.documenti import Documento
+    from app.core.platform.models import Documento
 
     scad_service = ScadenzarioService(db, model_class=Documento)
 

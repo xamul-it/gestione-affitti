@@ -1,7 +1,11 @@
 """
 Documento model shared across modules.
 
-Owned by anagrafica_italiana to avoid cyclic dependencies.
+Core platform model (app/core), per the module-communication architecture
+(docs/superpowers/specs/2026-09-14-module-communication-architecture-design.md)
+which lists the document registry as a core service alongside auth,
+notifications and the scadenzario — any domain module can attach documents
+to its own entities without depending on another domain module for it.
 
 Multi-File Support (v2):
 - A Documento can have multiple files (via DocumentoFile relationship)
@@ -17,6 +21,7 @@ import enum
 
 class EntityType(str, enum.Enum):
     IMMOBILE = "IMMOBILE"
+    CONDOMINIO = "CONDOMINIO"
     AFFITTUARIO = "AFFITTUARIO"
     CONTRATTO = "CONTRATTO"
     SPESA = "SPESA"

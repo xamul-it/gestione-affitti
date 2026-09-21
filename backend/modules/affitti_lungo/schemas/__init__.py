@@ -3,7 +3,6 @@ from .contratti import ContrattoBase, ContrattoCreate, ContrattoUpdate, Contratt
 from .spese import SpesaBase, SpesaCreate, SpesaUpdate, SpesaResponse
 from .incassi import IncassoBase, IncassoCreate, IncassoUpdate, IncassoResponse
 from .tecnici import TecnicoBase, TecnicoCreate, TecnicoUpdate, TecnicoResponse
-from .documenti import DocumentoBase, DocumentoCreate, DocumentoUpdate, DocumentoResponse
 
 __all__ = [
     # Other entities
@@ -12,5 +11,4 @@ __all__ = [
     "SpesaBase", "SpesaCreate", "SpesaUpdate", "SpesaResponse",
     "IncassoBase", "IncassoCreate", "IncassoUpdate", "IncassoResponse",
     "TecnicoBase", "TecnicoCreate", "TecnicoUpdate", "TecnicoResponse",
-    "DocumentoBase", "DocumentoCreate", "DocumentoUpdate", "DocumentoResponse",
 ]

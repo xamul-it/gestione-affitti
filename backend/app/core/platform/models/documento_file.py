@@ -1,7 +1,7 @@
 """
 DocumentoFile Model - Individual files within a multi-file document.
 
-Owned by anagrafica_italiana module to keep document logic centralized.
+Core platform model (app/core) — see documento.py for why.
 """
 from sqlalchemy import Column, Integer, String, BigInteger, ForeignKey, JSON, DateTime
 from sqlalchemy.orm import relationship
@@ -100,7 +100,7 @@ class DocumentoFile(Base):
     # Parsing information (optional per file)
     parsing_job_id = Column(
         Integer,
-        ForeignKey("public.core_document_jobs.id", ondelete="SET NULL"),
+        ForeignKey("core_document_jobs.id", ondelete="SET NULL"),
         nullable=True,
         comment="DocumentJob ID if parsing was performed on this file"
     )

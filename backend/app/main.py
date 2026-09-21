@@ -36,7 +36,9 @@ from app.core.platform.models import (
     MenuItem, Widget, UserDashboard,
     Scadenza, ScadenzaDestinatario, ScadenzaLog,
     DocumentJob, JobStatus,
-    Notifica, CanaleNotifica, StatoEmailNotifica
+    Notifica, CanaleNotifica, StatoEmailNotifica,
+    Documento, DocumentoFile, EntityType,
+    TipoDocumento, StatoDocumento,
 )
 
 # Import module system
@@ -51,6 +53,7 @@ from app.core.routes.admin_core import router as admin_core_router
 from app.core.routes.scadenze import router as scadenze_router
 from app.core.routes.notifiche import router as notifiche_router
 from app.core.routes.document_parsing import router as document_parsing_router
+from app.core.routes.documenti import router as documenti_router
 
 # Import auth routes
 from app.core.auth.routes import router as auth_router
@@ -505,6 +508,7 @@ app.include_router(admin_core_router, prefix=settings.API_V1_STR, tags=["Admin"]
 app.include_router(scadenze_router, prefix=settings.API_V1_STR)
 app.include_router(notifiche_router, prefix=settings.API_V1_STR)
 app.include_router(document_parsing_router, prefix=settings.API_V1_STR)
+app.include_router(documenti_router, prefix=settings.API_V1_STR)
 
 # ====================================================================
 # AUTO-DISCOVERY: Register all module routers dynamically

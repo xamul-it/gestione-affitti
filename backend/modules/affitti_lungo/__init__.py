@@ -12,7 +12,6 @@ def get_routers():
         spese_router,
         incassi_router,
         tecnici_router,
-        documenti_router,
         ripartizione_spesa_router,
         search_router,
     )
@@ -22,7 +21,6 @@ def get_routers():
         spese_router,
         incassi_router,
         tecnici_router,
-        documenti_router,
         ripartizione_spesa_router,
         search_router,
     ]

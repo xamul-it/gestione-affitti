@@ -30,6 +30,12 @@ from .notifica import (
     NotificaBadgeResponse,
     SegnaTutteLetteResponse,
 )
+from .documenti import (
+    DocumentoBase,
+    DocumentoCreate,
+    DocumentoUpdate,
+    DocumentoResponse,
+)
 
 __all__ = [
     "PrioritaScadenza",
@@ -50,4 +56,8 @@ __all__ = [
     "NotificaResponse",
     "NotificaBadgeResponse",
     "SegnaTutteLetteResponse",
+    "DocumentoBase",
+    "DocumentoCreate",
+    "DocumentoUpdate",
+    "DocumentoResponse",
 ]

@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.core.database import get_db
 from app.core.file_storage import file_storage
-from ..models import Documento, EntityType, TipoDocumento
-from ..schemas.documenti import DocumentoResponse, DocumentoUpdate
+from app.core.platform.models import Documento, EntityType, TipoDocumentoEnum as TipoDocumento
+from app.core.schemas.documenti import DocumentoResponse, DocumentoUpdate
 import mimetypes
 
 router = APIRouter(prefix="/documenti", tags=["Documenti"])

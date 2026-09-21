@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from ..models import EntityType, TipoDocumento
+from app.core.platform.models import EntityType, TipoDocumentoEnum as TipoDocumento
 
 
 class DocumentoBase(BaseModel):
