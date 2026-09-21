@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { certificatiEnergeticiAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
+import DocumentiSection from '../../../../components/Documenti/DocumentiSection';
 
 const CLASSI_ENERGETICHE = ['A4', 'A3', 'A2', 'A1', 'B', 'C', 'D', 'E', 'F', 'G'];
 
@@ -211,6 +212,8 @@ function CertificatoEnergeticoForm({ certificato, immobili, tecnici, onClose }) 
             </button>
           </div>
         </form>
+
+        <DocumentiSection entityType="CERTIFICATO_ENERGETICO" entityId={certificato?.id} />
       </div>
     </div>
   );

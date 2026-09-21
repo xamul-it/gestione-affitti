@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { documentiAPI } from '../../services/affittiAPI';
-import { formatApiError } from '../../../../utils/errorHandling';
+import { documentiAPI } from '../../services/documentiAPI';
+import { formatApiError } from '../../utils/errorHandling';
 
 const TIPI_DOCUMENTO = [
   { value: 'CERTIFICATO_ENERGETICO', label: 'Certificato Energetico' },

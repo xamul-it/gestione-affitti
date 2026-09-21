@@ -13,7 +13,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { DataTable, FormBuilder, FormModal } from '../../../core/components';
-import DocumentiSection from '../components/Documenti/DocumentiSection';
+import DocumentiSection from '../../../components/Documenti/DocumentiSection';
 import { contrattiConfig } from '../config';
 
 /**

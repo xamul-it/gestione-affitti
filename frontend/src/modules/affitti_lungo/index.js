@@ -31,5 +31,5 @@ export { default as TecniciList } from './components/Tecnici/TecniciList';
 export { default as TecnicoForm } from './components/Tecnici/TecnicoForm';
 
 // Documenti
-export { default as DocumentiSection } from './components/Documenti/DocumentiSection';
-export { default as DocumentoUpload } from './components/Documenti/DocumentoUpload';
+export { default as DocumentiSection } from '../../components/Documenti/DocumentiSection';
+export { default as DocumentoUpload } from '../../components/Documenti/DocumentoUpload';

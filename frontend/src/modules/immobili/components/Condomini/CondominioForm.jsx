@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { condominAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
+import DocumentiSection from '../../../../components/Documenti/DocumentiSection';
 
 function CondominioForm({ condominio, onClose }) {
   const [formData, setFormData] = useState({
@@ -250,6 +251,8 @@ function CondominioForm({ condominio, onClose }) {
             <button type="submit" className="primary">Salva</button>
           </div>
         </form>
+
+        <DocumentiSection entityType="CONDOMINIO" entityId={condominio?.id} />
       </div>
     </div>
   );

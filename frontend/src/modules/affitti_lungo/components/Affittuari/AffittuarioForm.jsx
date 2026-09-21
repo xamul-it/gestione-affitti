@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { affittuariAPI } from '../../services/affittiAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
-import DocumentiSection from '../Documenti/DocumentiSection';
+import DocumentiSection from '../../../../components/Documenti/DocumentiSection';
 
 function AffittuarioForm({ affittuario, onClose }) {
   const [formData, setFormData] = useState({

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { unitaImmobiliariAPI, categorieCatastaliAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
-import { DocumentiSection } from '../../../affitti_lungo';
+import DocumentiSection from '../../../../components/Documenti/DocumentiSection';
 import DirittiImmobileSection from '../DirittiImmobile/DirittiImmobileSection';
 
 // Mapping categorie catastali a tipi default
@@ -389,7 +389,7 @@ function UnitaImmobiliareForm({ unitaImmobiliare, onClose }) {
         </form>
 
         <DirittiImmobileSection immobileId={unitaImmobiliare?.id} />
-        <DocumentiSection entityType="UNITA_IMMOBILIARE" entityId={unitaImmobiliare?.id} />
+        <DocumentiSection entityType="IMMOBILE" entityId={unitaImmobiliare?.id} />
       </div>
     </div>
   );

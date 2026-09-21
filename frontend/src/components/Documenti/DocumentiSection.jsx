@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { documentiAPI } from '../../services/affittiAPI';
+import { documentiAPI } from '../../services/documentiAPI';
 import DocumentoUpload from './DocumentoUpload';
 import './Documenti.css';
 

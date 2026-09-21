@@ -13,6 +13,7 @@
 import React, { useState, useCallback } from 'react';
 import { DataTable, FormBuilder, FormModal } from '../../../core/components';
 import { proprietariConfig } from '../config';
+import DocumentiSection from '../../../components/Documenti/DocumentiSection';
 
 /**
  * ProprietarioFormModal - Form wrapper component
@@ -48,7 +49,7 @@ function ProprietarioFormModal({ entity, onClose }) {
           <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
             Carica documenti relativi al proprietario (documenti di identita, certificati, ecc.)
           </p>
-          {/* DocumentiSection component would go here if available */}
+          <DocumentiSection entityType="PROPRIETARIO" entityId={entity.id} />
         </div>
       )}
     </FormModal>
