@@ -1,7 +1,7 @@
 """
-Verifies that tenant-only core tables (scadenzario, notifiche) are never
-created in the public schema by create_core_tables() — they must only
-exist per-tenant, via their dedicated Alembic migrations.
+Verifies that tenant-only core tables (scadenzario, notifiche, documenti)
+are never created in the public schema by create_core_tables() — they must
+only exist per-tenant, via their dedicated Alembic migrations.
 """
 import pytest
 from sqlalchemy import MetaData
@@ -36,10 +36,27 @@ def test_tenant_only_tables_excluded_from_public_creation():
     assert "core_scadenze" not in created_names
     assert "core_scadenza_destinatari" not in created_names
     assert "core_scadenza_log" not in created_names
+    assert "core_documenti" not in created_names
+    assert "core_documenti_files" not in created_names
+    assert "core_tipi_documento_overrides" not in created_names
+    assert "core_stati_documento_overrides" not in created_names
     assert "core_users" in created_names  # sanity: real public tables still included
+    # sanity: the genuinely public document reference tables ARE still
+    # created here (they're not tenant-scoped, unlike the four above).
+    # Metadata keys these by "schema.tablename" since they declare an
+    # explicit schema="public" in __table_args__ (unlike core_users).
+    assert "public.core_tipi_documento" in created_names
+    assert "public.core_stati_documento" in created_names
 
 
 def test_tenant_only_tables_constant_contains_scadenzario():
     assert "core_scadenze" in TENANT_ONLY_CORE_TABLES
     assert "core_scadenza_destinatari" in TENANT_ONLY_CORE_TABLES
     assert "core_scadenza_log" in TENANT_ONLY_CORE_TABLES
+
+
+def test_tenant_only_tables_constant_contains_documenti():
+    assert "core_documenti" in TENANT_ONLY_CORE_TABLES
+    assert "core_documenti_files" in TENANT_ONLY_CORE_TABLES
+    assert "core_tipi_documento_overrides" in TENANT_ONLY_CORE_TABLES
+    assert "core_stati_documento_overrides" in TENANT_ONLY_CORE_TABLES

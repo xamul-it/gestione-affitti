@@ -88,6 +88,10 @@ TENANT_ONLY_CORE_TABLES = {
     "core_scadenza_destinatari",
     "core_scadenza_log",
     "core_notifiche",
+    "core_documenti",
+    "core_documenti_files",
+    "core_tipi_documento_overrides",
+    "core_stati_documento_overrides",
 }
 
 

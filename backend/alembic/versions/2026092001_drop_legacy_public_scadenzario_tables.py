@@ -40,14 +40,25 @@ def upgrade() -> None:
     # this is genuinely defensive on both an already-migrated DB (where
     # the FK/tables still exist from before 2026012801 was corrected) and
     # a brand-new bootstrap (where they never existed).
-    bind = op.get_bind()
-    bind.execute(sa.text(
-        "ALTER TABLE core_document_jobs "
+    #
+    # UPDATE (2026-09-21): switched from a raw bind.execute to op.execute,
+    # and added explicit "public." qualification. bind.execute bypasses
+    # env.py's schema gate, so this ran on every schema pass of
+    # `-x schema=all` — harmless historically only because it had already
+    # been applied everywhere by the time this was noticed. For a genuinely
+    # NEW tenant, this migration runs after 2026091801 (which creates that
+    # tenant's real core_scadenze/etc.), so the old unqualified,
+    # gate-bypassing DROP TABLE IF EXISTS core_scadenze would have deleted
+    # that tenant's freshly-created real table during its own schema pass.
+    # Found while debugging the identical bug in
+    # 2026092101/2026092102/2026092103.
+    op.execute(sa.text(
+        "ALTER TABLE public.core_document_jobs "
         "DROP CONSTRAINT IF EXISTS core_document_jobs_scadenza_id_fkey"
     ))
-    bind.execute(sa.text("DROP TABLE IF EXISTS core_scadenza_log"))
-    bind.execute(sa.text("DROP TABLE IF EXISTS core_scadenza_destinatari"))
-    bind.execute(sa.text("DROP TABLE IF EXISTS core_scadenze"))
+    op.execute(sa.text("DROP TABLE IF EXISTS public.core_scadenza_log"))
+    op.execute(sa.text("DROP TABLE IF EXISTS public.core_scadenza_destinatari"))
+    op.execute(sa.text("DROP TABLE IF EXISTS public.core_scadenze"))
 
 
 def downgrade() -> None:

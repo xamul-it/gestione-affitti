@@ -3,6 +3,12 @@
 Revision ID: 2026011505_tenant_documenti
 Revises: 2026011504_public_domain_fix
 Create Date: 2026-01-21
+
+NOTE (2026-09-21): tipo_documento_id's FK target was updated from
+public.anag_tipi_documento to public.core_tipi_documento — see the note
+in 2026011503_tenant_tables.py for the full rationale (same rename,
+same reasoning for why only the FK target changed and not this table's
+own name).
 """
 
 from alembic import op, context
@@ -37,7 +43,7 @@ def upgrade() -> None:
             descrizione VARCHAR(500),
             note VARCHAR(500),
             data_scadenza DATE,
-            tipo_documento_id INTEGER REFERENCES public.anag_tipi_documento(id),
+            tipo_documento_id INTEGER REFERENCES public.core_tipi_documento(id),
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             updated_at TIMESTAMPTZ
         )

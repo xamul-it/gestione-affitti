@@ -3,6 +3,24 @@
 Revision ID: 2026011503_tenant_tables
 Revises: 2026011502_public_domain
 Create Date: 2026-01-15
+
+NOTE (2026-09-21): the FK targets for the two document-override tables
+below were updated from public.anag_tipi_documento/anag_stati_documento to
+public.core_tipi_documento/core_stati_documento, because those tables were
+renamed (main chain migration 2026092101) when the document registry
+became a core platform service. This migration itself keeps creating
+anag_tipi_documento_overrides/anag_stati_documento_overrides under their
+original names — later migrations in this module's own chain
+(2026013101_documento_multifile.py and others) still reference
+anag_documenti/anag_documenti_files by name, so renaming here would break
+them. The main chain's 2026092102 migration performs the actual rename to
+core_tipi_documento_overrides/core_stati_documento_overrides for every
+tenant, including ones that reach this point in anagrafica's chain after
+the rename already happened elsewhere (its rename is defensive: a no-op
+if the old name doesn't exist yet, or the new name already does).
+Editing this file only affects tenants that haven't reached this revision
+yet (i.e. brand new ones) — every existing tenant's alembic_version_anag
+is already past it and will never re-run it.
 """
 
 from alembic import op, context
@@ -77,7 +95,7 @@ def upgrade() -> None:
     op.execute(text("""
         CREATE TABLE IF NOT EXISTS anag_tipi_documento_overrides (
             id SERIAL PRIMARY KEY,
-            tipo_documento_id INTEGER NOT NULL REFERENCES public.anag_tipi_documento(id) ON DELETE CASCADE,
+            tipo_documento_id INTEGER NOT NULL REFERENCES public.core_tipi_documento(id) ON DELETE CASCADE,
             codice VARCHAR(50),
             nome VARCHAR(100),
             descrizione VARCHAR(255),
@@ -95,7 +113,7 @@ def upgrade() -> None:
     op.execute(text("""
         CREATE TABLE IF NOT EXISTS anag_stati_documento_overrides (
             id SERIAL PRIMARY KEY,
-            stato_documento_id INTEGER NOT NULL REFERENCES public.anag_stati_documento(id) ON DELETE CASCADE,
+            stato_documento_id INTEGER NOT NULL REFERENCES public.core_stati_documento(id) ON DELETE CASCADE,
             codice VARCHAR(20),
             nome VARCHAR(100),
             descrizione VARCHAR(255),
