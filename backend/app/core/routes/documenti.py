@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.core.database import get_db
+from app.core.database import get_db, get_tenant_schema
 from app.core.file_storage import file_storage
 from app.core.platform.models import Documento, EntityType, TipoDocumentoEnum as TipoDocumento
 from app.core.schemas.documenti import DocumentoResponse, DocumentoUpdate
@@ -51,7 +51,8 @@ async def upload_documento(
     tipo_documento: TipoDocumento = Form(...),
     descrizione: Optional[str] = Form(None),
     note: Optional[str] = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     """
     Upload di un documento
@@ -63,13 +64,17 @@ async def upload_documento(
     - **descrizione**: Descrizione opzionale
     - **note**: Note opzionali
     """
+    if not tenant_schema:
+        raise HTTPException(status_code=400, detail="Tenant schema mancante")
+
     # Salva il file
     try:
         file_path = file_storage.save_file(
             file.file,
             entity_type.value,
             entity_id,
-            file.filename
+            file.filename,
+            tenant_schema=tenant_schema,
         )
     except Exception as e:
         raise HTTPException(
