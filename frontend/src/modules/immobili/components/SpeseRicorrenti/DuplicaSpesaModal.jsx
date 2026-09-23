@@ -2,8 +2,13 @@ import { useState } from 'react';
 import { speseRicorrentiAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
 
+function prossimoPeriodo(periodo) {
+  const next = Number(periodo) + 1;
+  return Number.isNaN(next) ? '' : String(next);
+}
+
 function DuplicaSpesaModal({ spesa, onClose }) {
-  const [periodo, setPeriodo] = useState(String(Number(spesa.periodo) + 1 || ''));
+  const [periodo, setPeriodo] = useState(prossimoPeriodo(spesa.periodo));
   const [dataScadenza, setDataScadenza] = useState('');
   const [importo, setImporto] = useState(spesa.importo);
   const [error, setError] = useState(null);

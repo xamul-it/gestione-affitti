@@ -11,7 +11,7 @@ const conduttoriTableConfig = {
   addButtonLabel: 'Nuovo Conduttore',
   columns: [
     { field: 'soggetto_id', label: 'ID Soggetto', width: 120 },
-    { field: 'note', label: 'Note', render: (value) => value || '-' },
+    { field: 'note', label: 'Note', filterable: true, render: (value) => value || '-' },
     {
       field: 'created_at',
       label: 'Registrato il',

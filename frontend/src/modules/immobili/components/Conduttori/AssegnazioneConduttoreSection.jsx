@@ -1,11 +1,20 @@
 import { useState, useEffect } from 'react';
 import { assegnazioniConduttoreAPI } from '../../services/immobiliAPI';
 import AssegnazioneConduttoreForm from './AssegnazioneConduttoreForm';
+import '../DirittiImmobile/DirittiImmobile.css';
 import './Conduttori.css';
 
 function formatData(value) {
   if (!value) return '-';
   return new Date(value).toLocaleDateString('it-IT');
+}
+
+function todayLocalISODate() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function AssegnazioneConduttoreSection({ unitaImmobiliareId }) {
@@ -39,7 +48,7 @@ function AssegnazioneConduttoreSection({ unitaImmobiliareId }) {
     if (!window.confirm('Chiudere questa assegnazione impostando la data di fine a oggi?')) return;
     try {
       await assegnazioniConduttoreAPI.update(assegnazione.id, {
-        data_fine: new Date().toISOString().slice(0, 10),
+        data_fine: todayLocalISODate(),
       });
       fetchAssegnazioni();
     } catch (err) {
