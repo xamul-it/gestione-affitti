@@ -47,6 +47,12 @@ export const manifest = {
       icon: 'building-columns',
     },
     {
+      path: '/conduttori',
+      component: 'ConduttoriList',
+      label: 'Conduttori',
+      icon: 'user-check',
+    },
+    {
       path: '/certificati-energetici',
       component: 'CertificatiEnergeticiList',
       label: 'Certificati Energetici',
@@ -99,6 +105,14 @@ export const manifest = {
       icon: 'building-columns',
       order: 30,
       requiredPermission: 'condominio.view',
+    },
+    {
+      id: 'immobili.conduttori',
+      label: 'Conduttori',
+      path: '/conduttori',
+      icon: 'user-check',
+      order: 25,
+      requiredPermission: 'conduttore.view',
     },
     {
       id: 'immobili.gestione',
@@ -172,6 +186,10 @@ export const manifest = {
     'condominio.create',
     'condominio.update',
     'condominio.delete',
+    'conduttore.view',
+    'conduttore.create',
+    'conduttore.update',
+    'conduttore.delete',
     'certificato_energetico.view',
     'certificato_energetico.create',
     'certificato_energetico.update',

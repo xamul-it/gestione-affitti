@@ -1,0 +1,46 @@
+/* Reuse existing modal/form styles */
+@import '../UnitaImmobiliari/UnitaImmobiliari.css';
+
+.conduttori-container {
+  padding: 20px;
+}
+
+.field-hint {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.soggetto-selezionato {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+}
+
+.soggetto-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.soggetto-search-item {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.soggetto-search-item:hover {
+  background: #f3f4f6;
+}

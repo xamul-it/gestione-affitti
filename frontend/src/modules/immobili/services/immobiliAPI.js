@@ -136,6 +136,39 @@ export const terreniAPI = {
   restore: (id) => api.post(`/terreni/${id}/restore`),
 };
 
+// Conduttori API
+export const conduttoriAPI = {
+  getAll: () => api.get('/conduttori/'),
+  getById: (id) => api.get(`/conduttori/${id}`),
+  create: (data) => api.post('/conduttori/', data),
+  update: (id, data) => api.put(`/conduttori/${id}`, data),
+  delete: (id) => api.delete(`/conduttori/${id}`),
+};
+
+// Assegnazioni Conduttore API
+export const assegnazioniConduttoreAPI = {
+  getAll: (unitaImmobiliareId = null, conduttoreId = null) => api.get('/assegnazioni-conduttore/', {
+    params: { unita_immobiliare_id: unitaImmobiliareId, conduttore_id: conduttoreId }
+  }),
+  getByUnita: (unitaImmobiliareId) => api.get(`/assegnazioni-conduttore/unita-immobiliare/${unitaImmobiliareId}`),
+  create: (data) => api.post('/assegnazioni-conduttore/', data),
+  update: (id, data) => api.put(`/assegnazioni-conduttore/${id}`, data),
+  delete: (id) => api.delete(`/assegnazioni-conduttore/${id}`),
+};
+
+// Spese Ricorrenti API (IMU, TARI, utenze)
+export const speseRicorrentiAPI = {
+  getAll: (unitaImmobiliareId = null, condominioId = null, pagato = null) => api.get('/spese-ricorrenti/', {
+    params: { unita_immobiliare_id: unitaImmobiliareId, condominio_id: condominioId, pagato }
+  }),
+  getById: (id) => api.get(`/spese-ricorrenti/${id}`),
+  create: (data) => api.post('/spese-ricorrenti/', data),
+  update: (id, data) => api.put(`/spese-ricorrenti/${id}`, data),
+  segnaPagato: (id, data) => api.post(`/spese-ricorrenti/${id}/segna-pagato`, data),
+  duplica: (id, data) => api.post(`/spese-ricorrenti/${id}/duplica`, data),
+  delete: (id) => api.delete(`/spese-ricorrenti/${id}`),
+};
+
 export default {
   unitaImmobiliariAPI,
   proprietariAPI,
@@ -147,4 +180,7 @@ export default {
   categorieCatastaliAPI,
   terreniAPI,
   tipologieTerrenoAPI,
+  conduttoriAPI,
+  assegnazioniConduttoreAPI,
+  speseRicorrentiAPI,
 };

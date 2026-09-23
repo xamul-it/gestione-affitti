@@ -3,6 +3,8 @@ import { unitaImmobiliariAPI, categorieCatastaliAPI } from '../../services/immob
 import { formatApiError } from '../../../../utils/errorHandling';
 import DocumentiSection from '../../../../components/Documenti/DocumentiSection';
 import DirittiImmobileSection from '../DirittiImmobile/DirittiImmobileSection';
+import AssegnazioneConduttoreSection from '../Conduttori/AssegnazioneConduttoreSection';
+import SpeseRicorrentiSection from '../SpeseRicorrenti/SpeseRicorrentiSection';
 
 // Mapping categorie catastali a tipi default
 const CATEGORIA_TIPO_MAP = {
@@ -389,6 +391,8 @@ function UnitaImmobiliareForm({ unitaImmobiliare, onClose }) {
         </form>
 
         <DirittiImmobileSection immobileId={unitaImmobiliare?.id} />
+        <AssegnazioneConduttoreSection unitaImmobiliareId={unitaImmobiliare?.id} />
+        <SpeseRicorrentiSection unitaImmobiliareId={unitaImmobiliare?.id} />
         <DocumentiSection entityType="IMMOBILE" entityId={unitaImmobiliare?.id} />
       </div>
     </div>

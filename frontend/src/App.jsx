@@ -22,6 +22,7 @@ import {
   CertificatiEnergeticiList,
   ProprietariList,
   CondominList,
+  ConduttoriList,
   TabelleMillesimaliList,
   MillesimiImmobileList,
   CategorieCatastaliList,
@@ -245,6 +246,7 @@ function App() {
                 <Route path="/certificati-energetici" element={<ProtectedRoute><CertificatiEnergeticiList /></ProtectedRoute>} />
                 <Route path="/proprietari" element={<ProtectedRoute><ProprietariList /></ProtectedRoute>} />
                 <Route path="/condomini" element={<ProtectedRoute><CondominList /></ProtectedRoute>} />
+                <Route path="/conduttori" element={<ProtectedRoute><ConduttoriList /></ProtectedRoute>} />
                 <Route path="/tabelle-millesimali" element={<ProtectedRoute><TabelleMillesimaliList /></ProtectedRoute>} />
                 <Route path="/millesimi-immobile" element={<ProtectedRoute><MillesimiImmobileList /></ProtectedRoute>} />
                 <Route path="/categorie-catastali" element={<ProtectedRoute requiredRole="Admin"><CategorieCatastaliList /></ProtectedRoute>} />

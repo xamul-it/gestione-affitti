@@ -41,6 +41,14 @@ export { default as ProprietarioForm } from './components/Proprietari/Proprietar
 export { default as CondominList } from './components/Condomini/CondominList';
 export { default as CondominioForm } from './components/Condomini/CondominioForm';
 
+// Conduttori
+export { default as ConduttoriList } from './components/Conduttori/ConduttoriList';
+export { default as ConduttoreForm } from './components/Conduttori/ConduttoreForm';
+export { default as AssegnazioneConduttoreSection } from './components/Conduttori/AssegnazioneConduttoreSection';
+
+// Spese Ricorrenti (IMU, TARI, utenze)
+export { default as SpeseRicorrentiSection } from './components/SpeseRicorrenti/SpeseRicorrentiSection';
+
 // CertificatiEnergetici
 export { default as CertificatiEnergeticiList } from './components/CertificatiEnergetici/CertificatiEnergeticiList';
 export { default as CertificatoEnergeticoForm } from './components/CertificatiEnergetici/CertificatoEnergeticoForm';

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { condominAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
 import DocumentiSection from '../../../../components/Documenti/DocumentiSection';
+import SpeseRicorrentiSection from '../SpeseRicorrenti/SpeseRicorrentiSection';
 
 function CondominioForm({ condominio, onClose }) {
   const [formData, setFormData] = useState({
@@ -252,6 +253,7 @@ function CondominioForm({ condominio, onClose }) {
           </div>
         </form>
 
+        <SpeseRicorrentiSection condominioId={condominio?.id} />
         <DocumentiSection entityType="CONDOMINIO" entityId={condominio?.id} />
       </div>
     </div>

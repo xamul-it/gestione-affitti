@@ -1,0 +1,113 @@
+.spese-ricorrenti-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+}
+
+.spese-ricorrenti-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.spese-ricorrenti-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.spese-ricorrenti-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.spesa-ricorrente-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  transition: box-shadow 0.2s;
+}
+
+.spesa-ricorrente-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.spesa-ricorrente-card.pagato {
+  opacity: 0.7;
+}
+
+.spesa-ricorrente-info {
+  flex: 1;
+}
+
+.spesa-ricorrente-titolo {
+  font-weight: 500;
+  margin-bottom: 0.4rem;
+}
+
+.spesa-ricorrente-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: #6c757d;
+  align-items: center;
+}
+
+.spesa-ricorrente-importo {
+  font-weight: 600;
+  color: #212529;
+}
+
+.spesa-ricorrente-note {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #495057;
+  font-style: italic;
+}
+
+.spesa-ricorrente-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.badge-info {
+  background-color: #0dcaf0;
+  color: black;
+}
+
+.badge-success {
+  background-color: #198754;
+  color: white;
+}
+
+.badge-warning {
+  background-color: #ffc107;
+  color: black;
+}
+
+.badge-info,
+.badge-success,
+.badge-warning {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.info-message,
+.no-data {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
+}
