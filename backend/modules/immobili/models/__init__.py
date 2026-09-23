@@ -21,6 +21,9 @@ from .diritti_immobile import DirittoImmobile, TipoDiritto
 from .certificati_energetici import CertificatoEnergetico, ClasseEnergetica
 from .tabelle_millesimali import TabellaMillesimale, TipoRipartizione
 from .millesimi_unita import MillesimiUnita
+from .conduttore import Conduttore
+from .assegnazione_conduttore import AssegnazioneConduttore
+from .spesa_ricorrente import SpesaRicorrenteImmobile, ResponsabileSpesa, TIPI_NOTI
 
 # Land parcels - domain data in public schema
 from .tipologia_terreno import TipologiaTerreno
@@ -47,6 +50,11 @@ __all__ = [
     "TabellaMillesimale",
     "TipoRipartizione",
     "MillesimiUnita",
+    "Conduttore",
+    "AssegnazioneConduttore",
+    "SpesaRicorrenteImmobile",
+    "ResponsabileSpesa",
+    "TIPI_NOTI",
     # Land parcels
     "Terreno",
     "TipologiaTerreno",

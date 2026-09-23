@@ -58,5 +58,11 @@ class UnitaImmobiliare(Base):
     spese = relationship("Spesa", back_populates="unita_immobiliare")
     certificati_energetici = relationship("CertificatoEnergetico", back_populates="unita_immobiliare")
     diritti = relationship("DirittoImmobile", back_populates="unita_immobiliare")
+    assegnazioni_conduttore = relationship("AssegnazioneConduttore", back_populates="unita_immobiliare")
+    spese_ricorrenti = relationship(
+        "SpesaRicorrenteImmobile",
+        back_populates="unita_immobiliare",
+        foreign_keys="SpesaRicorrenteImmobile.unita_immobiliare_id",
+    )
     millesimi = relationship("MillesimiUnita", back_populates="unita_immobiliare", cascade="all, delete-orphan")
     categoria_catastale = relationship("CategoriaCatastale", foreign_keys=[categoria_catastale_id])

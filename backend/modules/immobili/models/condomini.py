@@ -47,3 +47,8 @@ class Condominio(Base):
     # Relationships
     tabelle_millesimali = relationship("TabellaMillesimale", back_populates="condominio", cascade="all, delete-orphan")
     unita = relationship("UnitaImmobiliare", back_populates="condominio")
+    spese_ricorrenti = relationship(
+        "SpesaRicorrenteImmobile",
+        back_populates="condominio",
+        foreign_keys="SpesaRicorrenteImmobile.condominio_id",
+    )

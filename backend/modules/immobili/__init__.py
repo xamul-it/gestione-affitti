@@ -51,6 +51,9 @@ def get_routers():
         certificati_energetici_router,
         tabelle_millesimali_router,
         millesimi_immobile_router,
+        conduttori_router,
+        assegnazioni_conduttore_router,
+        spese_ricorrenti_router,
     )
     return [
         categorie_catastali_router,
@@ -63,6 +66,9 @@ def get_routers():
         certificati_energetici_router,
         tabelle_millesimali_router,
         millesimi_immobile_router,
+        conduttori_router,
+        assegnazioni_conduttore_router,
+        spese_ricorrenti_router,
     ]
 
 

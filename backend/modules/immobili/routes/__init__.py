@@ -11,6 +11,9 @@ from .diritti_immobile import router as diritti_immobile_router
 from .certificati_energetici import router as certificati_energetici_router
 from .tabelle_millesimali import router as tabelle_millesimali_router
 from .millesimi_immobile import router as millesimi_immobile_router
+from .conduttori import router as conduttori_router
+from .assegnazioni_conduttore import router as assegnazioni_conduttore_router
+from .spese_ricorrenti import router as spese_ricorrenti_router
 
 __all__ = [
     "categorie_catastali_router",
@@ -23,4 +26,7 @@ __all__ = [
     "certificati_energetici_router",
     "tabelle_millesimali_router",
     "millesimi_immobile_router",
+    "conduttori_router",
+    "assegnazioni_conduttore_router",
+    "spese_ricorrenti_router",
 ]

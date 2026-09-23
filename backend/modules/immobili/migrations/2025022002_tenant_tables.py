@@ -41,6 +41,25 @@ PUBLIC_TABLES = {
     "immo_tipologie_terreno",
 }
 
+# Tables created by a LATER, dedicated migration in this same chain, not by
+# this one's generic "sweep every immo_-prefixed table off Base.metadata"
+# mechanism. Importing any immobili.models.* submodule above runs
+# immobili/models/__init__.py in full (Python always executes a package's
+# __init__ when importing a submodule), which registers every model on
+# Base.metadata regardless of this file's own explicit import list — so
+# new immo_ tables added later keep getting swept in here too unless
+# excluded. This specific migration's target_metadata only stubs FK targets
+# it knew about when written (anag_soggetti_anagrafici, the two public
+# terreno/categoria tables) — a table added later with an FK to something
+# else (e.g. core_scadenze) would fail to resolve here. Excluding it and
+# letting its own migration (with a real database connection, not a stub
+# metadata) create it avoids that entirely.
+EXCLUDED_TABLES = {
+    "immo_conduttori",
+    "immo_assegnazioni_conduttore",
+    "immo_spese_ricorrenti",
+}
+
 
 def _get_target_schema():
     return context.get_x_argument(as_dictionary=True).get("schema")
@@ -50,7 +69,11 @@ def _get_tenant_tables(schema):
     target_metadata = MetaData()
     _ensure_fk_targets(target_metadata, schema)
     for table in Base.metadata.tables.values():
-        if table.name.startswith("immo_") and table.name not in PUBLIC_TABLES:
+        if (
+            table.name.startswith("immo_")
+            and table.name not in PUBLIC_TABLES
+            and table.name not in EXCLUDED_TABLES
+        ):
             table.to_metadata(target_metadata, schema=schema)
     # Avoid sorted_tables to prevent FK resolution against external modules.
     return _order_tenant_tables(list(target_metadata.tables.values()))

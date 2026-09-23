@@ -48,6 +48,16 @@ def create_default_permissions(db: Session) -> dict:
         ("proprietari.write", "Create/edit owners", "proprietari", "write"),
         ("proprietari.delete", "Delete owners", "proprietari", "delete"),
 
+        # Conduttori (occupant role, independent of any rental contract)
+        ("conduttori.read", "View conduttori", "conduttori", "read"),
+        ("conduttori.write", "Create/edit conduttori", "conduttori", "write"),
+        ("conduttori.delete", "Delete conduttori", "conduttori", "delete"),
+
+        # Spese ricorrenti immobile (IMU, TARI, utenze)
+        ("spese_ricorrenti_immobile.read", "View recurring property expenses", "spese_ricorrenti_immobile", "read"),
+        ("spese_ricorrenti_immobile.write", "Create/edit recurring property expenses", "spese_ricorrenti_immobile", "write"),
+        ("spese_ricorrenti_immobile.delete", "Delete recurring property expenses", "spese_ricorrenti_immobile", "delete"),
+
         # Spese
         ("spese.read", "View expenses", "spese", "read"),
         ("spese.write", "Create/edit expenses", "spese", "write"),

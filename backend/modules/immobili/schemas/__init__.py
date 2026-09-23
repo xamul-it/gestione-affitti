@@ -66,6 +66,26 @@ from .millesimi_unita import (
     MillesimiUnitaUpdate,
     MillesimiUnitaResponse,
 )
+from .conduttore import (
+    ConduttoreBase,
+    ConduttoreCreate,
+    ConduttoreUpdate,
+    ConduttoreResponse,
+)
+from .assegnazione_conduttore import (
+    AssegnazioneConduttoreBase,
+    AssegnazioneConduttoreCreate,
+    AssegnazioneConduttoreUpdate,
+    AssegnazioneConduttoreResponse,
+)
+from .spesa_ricorrente import (
+    SpesaRicorrenteBase,
+    SpesaRicorrenteCreate,
+    SpesaRicorrenteUpdate,
+    SpesaRicorrenteResponse,
+    SegnaPagatoRequest,
+    DuplicaSpesaRequest,
+)
 
 __all__ = [
     # Categoria Catastale
@@ -100,4 +120,11 @@ __all__ = [
     "TabellaMillesimaleBase", "TabellaMillesimaleCreate", "TabellaMillesimaleUpdate", "TabellaMillesimaleResponse",
     # Millesimi Unità
     "MillesimiUnitaBase", "MillesimiUnitaCreate", "MillesimiUnitaUpdate", "MillesimiUnitaResponse",
+    # Conduttori
+    "ConduttoreBase", "ConduttoreCreate", "ConduttoreUpdate", "ConduttoreResponse",
+    # Assegnazioni Conduttore
+    "AssegnazioneConduttoreBase", "AssegnazioneConduttoreCreate", "AssegnazioneConduttoreUpdate", "AssegnazioneConduttoreResponse",
+    # Spese Ricorrenti
+    "SpesaRicorrenteBase", "SpesaRicorrenteCreate", "SpesaRicorrenteUpdate", "SpesaRicorrenteResponse",
+    "SegnaPagatoRequest", "DuplicaSpesaRequest",
 ]

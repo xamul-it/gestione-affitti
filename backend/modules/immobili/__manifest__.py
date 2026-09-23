@@ -66,6 +66,9 @@ manifest = {
         "immo_tipologie_terreno_overrides",
         "immo_terreni",
         "immo_tipo_immobile_categoria_map",
+        "immo_conduttori",
+        "immo_assegnazioni_conduttore",
+        "immo_spese_ricorrenti",
     ],
 
     # DDL for override tables (reference public domain tables, created directly in tenant schema)
@@ -111,6 +114,14 @@ manifest = {
         "terreno.create",
         "terreno.edit",
         "terreno.delete",
+        "conduttore.view",
+        "conduttore.create",
+        "conduttore.edit",
+        "conduttore.delete",
+        "spesa_ricorrente.view",
+        "spesa_ricorrente.create",
+        "spesa_ricorrente.edit",
+        "spesa_ricorrente.delete",
     ],
 
     # Dashboard widgets
@@ -168,6 +179,14 @@ manifest = {
             "icon": "building-2",
             "order_index": 30,
             "required_permission": "condominio.view"
+        },
+        {
+            "id": "immobili.conduttori",
+            "label": "Conduttori",
+            "path": "/conduttori",
+            "icon": "user-check",
+            "order_index": 25,
+            "required_permission": "conduttore.view"
         },
         {
             "id": "immobili.certificati",
