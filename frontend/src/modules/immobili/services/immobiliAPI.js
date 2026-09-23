@@ -44,10 +44,10 @@ export const proprietariAPI = {
 // Diritti Immobile API
 export const dirittiImmobileAPI = {
   getAll: (immobileId = null, proprietarioId = null) => api.get('/diritti-immobile/', {
-    params: { immobile_id: immobileId, proprietario_id: proprietarioId }
+    params: { unita_immobiliare_id: immobileId, proprietario_id: proprietarioId }
   }),
   getById: (id) => api.get(`/diritti-immobile/${id}`),
-  getByImmobile: (immobileId) => api.get(`/diritti-immobile/immobile/${immobileId}`),
+  getByImmobile: (immobileId) => api.get(`/diritti-immobile/unita-immobiliare/${immobileId}`),
   getByProprietario: (proprietarioId) => api.get(`/diritti-immobile/proprietario/${proprietarioId}`),
   create: (data) => api.post('/diritti-immobile/', data),
   update: (id, data) => api.put(`/diritti-immobile/${id}`, data),

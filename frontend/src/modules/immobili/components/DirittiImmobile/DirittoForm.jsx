@@ -57,7 +57,7 @@ function DirittoForm({ immobileId, onClose, onComplete }) {
 
     try {
       const dataToSend = {
-        immobile_id: immobileId,
+        unita_immobiliare_id: immobileId,
         proprietario_id: parseInt(formData.proprietario_id),
         tipo_diritto: formData.tipo_diritto,
         quota_percentuale: formData.quota_percentuale ? parseFloat(formData.quota_percentuale) : null,
