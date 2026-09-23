@@ -51,6 +51,17 @@ module_version_table = context.get_x_argument(as_dictionary=True).get('module_ve
 def _normalize_prefix(prefix: str) -> str:
     if not prefix:
         return ""
+    # Lowercased: table-name prefixes are conventionally lowercase
+    # throughout this codebase (immo_, anag_, alng_, ...) regardless of how
+    # a module's own module_short_code happens to be cased in its manifest
+    # (e.g. immobili declares "IMMO"). Comparing/prepending case-sensitively
+    # here silently produced tables like "IMMO_immo_conduttori" for any
+    # module whose declared code didn't already match this convention's
+    # casing — found and fixed while adding immobili's Conduttore/
+    # SpesaRicorrenteImmobile migration (which sidesteps the wrapped op.*
+    # functions entirely via raw op.execute() SQL, but that's a per-
+    # migration workaround, not a fix for this function).
+    prefix = prefix.lower()
     return prefix if prefix.endswith("_") else f"{prefix}_"
 
 
@@ -59,7 +70,7 @@ def _should_prefix(name: str, prefix: str) -> bool:
         return False
     if "." in name:
         return False
-    return not name.startswith(prefix)
+    return not name.lower().startswith(prefix.lower())
 
 
 def _apply_prefix(name: str, prefix: str) -> str:
