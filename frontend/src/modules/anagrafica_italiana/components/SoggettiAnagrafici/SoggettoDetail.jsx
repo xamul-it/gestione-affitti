@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { getSoggettoById, deleteSoggetto, getSoggettoRuoli } from '../../services/anagraficaAPI';
 import { DocumentoUpload, DocumentoList, DocumentoParsingPending } from '../Documenti';
 import RuoliAziendaSection from '../RuoliAzienda/RuoliAziendaSection';
+import { formatApiError } from '../../../../utils/errorHandling';
 import './SoggettoDetail.css';
 
 /**
@@ -81,7 +82,7 @@ function SoggettoDetail() {
       navigate('/anagrafiche');
     } catch (err) {
       console.error('Error deleting soggetto:', err);
-      alert('Errore nell\'eliminazione dell\'anagrafica');
+      alert(formatApiError(err));
     }
   };
 

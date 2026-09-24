@@ -8,6 +8,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
+from sqlalchemy.exc import ProgrammingError
 from app.core.database import get_db
 from ..models import SoggettoAnagrafico, TipoSoggetto
 from app.core.models import RuoloDisponibile, SoggettoRuolo
@@ -15,6 +16,26 @@ from pydantic import BaseModel
 from datetime import date
 
 router = APIRouter(prefix="/anagrafica/soggetti-v2", tags=["Soggetti Anagrafici V2"])
+
+
+def _has_role_records(db: Session, soggetto: SoggettoAnagrafico) -> bool:
+    """
+    Whether this soggetto has any role-specialization record linked to it
+    (Proprietario/Affittuario/Tecnico — the hardcoded per-module role tables,
+    not the newer dynamic SoggettoRuolo registry, which nothing in immobili/
+    affitti_lungo currently populates when creating these roles).
+
+    A module's role table may not exist at all in a given tenant schema if
+    that module isn't enabled there, so a missing table is treated the same
+    as "no role of that kind" rather than an error.
+    """
+    for attr in ("proprietari", "affittuari", "tecnici"):
+        try:
+            if len(getattr(soggetto, attr)) > 0:
+                return True
+        except ProgrammingError:
+            db.rollback()
+    return False
 
 
 # Schemas
@@ -410,6 +431,12 @@ def delete_soggetto_v2(
 
     if not db_soggetto:
         raise HTTPException(status_code=404, detail="Soggetto non trovato")
+
+    if _has_role_records(db, db_soggetto):
+        raise HTTPException(
+            status_code=400,
+            detail="Impossibile eliminare: il soggetto ha ruoli attivi (proprietario, affittuario o tecnico). Eliminare prima i ruoli.",
+        )
 
     db.delete(db_soggetto)
     db.commit()

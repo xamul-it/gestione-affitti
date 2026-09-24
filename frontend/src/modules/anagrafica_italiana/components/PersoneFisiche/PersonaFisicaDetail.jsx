@@ -4,6 +4,7 @@ import { getSoggettoById, deleteSoggetto, getSoggettoRuoli } from '../../service
 import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import { DocumentoUpload, DocumentoList, DocumentoParsingPending } from '../Documenti';
 import RuoliAziendaSection from '../RuoliAzienda/RuoliAziendaSection';
+import { formatApiError } from '../../../../utils/errorHandling';
 import '../SoggettiAnagrafici/SoggettoDetail.css';
 
 /**
@@ -87,7 +88,7 @@ function PersonaFisicaDetail() {
       navigate('/anagrafiche/persone-fisiche');
     } catch (err) {
       console.error('Error deleting persona:', err);
-      alert('Errore nell\'eliminazione della persona');
+      alert(formatApiError(err));
     }
   };
 

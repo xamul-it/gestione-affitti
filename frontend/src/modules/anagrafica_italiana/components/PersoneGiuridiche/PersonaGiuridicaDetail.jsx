@@ -4,6 +4,7 @@ import { getSoggettoById, deleteSoggetto } from '../../services/anagraficaAPI';
 import { DocumentoUpload, DocumentoList, DocumentoParsingPending } from '../Documenti';
 import RuoliAziendaSection from '../RuoliAzienda/RuoliAziendaSection';
 import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
+import { formatApiError } from '../../../../utils/errorHandling';
 import '../SoggettiAnagrafici/SoggettoDetail.css';
 
 /**
@@ -77,7 +78,7 @@ function PersonaGiuridicaDetail() {
       navigate('/anagrafiche/persone-giuridiche');
     } catch (err) {
       console.error('Error deleting azienda:', err);
-      alert('Errore nell\'eliminazione dell\'azienda/ente');
+      alert(formatApiError(err));
     }
   };
 
