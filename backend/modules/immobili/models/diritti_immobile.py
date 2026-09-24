@@ -41,4 +41,4 @@ class DirittoImmobile(Base):
 
     # Relationships
     unita_immobiliare = relationship("UnitaImmobiliare", back_populates="diritti")
-    proprietario = relationship("Proprietario")
+    proprietario = relationship("Proprietario", back_populates="diritti_immobile")
