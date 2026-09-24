@@ -3,8 +3,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   unitaImmobiliariAPI,
   certificatiEnergeticiAPI,
-  dirittiImmobileAPI
+  dirittiImmobileAPI,
+  proprietariAPI
 } from '../modules/immobili/services/immobiliAPI';
+import { getSoggettoById } from '../modules/anagrafica_italiana/services/anagraficaAPI';
 import { contrattiAPI, speseAPI, documentiAPI } from '../services/api';
 import { UnitaImmobiliareForm } from '../modules/immobili';
 import ScadenzeSection from '../components/Platform/Scadenze/ScadenzeSection';
@@ -115,7 +117,27 @@ function ImmobileDetail() {
   const fetchDiritti = async () => {
     try {
       const response = await dirittiImmobileAPI.getByImmobile(id);
-      setDiritti(response.data);
+      const diritti = response.data;
+
+      // DirittoImmobileResponse only carries proprietario_id — resolve the
+      // display name through the proprietario's linked soggetto anagrafico.
+      const proprietariIds = [...new Set(diritti.map(d => d.proprietario_id))];
+      const proprietariById = {};
+      await Promise.all(
+        proprietariIds.map(async (propId) => {
+          try {
+            const propResp = await proprietariAPI.getById(propId);
+            const soggetto = await getSoggettoById(propResp.data.soggetto_id);
+            const nome = soggetto.ragione_sociale || [soggetto.nome, soggetto.cognome].filter(Boolean).join(' ');
+            proprietariById[propId] = { id: propId, nome: nome || `Soggetto #${propResp.data.soggetto_id}`, cognome: '' };
+          } catch (err) {
+            console.error(`Errore caricamento proprietario ${propId}:`, err);
+            proprietariById[propId] = { id: propId, nome: `Proprietario #${propId}`, cognome: '' };
+          }
+        })
+      );
+
+      setDiritti(diritti.map(d => ({ ...d, proprietario: proprietariById[d.proprietario_id] })));
     } catch (err) {
       console.error('Error fetching diritti:', err);
     } finally {
@@ -474,10 +496,10 @@ function ImmobileDetail() {
                 {diritti.map(diritto => (
                   <div key={diritto.id} className="proprietario-item">
                     <span className="prop-name">
-                      {diritto.proprietario?.nome} {diritto.proprietario?.cognome}
+                      {diritto.proprietario?.nome}
                     </span>
                     <span className="prop-quota">
-                      {diritto.percentuale_possesso}% • {diritto.tipo_diritto}
+                      {diritto.quota_percentuale != null ? `${diritto.quota_percentuale}% • ` : ''}{diritto.tipo_diritto}
                     </span>
                   </div>
                 ))}
@@ -859,7 +881,7 @@ function ProprietaSection({ diritti, loading }) {
     );
   }
 
-  const totalePossesso = diritti.reduce((sum, d) => sum + parseFloat(d.percentuale_possesso || 0), 0);
+  const totalePossesso = diritti.reduce((sum, d) => sum + parseFloat(d.quota_percentuale || 0), 0);
 
   return (
     <div>
@@ -871,10 +893,10 @@ function ProprietaSection({ diritti, loading }) {
               key={diritto.id}
               className="progress-segment"
               style={{
-                width: `${diritto.percentuale_possesso}%`,
+                width: `${diritto.quota_percentuale || 0}%`,
                 backgroundColor: `hsl(${index * 60}, 70%, 50%)`
               }}
-              title={`${diritto.proprietario?.nome} ${diritto.proprietario?.cognome}: ${diritto.percentuale_possesso}%`}
+              title={`${diritto.proprietario?.nome}: ${diritto.quota_percentuale ?? '-'}%`}
             />
           ))}
         </div>
@@ -901,8 +923,8 @@ function ProprietaSection({ diritti, loading }) {
             <tr key={diritto.id}>
               <td>
                 {diritto.proprietario && (
-                  <Link to={`/proprietari/${diritto.proprietario.id}`} className="table-link">
-                    {diritto.proprietario.nome} {diritto.proprietario.cognome}
+                  <Link to="/proprietari" className="table-link">
+                    {diritto.proprietario.nome}
                   </Link>
                 )}
               </td>
@@ -910,9 +932,9 @@ function ProprietaSection({ diritti, loading }) {
                 <span className="badge badge-info">{diritto.tipo_diritto}</span>
               </td>
               <td>
-                <strong>{diritto.percentuale_possesso}%</strong>
+                <strong>{diritto.quota_percentuale != null ? `${diritto.quota_percentuale}%` : '-'}</strong>
               </td>
-              <td>{new Date(diritto.data_inizio).toLocaleDateString('it-IT')}</td>
+              <td>{diritto.data_inizio ? new Date(diritto.data_inizio).toLocaleDateString('it-IT') : '-'}</td>
               <td>{diritto.data_fine ? new Date(diritto.data_fine).toLocaleDateString('it-IT') : 'Indefinito'}</td>
               <td>
                 <div className="action-buttons">
