@@ -118,6 +118,7 @@ class SoggettoAnagrafico(Base):
     proprietari = relationship("Proprietario", back_populates="soggetto", foreign_keys="[Proprietario.soggetto_id]")
     affittuari = relationship("Affittuario", back_populates="soggetto", foreign_keys="[Affittuario.soggetto_id]")
     tecnici = relationship("Tecnico", back_populates="soggetto", foreign_keys="[Tecnico.soggetto_id]")
+    conduttori = relationship("Conduttore", back_populates="soggetto", foreign_keys="[Conduttore.soggetto_id]")
 
     def __repr__(self):
         if self.tipo_soggetto == TipoSoggetto.PERSONA_FISICA:

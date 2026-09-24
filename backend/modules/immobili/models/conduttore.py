@@ -45,7 +45,7 @@ class Conduttore(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    soggetto = relationship("SoggettoAnagrafico", foreign_keys=[soggetto_id])
+    soggetto = relationship("SoggettoAnagrafico", foreign_keys=[soggetto_id], back_populates="conduttori")
     assegnazioni = relationship("AssegnazioneConduttore", back_populates="conduttore", passive_deletes=True)
 
     def __repr__(self):

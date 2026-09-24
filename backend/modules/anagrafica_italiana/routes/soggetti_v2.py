@@ -7,9 +7,8 @@ i ruoli specifici (proprietario, affittuario, tecnico).
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
-from sqlalchemy.exc import ProgrammingError
-from app.core.database import get_db
+from sqlalchemy import or_, inspect
+from app.core.database import get_db, get_tenant_schema
 from ..models import SoggettoAnagrafico, TipoSoggetto
 from app.core.models import RuoloDisponibile, SoggettoRuolo
 from pydantic import BaseModel
@@ -17,24 +16,38 @@ from datetime import date
 
 router = APIRouter(prefix="/anagrafica/soggetti-v2", tags=["Soggetti Anagrafici V2"])
 
+# attribute name -> the table it's backed by, for the has_table() pre-check below
+_ROLE_RELATIONSHIPS = {
+    "proprietari": "immo_proprietari",
+    "affittuari": "affittuari",
+    "tecnici": "tecnici",
+    "conduttori": "immo_conduttori",
+}
 
-def _has_role_records(db: Session, soggetto: SoggettoAnagrafico) -> bool:
+
+def _has_role_records(db: Session, soggetto: SoggettoAnagrafico, tenant_schema: Optional[str]) -> bool:
     """
     Whether this soggetto has any role-specialization record linked to it
-    (Proprietario/Affittuario/Tecnico — the hardcoded per-module role tables,
-    not the newer dynamic SoggettoRuolo registry, which nothing in immobili/
-    affitti_lungo currently populates when creating these roles).
+    (Proprietario/Affittuario/Tecnico/Conduttore — the hardcoded per-module
+    role tables, not the newer dynamic SoggettoRuolo registry, which nothing
+    in immobili/affitti_lungo currently populates when creating these roles).
 
     A module's role table may not exist at all in a given tenant schema if
-    that module isn't enabled there, so a missing table is treated the same
-    as "no role of that kind" rather than an error.
+    that module isn't enabled there. Checked via inspector.has_table() up
+    front rather than attempting the query and catching a ProgrammingError:
+    get_db() issues `SET search_path` as the first statement of the
+    session's transaction, so a mid-request rollback (e.g. from a caught
+    ProgrammingError) undoes that SET along with it, silently reverting the
+    rest of the request to the wrong schema.
     """
-    for attr in ("proprietari", "affittuari", "tecnici"):
-        try:
-            if len(getattr(soggetto, attr)) > 0:
-                return True
-        except ProgrammingError:
-            db.rollback()
+    if not tenant_schema:
+        return False
+    inspector = inspect(db.get_bind())
+    for attr, table_name in _ROLE_RELATIONSHIPS.items():
+        if not inspector.has_table(table_name, schema=tenant_schema):
+            continue
+        if len(getattr(soggetto, attr)) > 0:
+            return True
     return False
 
 
@@ -423,7 +436,8 @@ def update_soggetto_v2(
 @router.delete("/{soggetto_id}", status_code=204)
 def delete_soggetto_v2(
     soggetto_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
 ):
     db_soggetto = db.query(SoggettoAnagrafico).filter(
         SoggettoAnagrafico.id == soggetto_id
@@ -432,10 +446,10 @@ def delete_soggetto_v2(
     if not db_soggetto:
         raise HTTPException(status_code=404, detail="Soggetto non trovato")
 
-    if _has_role_records(db, db_soggetto):
+    if _has_role_records(db, db_soggetto, tenant_schema):
         raise HTTPException(
             status_code=400,
-            detail="Impossibile eliminare: il soggetto ha ruoli attivi (proprietario, affittuario o tecnico). Eliminare prima i ruoli.",
+            detail="Impossibile eliminare: il soggetto ha ruoli attivi (proprietario, affittuario, tecnico o conduttore). Eliminare prima i ruoli.",
         )
 
     db.delete(db_soggetto)
