@@ -166,9 +166,21 @@ class SyncScheduler:
 
             logger.info(f"Sync scheduler started (interval: {self.interval_hours} hours)")
 
-            # Run initial sync immediately
-            logger.info("Running initial sync...")
-            self.sync_job()
+            # Run an initial sync soon, but as a one-off job on the
+            # scheduler's own background thread rather than calling
+            # sync_job() synchronously here: this method is now invoked
+            # from register_module(app), which runs at app.main import
+            # time (before any ASGI server is listening, and before any
+            # process — including the test suite's app fixture — has
+            # asked for one) rather than only when the app actually
+            # starts serving, so blocking here on real network I/O across
+            # every configured calendar would block that import instead.
+            self.scheduler.add_job(
+                func=self.sync_job,
+                id='ical_sync_job_initial',
+                name='iCal Synchronization (initial)',
+                replace_existing=True,
+            )
 
         except Exception as e:
             logger.error(f"Failed to start scheduler: {str(e)}", exc_info=True)

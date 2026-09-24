@@ -426,6 +426,7 @@ async def register_module_resources():
 
         except Exception as e:
             logger.warning(f"⚠️  Could not register platform menu items: {e}")
+            db.rollback()
 
         # Registra menu items e widget per ogni modulo installato (dinamico)
         import importlib as _importlib
@@ -461,6 +462,7 @@ async def register_module_resources():
                         logger.info(f"✅ [{module_name}] menu: {r.get('items_registered', 0)} items")
                     except Exception as e:
                         logger.warning(f"⚠️  [{module_name}] menu register failed: {e}")
+                        db.rollback()
 
                 if widgets:
                     try:
@@ -474,6 +476,7 @@ async def register_module_resources():
                         logger.info(f"✅ [{module_name}] widgets: {r.get('widgets_registered', 0)} registered")
                     except Exception as e:
                         logger.warning(f"⚠️  [{module_name}] widget register failed: {e}")
+                        db.rollback()
 
             except Exception as e:
                 logger.warning(f"⚠️  Could not process manifest {manifest_file}: {e}")
