@@ -39,7 +39,7 @@ def get_canali(
         query = query.filter(Canale.attivo == attivo)
 
     totale = query.count()
-    canali = query.order_by(Canale.ordine, Canale.nome).offset(skip).limit(limit).all()
+    canali = query.order_by(Canale.nome).offset(skip).limit(limit).all()
 
     return CanaleListResponse(
         canali=canali,
@@ -58,7 +58,7 @@ def get_canali_attivi(db: Session = Depends(get_db)):
     """
     canali = db.query(Canale).filter(
         Canale.attivo == True
-    ).order_by(Canale.ordine, Canale.nome).all()
+    ).order_by(Canale.nome).all()
 
     return canali
 
@@ -73,7 +73,7 @@ def get_canali_legenda(db: Session = Depends(get_db)):
     """
     canali = db.query(Canale).filter(
         Canale.attivo == True
-    ).order_by(Canale.ordine).all()
+    ).order_by(Canale.nome).all()
 
     return {
         "canali": [

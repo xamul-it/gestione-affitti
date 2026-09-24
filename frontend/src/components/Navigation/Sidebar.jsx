@@ -45,6 +45,7 @@ function Sidebar() {
     if (path.startsWith('/unita-immobiliari') ||
         path.startsWith('/terreni') ||
         path.startsWith('/proprietari') ||
+        path.startsWith('/conduttori') ||
         path.startsWith('/condomini') ||
         path.startsWith('/certificati-energetici') ||
         path.startsWith('/tabelle-millesimali') ||
@@ -62,6 +63,14 @@ function Sidebar() {
         path.startsWith('/tecnici')) {
       return 'affitti_lungo';
     }
+
+    // Affitti Brevi module routes
+    if (path.startsWith('/affitti-brevi')) {
+      return 'affitti_brevi';
+    }
+
+    // Gestione PEC module routes
+    if (path.startsWith('/pec')) return 'gestione_pec';
 
     // Test pages - show platform menu
     if (path.startsWith('/test/')) {

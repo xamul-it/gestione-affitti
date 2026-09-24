@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { calendariAPI } from '../../services/affittiBreviAPI';
+import { calendariAPI, syncAPI } from '../../services/affittiBreviAPI';
 import CalendarioForm from './CalendarioForm';
 import './Calendari.css';
 
@@ -9,6 +9,8 @@ function CalendariList() {
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingCalendario, setEditingCalendario] = useState(null);
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [syncingId, setSyncingId] = useState(null);
 
   useEffect(() => {
     fetchCalendari();
@@ -43,6 +45,34 @@ function CalendariList() {
   const handleEdit = (calendario) => {
     setEditingCalendario(calendario);
     setShowForm(true);
+  };
+
+  const handleSyncAll = async () => {
+    setSyncingAll(true);
+    setError(null);
+    try {
+      await syncAPI.syncAll();
+      await fetchCalendari();
+    } catch (err) {
+      setError('Errore durante la sincronizzazione');
+      console.error(err);
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
+  const handleSyncOne = async (id) => {
+    setSyncingId(id);
+    setError(null);
+    try {
+      await syncAPI.syncCalendario(id);
+      await fetchCalendari();
+    } catch (err) {
+      setError('Errore durante la sincronizzazione del calendario');
+      console.error(err);
+    } finally {
+      setSyncingId(null);
+    }
   };
 
   const handleFormClose = () => {
@@ -87,18 +117,22 @@ function CalendariList() {
   };
 
   if (loading) return <div className="loading">Caricamento...</div>;
-  if (error) return <div className="error">{error}</div>;
 
   return (
     <div className="calendari-container">
       <div className="header">
         <h1>Calendari iCal</h1>
         <div className="header-actions">
+          <button onClick={handleSyncAll} className="btn btn-secondary" disabled={syncingAll || calendari.length === 0}>
+            {syncingAll ? 'Sincronizzazione...' : '🔄 Sincronizza tutti'}
+          </button>
           <button onClick={() => setShowForm(true)} className="btn btn-primary">
             + Nuovo Calendario
           </button>
         </div>
       </div>
+
+      {error && <div className="error">{error}</div>}
 
       {showForm && (
         <CalendarioForm
@@ -156,6 +190,14 @@ function CalendariList() {
                     </span>
                   </td>
                   <td>
+                    <button
+                      onClick={() => handleSyncOne(calendario.id)}
+                      className="btn btn-sm btn-secondary"
+                      disabled={syncingId === calendario.id}
+                      title="Sincronizza ora"
+                    >
+                      {syncingId === calendario.id ? '...' : '🔄'}
+                    </button>
                     <button onClick={() => handleEdit(calendario)} className="btn btn-sm btn-secondary">
                       Modifica
                     </button>

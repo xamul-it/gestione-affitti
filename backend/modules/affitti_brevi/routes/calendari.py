@@ -42,16 +42,16 @@ def get_calendario(calendario_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=CalendarioIcalResponse, status_code=status.HTTP_201_CREATED)
 def create_calendario(calendario: CalendarioIcalCreate, db: Session = Depends(get_db)):
     """Crea una nuova configurazione calendario iCal"""
-    # Check if calendar already exists for this property/platform combination
+    # Check if calendar already exists for this property/channel combination
     existing = db.query(CalendarioIcal).filter(
         CalendarioIcal.unita_immobiliare_id == calendario.unita_immobiliare_id,
-        CalendarioIcal.portale == calendario.portale
+        CalendarioIcal.canale_id == calendario.canale_id
     ).first()
 
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Calendario {calendario.portale.value} già configurato per questo immobile"
+            detail="Calendario già configurato per questo immobile e questo canale"
         )
 
     new_calendario = CalendarioIcal(**calendario.model_dump())

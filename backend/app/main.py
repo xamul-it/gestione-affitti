@@ -323,14 +323,29 @@ async def stop_background_schedulers():
 # Startup event: registra menu e widget del modulo Affitti
 @app.on_event("startup")
 async def register_module_resources():
-    """Registra menu items e widget dei moduli al startup"""
-    if os.getenv("REGISTER_MENUS_ON_STARTUP", "").lower() not in {"1", "true", "yes"}:
-        logger.info("Skipping menu/widget registration at startup (REGISTER_MENUS_ON_STARTUP not enabled)")
+    """
+    Registra menu items e widget dei moduli al startup.
+
+    Chiama la logica di registrazione direttamente in-process (stessa
+    funzione usata dalle route /platform/menu/register e
+    /platform/dashboard/register-widgets) invece di un self-HTTP-call.
+    Il self-HTTP-call precedente correva il rischio di una race condition
+    con il server ASGI non ancora in ascolto durante il proprio stesso
+    startup, causando "All connection attempts failed" e menu/widget mai
+    registrati — non solo in modalità --reload.
+    """
+    if os.getenv("REGISTER_MENUS_ON_STARTUP", "").lower() in {"0", "false", "no"}:
+        logger.info("Skipping menu/widget registration at startup (REGISTER_MENUS_ON_STARTUP disabled)")
         return
 
-    import httpx
+    from sqlalchemy import text as _text
+    from app.core.platform.routes.menu import register_menu_items, MenuRegisterRequest, MenuItemCreate
+    from app.core.platform.routes.dashboard import register_widgets, WidgetRegisterRequest, WidgetCreate
 
-    async with httpx.AsyncClient() as client:
+    db = SessionLocal()
+    try:
+        db.connection().execute(_text("SET search_path TO public"))
+
         # Registra menu items della PIATTAFORMA
         try:
             PLATFORM_MENU = [
@@ -400,20 +415,14 @@ async def register_module_resources():
             ]
 
             logger.info("Registering platform menu items...")
-            response = await client.post(
-                f"http://localhost:8000{settings.API_V1_STR}/platform/menu/register",
-                json={
-                    "module_id": "platform",
-                    "items": PLATFORM_MENU
-                },
-                timeout=5.0
+            result = register_menu_items(
+                MenuRegisterRequest(
+                    module_id="platform",
+                    items=[MenuItemCreate(**item) for item in PLATFORM_MENU],
+                ),
+                db=db,
             )
-
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Registered {result['items_registered']} platform menu items")
-            else:
-                logger.error(f"❌ Failed to register platform menu items: HTTP {response.status_code}")
+            logger.info(f"✅ Registered {result['items_registered']} platform menu items")
 
         except Exception as e:
             logger.warning(f"⚠️  Could not register platform menu items: {e}")
@@ -442,36 +451,34 @@ async def register_module_resources():
 
                 if menu_items:
                     try:
-                        response = await client.post(
-                            f"http://localhost:8000{settings.API_V1_STR}/platform/menu/register",
-                            json={"module_id": module_name, "items": menu_items},
-                            timeout=5.0,
+                        r = register_menu_items(
+                            MenuRegisterRequest(
+                                module_id=module_name,
+                                items=[MenuItemCreate(**item) for item in menu_items],
+                            ),
+                            db=db,
                         )
-                        if response.status_code == 200:
-                            r = response.json()
-                            logger.info(f"✅ [{module_name}] menu: {r.get('items_registered', 0)} items")
-                        else:
-                            logger.error(f"❌ [{module_name}] menu register: HTTP {response.status_code}")
+                        logger.info(f"✅ [{module_name}] menu: {r.get('items_registered', 0)} items")
                     except Exception as e:
                         logger.warning(f"⚠️  [{module_name}] menu register failed: {e}")
 
                 if widgets:
                     try:
-                        response = await client.post(
-                            f"http://localhost:8000{settings.API_V1_STR}/platform/dashboard/register-widgets",
-                            json={"module_id": module_name, "widgets": widgets},
-                            timeout=5.0,
+                        r = register_widgets(
+                            WidgetRegisterRequest(
+                                module_id=module_name,
+                                widgets=[WidgetCreate(**w) for w in widgets],
+                            ),
+                            db=db,
                         )
-                        if response.status_code == 200:
-                            r = response.json()
-                            logger.info(f"✅ [{module_name}] widgets: {r.get('widgets_registered', 0)} registered")
-                        else:
-                            logger.error(f"❌ [{module_name}] widget register: HTTP {response.status_code}")
+                        logger.info(f"✅ [{module_name}] widgets: {r.get('widgets_registered', 0)} registered")
                     except Exception as e:
                         logger.warning(f"⚠️  [{module_name}] widget register failed: {e}")
 
             except Exception as e:
                 logger.warning(f"⚠️  Could not process manifest {manifest_file}: {e}")
+    finally:
+        db.close()
 
 
 @app.get("/")

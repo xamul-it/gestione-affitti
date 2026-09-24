@@ -9,10 +9,88 @@ from apscheduler.triggers.interval import IntervalTrigger
 from datetime import datetime
 import logging
 
-from app.core.database import SessionLocal
-from .ical_parser import ICalParser
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+from app.core.database import SessionLocal, engine
+from .ical_sync_service import ICalSyncService
 
 logger = logging.getLogger(__name__)
+
+_EMPTY_STATS = {
+    'calendari_processati': 0,
+    'prenotazioni_create': 0,
+    'prenotazioni_aggiornate': 0,
+    'prenotazioni_saltate': 0,
+    'errori': 0,
+    'dettagli': [],
+}
+
+
+def _sync_tenant(tenant_schema: str) -> dict:
+    """
+    Run the iCal sync for one tenant.
+
+    Uses ICalSyncService (the implementation routes/sync.py's manual
+    "sync now" endpoints also use, and the one SyncAllResponse/SyncResult
+    are actually shaped for) rather than the older, parallel ICalParser —
+    which targets model/field names (CalendarioIcal.portale,
+    Prenotazione.calendario_ical_id/portale_origine) that predate the
+    Canale/CalendarioCanale refactor and no longer exist, so any call
+    through it fails immediately.
+
+    Binds to a single, explicitly-checked-out Connection for its whole
+    lifetime rather than the engine directly: a Session bound to the
+    engine returns its connection to the pool on every commit/rollback,
+    and the next statement can then land on a *different* pooled
+    connection that still carries a stale search_path from a previous
+    tenant's run (same hazard app.core.platform_services.
+    scadenza_reminder_job.run_reminder_check documents and avoids the
+    same way).
+    """
+    if not tenant_schema.replace('_', '').replace('-', '').isalnum():
+        logger.error("Invalid tenant schema, skipping sync: %s", tenant_schema)
+        return {**_EMPTY_STATS, 'errori': 1}
+
+    connection = engine.connect()
+    try:
+        connection.execute(text(f"SET search_path TO {tenant_schema}, public"))
+        connection.commit()
+
+        db = Session(bind=connection)
+        try:
+            return ICalSyncService(db).sync_all_calendari()
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error("iCal sync failed for tenant %s: %s", tenant_schema, e, exc_info=True)
+        return {**_EMPTY_STATS, 'errori': 1}
+    finally:
+        connection.close()
+
+
+def _get_active_tenant_schemas() -> list:
+    """Schemas of active tenants that actually have affitti_brevi enabled."""
+    from app.core.services.tenant_service import TenantService
+
+    db = SessionLocal()
+    try:
+        db.connection().execute(text("SET search_path TO public"))
+        rows = db.execute(
+            text("SELECT id, schema_name FROM public.core_tenants WHERE active = true OR active IS NULL")
+        ).fetchall()
+        schemas = []
+        for tenant_id, schema_name in rows:
+            try:
+                if "affitti_brevi" in TenantService.get_enabled_modules(tenant_id, db):
+                    schemas.append(schema_name)
+            except Exception as e:
+                logger.warning("Could not check enabled modules for tenant %s: %s", schema_name, e)
+        return schemas
+    except Exception as e:
+        logger.warning("Could not list tenants for iCal sync: %s", e)
+        return []
+    finally:
+        db.close()
 
 
 class SyncScheduler:
@@ -37,32 +115,28 @@ class SyncScheduler:
         """
         Sync job executed by scheduler
 
-        This function is called periodically to sync all active calendars.
+        This function is called periodically to sync all active calendars,
+        for every active tenant (this is a single global scheduler, not a
+        per-request session — it must iterate tenants itself).
         """
         logger.info("Starting scheduled iCal sync job")
         start_time = datetime.now()
 
-        # Create database session
-        db = SessionLocal()
-        try:
-            # Create parser and sync all calendars
-            parser = ICalParser(db)
-            stats = parser.sync_all_calendari()
+        totals = dict(_EMPTY_STATS)
+        del totals['dettagli']
+        for tenant_schema in _get_active_tenant_schemas():
+            stats = _sync_tenant(tenant_schema)
+            for key in totals:
+                totals[key] += stats.get(key, 0)
 
-            # Log results
-            duration = (datetime.now() - start_time).total_seconds()
-            logger.info(
-                f"Sync job completed in {duration:.2f}s: "
-                f"{stats['calendari_processed']} calendars processed, "
-                f"{stats['prenotazioni_created']} created, "
-                f"{stats['prenotazioni_updated']} updated, "
-                f"{stats['errors']} errors"
-            )
-
-        except Exception as e:
-            logger.error(f"Sync job failed: {str(e)}", exc_info=True)
-        finally:
-            db.close()
+        duration = (datetime.now() - start_time).total_seconds()
+        logger.info(
+            f"Sync job completed in {duration:.2f}s: "
+            f"{totals['calendari_processati']} calendars processed, "
+            f"{totals['prenotazioni_create']} created, "
+            f"{totals['prenotazioni_aggiornate']} updated, "
+            f"{totals['errori']} errors"
+        )
 
     def start(self):
         """

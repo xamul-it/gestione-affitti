@@ -33,6 +33,17 @@ export const calendariAPI = {
   delete: (id) => api.delete(`/calendari/${id}`),
 };
 
+// Sincronizzazione iCal API
+export const syncAPI = {
+  syncAll: () => api.post('/sync/all'),
+  syncCalendario: (calendarioId) => api.post(`/sync/calendario/${calendarioId}`),
+  getStatus: () => api.get('/sync/status'),
+  getCalendarioStatus: (calendarioId) => api.get(`/sync/calendario/${calendarioId}/status`),
+  attiva: (calendarioId) => api.post(`/sync/calendario/${calendarioId}/attiva`),
+  disattiva: (calendarioId) => api.post(`/sync/calendario/${calendarioId}/disattiva`),
+  resetErrore: (calendarioId) => api.post(`/sync/calendario/${calendarioId}/reset-errore`),
+};
+
 // Prenotazioni API
 export const prenotazioniAPI = {
   getAll: (params = {}) => api.get('/prenotazioni/', { params }),

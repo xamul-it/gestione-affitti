@@ -102,6 +102,14 @@ MENU_ITEMS = [
         "required_permission": "proprietario.view"
     },
     {
+        "id": "immobili.conduttori",
+        "label": "Conduttori",
+        "path": "/conduttori",
+        "icon": "user-check",
+        "order_index": 25,
+        "required_permission": "conduttori.read"
+    },
+    {
         "id": "immobili.condomini",
         "label": "Condomini",
         "path": "/condomini",

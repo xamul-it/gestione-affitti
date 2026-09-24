@@ -186,7 +186,7 @@ manifest = {
             "path": "/conduttori",
             "icon": "user-check",
             "order_index": 25,
-            "required_permission": "conduttore.view"
+            "required_permission": "conduttori.read"
         },
         {
             "id": "immobili.certificati",

@@ -95,7 +95,6 @@ def register_module(app):
         prenotazioni,
         soggiorni,
         sync,
-        tasse,
     )
 
     # Register routes
@@ -109,7 +108,19 @@ def register_module(app):
     app.include_router(prenotazioni.router, prefix=prefix, tags=tags)
     app.include_router(soggiorni.router, prefix=prefix, tags=tags)
     app.include_router(sync.router, prefix=prefix, tags=tags)
-    app.include_router(tasse.router, prefix=prefix, tags=tags)
+    # "tasse" disabilitato — vedi nota in routes/__init__.py
 
     print("[Affitti Brevi] Module registered successfully!")
-    print("[Affitti Brevi] Routes: canali, calendari, calendario-unificato, prenotazioni, soggiorni, sync, tasse")
+    print("[Affitti Brevi] Routes: canali, calendari, calendario-unificato, prenotazioni, soggiorni, sync")
+
+    # Avvia lo scheduler di sincronizzazione iCal automatica.
+    # start() è no-op (con un warning) se già in esecuzione — protegge da
+    # doppie attivazioni causate da hot-reload di uvicorn.
+    try:
+        from .services.sync_scheduler import get_scheduler
+        scheduler = get_scheduler()
+        if not scheduler.is_running:
+            scheduler.start()
+            print("[Affitti Brevi] Sync scheduler iCal avviato")
+    except Exception as exc:
+        logger.error("[Affitti Brevi] Impossibile avviare lo scheduler di sync iCal: %s", exc, exc_info=True)

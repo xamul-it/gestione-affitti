@@ -76,8 +76,15 @@ def sync_single_calendario(
     service = ICalSyncService(db)
 
     try:
-        result = service.sync_calendario(calendario_id)
-        return SyncResult(**result)
+        created, aggiornate, saltate, errore = service.sync_calendario(calendario_id)
+        return SyncResult(
+            calendario_id=calendario_id,
+            canale=calendario.canale.codice if calendario.canale else "?",
+            create=created,
+            aggiornate=aggiornate,
+            saltate=saltate,
+            errore=errore,
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -124,8 +131,15 @@ def sync_calendari_unita(
     for calendario in calendari:
         if calendario.url_ical:
             try:
-                result = service.sync_calendario(calendario.id)
-                results.append(result)
+                created, aggiornate, saltate, errore = service.sync_calendario(calendario.id)
+                results.append({
+                    "calendario_id": calendario.id,
+                    "canale": calendario.canale.codice if calendario.canale else "UNKNOWN",
+                    "create": created,
+                    "aggiornate": aggiornate,
+                    "saltate": saltate,
+                    "errore": errore,
+                })
             except Exception as e:
                 results.append({
                     "calendario_id": calendario.id,

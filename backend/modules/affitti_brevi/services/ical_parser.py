@@ -20,8 +20,8 @@ modules_dir = os.path.join(os.path.dirname(__file__), '../../../modules')
 if modules_dir not in sys.path:
     sys.path.insert(0, modules_dir)
 
-from affitti_brevi.models.calendario_ical import CalendarioIcal, StatoSincronizzazione
-from affitti_brevi.models.prenotazione import Prenotazione, StatoPrenotazione, OriginePrenotazione
+from affitti_brevi.models import CalendarioIcal, StatoSincronizzazione
+from affitti_brevi.models.prenotazione import Prenotazione, StatoPrenotazione
 from affitti_brevi.services.price_extractor import PriceExtractor
 
 logger = logging.getLogger(__name__)
@@ -219,21 +219,15 @@ class ICalParser:
             calendar = self.parse_ical_content(ical_data)
             events = self.extract_events(calendar)
 
-            # Map platform to enum
-            portale_map = {
-                'BOOKING_COM': OriginePrenotazione.BOOKING_COM,
-                'AIRBNB': OriginePrenotazione.AIRBNB,
-                'VRBO': OriginePrenotazione.VRBO,
-                'ALTRO': OriginePrenotazione.ALTRO,
-            }
-            portale_origine = portale_map.get(calendario.portale.value, OriginePrenotazione.ALTRO)
-
             # Create/update prenotazioni
             for event in events:
                 try:
+                    # Scoped to this calendario (unit+channel), not just unit: two
+                    # channels for the same unit can otherwise collide on a
+                    # coincidentally-equal external booking code.
                     existing = self.db.query(Prenotazione).filter(
                         Prenotazione.codice_prenotazione == event['codice_prenotazione'],
-                        Prenotazione.portale_origine == portale_origine,
+                        Prenotazione.calendario_canale_id == calendario.id,
                         Prenotazione.unita_immobiliare_id == calendario.unita_immobiliare_id
                     ).first()
 
@@ -249,9 +243,8 @@ class ICalParser:
                         # Create new prenotazione
                         new_prenotazione = Prenotazione(
                             unita_immobiliare_id=calendario.unita_immobiliare_id,
-                            calendario_ical_id=calendario.id,
+                            calendario_canale_id=calendario.id,
                             codice_prenotazione=event['codice_prenotazione'],
-                            portale_origine=portale_origine,
                             data_checkin=event['data_checkin'],
                             data_checkout=event['data_checkout'],
                             numero_ospiti=1,  # Default, can be updated manually
