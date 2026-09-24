@@ -34,27 +34,29 @@ function DirittiImmobileSection({ immobileId }) {
       // Carica i dati dei proprietari, risolvendo il nome tramite il soggetto anagrafico collegato
       const proprietariIds = [...new Set(response.data.map(d => d.proprietario_id))];
       const proprietariData = {};
-      for (const id of proprietariIds) {
-        let propResp;
-        try {
-          propResp = await proprietariAPI.getById(id);
-        } catch (err) {
-          console.error(`Errore caricamento proprietario ${id}:`, err);
-          continue;
-        }
-        try {
-          const soggetto = await getSoggettoById(propResp.data.soggetto_id);
-          const nome = soggetto.ragione_sociale || [soggetto.nome, soggetto.cognome].filter(Boolean).join(' ');
-          proprietariData[id] = {
-            ...propResp.data,
-            nomeVisualizzato: nome || `Soggetto #${propResp.data.soggetto_id}`,
-            codiceFiscale: soggetto.codice_fiscale,
-          };
-        } catch (err) {
-          console.error(`Errore caricamento soggetto ${propResp.data.soggetto_id} per proprietario ${id}:`, err);
-          proprietariData[id] = { ...propResp.data, nomeVisualizzato: `Soggetto #${propResp.data.soggetto_id}`, codiceFiscale: null };
-        }
-      }
+      await Promise.all(
+        proprietariIds.map(async (id) => {
+          let propResp;
+          try {
+            propResp = await proprietariAPI.getById(id);
+          } catch (err) {
+            console.error(`Errore caricamento proprietario ${id}:`, err);
+            return;
+          }
+          try {
+            const soggetto = await getSoggettoById(propResp.data.soggetto_id);
+            const nome = soggetto.ragione_sociale || [soggetto.nome, soggetto.cognome].filter(Boolean).join(' ');
+            proprietariData[id] = {
+              ...propResp.data,
+              nomeVisualizzato: nome || `Soggetto #${propResp.data.soggetto_id}`,
+              codiceFiscale: soggetto.codice_fiscale,
+            };
+          } catch (err) {
+            console.error(`Errore caricamento soggetto ${propResp.data.soggetto_id} per proprietario ${id}:`, err);
+            proprietariData[id] = { ...propResp.data, nomeVisualizzato: `Soggetto #${propResp.data.soggetto_id}`, codiceFiscale: null };
+          }
+        })
+      );
       setProprietari(proprietariData);
       setError(null);
     } catch (err) {
