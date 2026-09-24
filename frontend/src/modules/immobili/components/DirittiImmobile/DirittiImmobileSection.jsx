@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { dirittiImmobileAPI, proprietariAPI } from '../../services/immobiliAPI';
+import { getSoggettoById } from '../../../anagrafica_italiana/services/anagraficaAPI';
 import DirittoForm from './DirittoForm';
 import './DirittiImmobile.css';
 
@@ -30,15 +31,28 @@ function DirittiImmobileSection({ immobileId }) {
       const response = await dirittiImmobileAPI.getByImmobile(immobileId);
       setDiritti(response.data);
 
-      // Carica i dati dei proprietari
+      // Carica i dati dei proprietari, risolvendo il nome tramite il soggetto anagrafico collegato
       const proprietariIds = [...new Set(response.data.map(d => d.proprietario_id))];
       const proprietariData = {};
       for (const id of proprietariIds) {
+        let propResp;
         try {
-          const propResp = await proprietariAPI.getById(id);
-          proprietariData[id] = propResp.data;
+          propResp = await proprietariAPI.getById(id);
         } catch (err) {
           console.error(`Errore caricamento proprietario ${id}:`, err);
+          continue;
+        }
+        try {
+          const soggetto = await getSoggettoById(propResp.data.soggetto_id);
+          const nome = soggetto.ragione_sociale || [soggetto.nome, soggetto.cognome].filter(Boolean).join(' ');
+          proprietariData[id] = {
+            ...propResp.data,
+            nomeVisualizzato: nome || `Soggetto #${propResp.data.soggetto_id}`,
+            codiceFiscale: soggetto.codice_fiscale,
+          };
+        } catch (err) {
+          console.error(`Errore caricamento soggetto ${propResp.data.soggetto_id} per proprietario ${id}:`, err);
+          proprietariData[id] = { ...propResp.data, nomeVisualizzato: `Soggetto #${propResp.data.soggetto_id}`, codiceFiscale: null };
         }
       }
       setProprietari(proprietariData);
@@ -107,9 +121,9 @@ function DirittiImmobileSection({ immobileId }) {
               <div key={diritto.id} className="diritto-card">
                 <div className="diritto-info">
                   <div className="diritto-nome">
-                    {proprietario ? `${proprietario.nome} ${proprietario.cognome}` : 'Caricamento...'}
-                    {proprietario && proprietario.codice_fiscale && (
-                      <span className="diritto-cf"> - CF: {proprietario.codice_fiscale}</span>
+                    {proprietario ? proprietario.nomeVisualizzato : 'Caricamento...'}
+                    {proprietario && proprietario.codiceFiscale && (
+                      <span className="diritto-cf"> - CF: {proprietario.codiceFiscale}</span>
                     )}
                   </div>
                   <div className="diritto-meta">

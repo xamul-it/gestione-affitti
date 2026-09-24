@@ -34,7 +34,7 @@ export const unitaImmobiliariAPI = {
 
 // Proprietari API
 export const proprietariAPI = {
-  getAll: (attiviSolo = false) => api.get('/proprietari/', { params: { attivi_solo: attiviSolo } }),
+  getAll: () => api.get('/proprietari/'),
   getById: (id) => api.get(`/proprietari/${id}`),
   create: (data) => api.post('/proprietari/', data),
   update: (id, data) => api.put(`/proprietari/${id}`, data),

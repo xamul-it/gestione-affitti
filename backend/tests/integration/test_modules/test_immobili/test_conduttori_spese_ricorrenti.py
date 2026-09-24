@@ -24,7 +24,7 @@ from immobili.models import (
     SpesaRicorrenteImmobile,
     UnitaImmobiliare,
 )
-from immobili.routes.conduttori import create_conduttore
+from immobili.routes.conduttori import create_conduttore, delete_conduttore
 from immobili.routes.assegnazioni_conduttore import create_assegnazione
 from immobili.routes.spese_ricorrenti import (
     create_spesa_ricorrente,
@@ -152,6 +152,31 @@ def test_create_conduttore_and_assegnazione(pg_session, soggetto_conduttore, uni
         if conduttore:
             pg_session.query(Conduttore).filter_by(id=conduttore.id).delete()
         pg_session.commit()
+
+
+def test_delete_conduttore_cascades_assegnazioni(pg_session, soggetto_conduttore, unita):
+    """Regression test: deleting a Conduttore with an existing
+    AssegnazioneConduttore used to raise a NotNullViolation, because the
+    ORM tried to null out the (non-nullable) conduttore_id FK on the child
+    instead of trusting the DB's real ON DELETE CASCADE constraint."""
+    conduttore = create_conduttore(
+        ConduttoreCreate(soggetto_id=soggetto_conduttore.id),
+        db=pg_session,
+    )
+    assegnazione = create_assegnazione(
+        AssegnazioneConduttoreCreate(
+            unita_immobiliare_id=unita.id,
+            conduttore_id=conduttore.id,
+            data_inizio="2026-01-01",
+        ),
+        db=pg_session,
+    )
+    assegnazione_id = assegnazione.id
+
+    delete_conduttore(conduttore.id, db=pg_session)
+
+    assert pg_session.query(Conduttore).filter_by(id=conduttore.id).first() is None
+    assert pg_session.query(AssegnazioneConduttore).filter_by(id=assegnazione_id).first() is None
 
 
 def test_create_spesa_ricorrente_creates_linked_scadenza(pg_session, test_user, unita):

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { dirittiImmobileAPI, proprietariAPI } from '../../services/immobiliAPI';
+import { getSoggettoById } from '../../../anagrafica_italiana/services/anagraficaAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
 
 const TIPI_DIRITTO = [
@@ -29,8 +30,19 @@ function DirittoForm({ immobileId, onClose, onComplete }) {
 
   const fetchProprietari = async () => {
     try {
-      const response = await proprietariAPI.getAll(true); // solo attivi
-      setProprietari(response.data);
+      const response = await proprietariAPI.getAll();
+      const arricchiti = await Promise.all(
+        response.data.map(async (p) => {
+          try {
+            const soggetto = await getSoggettoById(p.soggetto_id);
+            const nome = soggetto.ragione_sociale || [soggetto.nome, soggetto.cognome].filter(Boolean).join(' ');
+            return { ...p, nomeVisualizzato: nome || `Soggetto #${p.soggetto_id}`, codiceFiscale: soggetto.codice_fiscale };
+          } catch (err) {
+            return { ...p, nomeVisualizzato: `Soggetto #${p.soggetto_id}`, codiceFiscale: null };
+          }
+        })
+      );
+      setProprietari(arricchiti);
     } catch (err) {
       console.error('Errore nel caricamento dei proprietari:', err);
     }
@@ -94,7 +106,7 @@ function DirittoForm({ immobileId, onClose, onComplete }) {
               <option value="">Seleziona proprietario...</option>
               {proprietari.map(prop => (
                 <option key={prop.id} value={prop.id}>
-                  {prop.nome} {prop.cognome} - {prop.codice_fiscale}
+                  {prop.nomeVisualizzato}{prop.codiceFiscale ? ` - ${prop.codiceFiscale}` : ''}
                 </option>
               ))}
             </select>

@@ -60,7 +60,11 @@ class Proprietario(Base):
 
     # Relationships
     soggetto = relationship("SoggettoAnagrafico", foreign_keys=[soggetto_id], back_populates="proprietari")
-    diritti_immobile = relationship("DirittoImmobile", back_populates="proprietario")
+    # immo_diritti_immobile has no real FK constraint in the DB (pre-existing
+    # gap across several older immobili tables — ondelete="CASCADE" above is
+    # therefore decorative), so cascade must be ORM-managed here rather than
+    # relying on passive_deletes.
+    diritti_immobile = relationship("DirittoImmobile", back_populates="proprietario", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Proprietario {self.id}: Soggetto {self.soggetto_id}>"

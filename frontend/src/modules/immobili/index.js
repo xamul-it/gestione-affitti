@@ -34,7 +34,7 @@ export { default as TerreniList } from './components/Terreni/TerreniList';
 export { default as TerrenoForm } from './components/Terreni/TerrenoForm';
 
 // Proprietari
-export { default as ProprietariList } from './pages/ProprietariPage';  // New migrated version
+export { default as ProprietariList } from './components/Proprietari/ProprietariList';
 export { default as ProprietarioForm } from './components/Proprietari/ProprietarioForm';
 
 // Condomini

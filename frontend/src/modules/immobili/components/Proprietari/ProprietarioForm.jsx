@@ -1,58 +1,95 @@
 import { useState, useEffect } from 'react';
 import { proprietariAPI } from '../../services/immobiliAPI';
+import { getSoggettiAnagrafici } from '../../../anagrafica_italiana/services/anagraficaAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
+import './Proprietari.css';
+
+function displaySoggetto(soggetto) {
+  if (!soggetto) return '';
+  const nomeCompleto = soggetto.ragione_sociale || [soggetto.nome, soggetto.cognome].filter(Boolean).join(' ');
+  const identificativo = soggetto.codice_fiscale || soggetto.partita_iva || '';
+  return identificativo ? `${nomeCompleto} (${identificativo})` : nomeCompleto;
+}
 
 function ProprietarioForm({ proprietario, onClose }) {
-  const [formData, setFormData] = useState({
-    nome: '',
-    cognome: '',
-    codice_fiscale: '',
-    data_nascita: '',
-    luogo_nascita: '',
-    email: '',
-    telefono: '',
-    cellulare: '',
-    indirizzo: '',
-    citta: '',
-    cap: '',
-    provincia: '',
-    note: '',
-    attivo: true
-  });
+  const [soggettoId, setSoggettoId] = useState(proprietario?.soggetto_id || null);
+  const [soggettoSelezionato, setSoggettoSelezionato] = useState(null);
+  const [noteProprietario, setNoteProprietario] = useState(proprietario?.note_proprietario || '');
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [soggettiCandidati, setSoggettiCandidati] = useState([]);
+  const [showResults, setShowResults] = useState(false);
+  const [loadingSoggetti, setLoadingSoggetti] = useState(false);
+
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (proprietario) {
-      setFormData(proprietario);
+    // In edit mode, we don't have the soggetto's anagrafica details from the
+    // proprietario record alone (it only stores soggetto_id) — show the ID as
+    // a fallback label. The backend doesn't currently expose an endpoint to
+    // fetch a single soggetto's summary from here without a broader fetch.
+    if (proprietario?.soggetto_id && !soggettoSelezionato) {
+      setSoggettoSelezionato({ id: proprietario.soggetto_id, nome: `Soggetto #${proprietario.soggetto_id}` });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proprietario]);
+
+  const handleSearch = async (term) => {
+    setSearchTerm(term);
+    if (!term || term.trim().length < 2) {
+      setSoggettiCandidati([]);
+      setShowResults(false);
+      return;
+    }
+    setLoadingSoggetti(true);
+    try {
+      // No server-side search on this endpoint today — fetch a page and
+      // filter client-side. Fine for the realistic size of an anagrafica
+      // registry; revisit if this ever needs to scale to thousands.
+      const tutti = await getSoggettiAnagrafici({ limit: 200 });
+      const termLower = term.toLowerCase();
+      const filtrati = tutti.filter((s) => {
+        const nomeCompleto = (s.ragione_sociale || `${s.nome || ''} ${s.cognome || ''}`).toLowerCase();
+        const cf = (s.codice_fiscale || '').toLowerCase();
+        return nomeCompleto.includes(termLower) || cf.includes(termLower);
+      });
+      setSoggettiCandidati(filtrati.slice(0, 15));
+      setShowResults(true);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingSoggetti(false);
+    }
+  };
+
+  const handleSelectSoggetto = (soggetto) => {
+    setSoggettoId(soggetto.id);
+    setSoggettoSelezionato(soggetto);
+    setSearchTerm('');
+    setShowResults(false);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    if (!soggettoId) {
+      setError('Seleziona un soggetto anagrafico');
+      return;
+    }
+    setSaving(true);
     setError(null);
-
     try {
       if (proprietario) {
-        await proprietariAPI.update(proprietario.id, formData);
+        await proprietariAPI.update(proprietario.id, { note_proprietario: noteProprietario });
       } else {
-        await proprietariAPI.create(formData);
+        await proprietariAPI.create({ soggetto_id: soggettoId, note_proprietario: noteProprietario });
       }
       onClose();
     } catch (err) {
       setError(formatApiError(err));
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
-  };
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
   };
 
   return (
@@ -60,173 +97,61 @@ function ProprietarioForm({ proprietario, onClose }) {
       <div className="modal-content">
         <div className="modal-header">
           <h2>{proprietario ? 'Modifica Proprietario' : 'Nuovo Proprietario'}</h2>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={() => onClose()}>×</button>
         </div>
 
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Nome *</label>
-              <input
-                type="text"
-                name="nome"
-                value={formData.nome}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Cognome *</label>
-              <input
-                type="text"
-                name="cognome"
-                value={formData.cognome}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
-
           <div className="form-group">
-            <label>Codice Fiscale *</label>
-            <input
-              type="text"
-              name="codice_fiscale"
-              value={formData.codice_fiscale}
-              onChange={handleChange}
-              maxLength="16"
-              required
-            />
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Data di Nascita</label>
-              <input
-                type="date"
-                name="data_nascita"
-                value={formData.data_nascita}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Luogo di Nascita</label>
-              <input
-                type="text"
-                name="luogo_nascita"
-                value={formData.luogo_nascita}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Telefono</label>
-              <input
-                type="tel"
-                name="telefono"
-                value={formData.telefono}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Cellulare</label>
-              <input
-                type="tel"
-                name="cellulare"
-                value={formData.cellulare}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>Indirizzo</label>
-            <input
-              type="text"
-              name="indirizzo"
-              value={formData.indirizzo}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Città</label>
-              <input
-                type="text"
-                name="citta"
-                value={formData.citta}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>CAP</label>
-              <input
-                type="text"
-                name="cap"
-                value={formData.cap}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Provincia</label>
-              <input
-                type="text"
-                name="provincia"
-                value={formData.provincia}
-                onChange={handleChange}
-                maxLength="2"
-              />
-            </div>
+            <label>Soggetto Anagrafico *</label>
+            {proprietario ? (
+              <input type="text" value={displaySoggetto(soggettoSelezionato) || soggettoSelezionato?.nome || ''} disabled />
+            ) : soggettoSelezionato ? (
+              <div className="soggetto-selezionato">
+                <span>{displaySoggetto(soggettoSelezionato)}</span>
+                <button type="button" onClick={() => { setSoggettoId(null); setSoggettoSelezionato(null); }}>
+                  Cambia
+                </button>
+              </div>
+            ) : (
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  placeholder="Cerca per nome, cognome o codice fiscale..."
+                  autoComplete="off"
+                />
+                {showResults && (
+                  <div className="soggetto-search-results">
+                    {loadingSoggetti && <div className="soggetto-search-item">Ricerca...</div>}
+                    {!loadingSoggetti && soggettiCandidati.length === 0 && (
+                      <div className="soggetto-search-item">Nessun soggetto trovato</div>
+                    )}
+                    {soggettiCandidati.map((s) => (
+                      <div key={s.id} className="soggetto-search-item" onClick={() => handleSelectSoggetto(s)}>
+                        {displaySoggetto(s)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="field-hint">
+              Il soggetto deve già esistere in anagrafica. Non trovi chi cerchi? Registralo prima nella sezione Anagrafica.
+            </p>
           </div>
 
           <div className="form-group">
             <label>Note</label>
-            <textarea
-              name="note"
-              value={formData.note}
-              onChange={handleChange}
-              rows="3"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>
-              <input
-                type="checkbox"
-                name="attivo"
-                checked={formData.attivo}
-                onChange={handleChange}
-              />
-              Attivo
-            </label>
+            <textarea value={noteProprietario} onChange={(e) => setNoteProprietario(e.target.value)} rows="3" />
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={onClose} className="btn btn-secondary" disabled={loading}>
-              Annulla
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Salvataggio...' : 'Salva'}
+            <button type="button" onClick={() => onClose()} disabled={saving}>Annulla</button>
+            <button type="submit" className="primary" disabled={saving || !soggettoId}>
+              {saving ? 'Salvataggio...' : 'Salva'}
             </button>
           </div>
         </form>
