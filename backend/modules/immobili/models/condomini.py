@@ -47,8 +47,12 @@ class Condominio(Base):
     # Relationships
     tabelle_millesimali = relationship("TabellaMillesimale", back_populates="condominio", cascade="all, delete-orphan")
     unita = relationship("UnitaImmobiliare", back_populates="condominio")
+    # immo_spese_ricorrenti has a real ON DELETE CASCADE constraint; trust it
+    # instead of letting SQLAlchemy null out this column in Python (which
+    # would violate the model's exactly-one-of unita/condominio CHECK).
     spese_ricorrenti = relationship(
         "SpesaRicorrenteImmobile",
         back_populates="condominio",
         foreign_keys="SpesaRicorrenteImmobile.condominio_id",
+        passive_deletes=True,
     )

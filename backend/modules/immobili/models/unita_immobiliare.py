@@ -56,13 +56,21 @@ class UnitaImmobiliare(Base):
     condominio = relationship("Condominio", back_populates="unita")
     contratti = relationship("Contratto", back_populates="unita_immobiliare")
     spese = relationship("Spesa", back_populates="unita_immobiliare")
-    certificati_energetici = relationship("CertificatoEnergetico", back_populates="unita_immobiliare")
-    diritti = relationship("DirittoImmobile", back_populates="unita_immobiliare")
-    assegnazioni_conduttore = relationship("AssegnazioneConduttore", back_populates="unita_immobiliare")
+    # immo_certificati_energetici and immo_diritti_immobile have no real FK
+    # constraint in the DB (their ondelete="CASCADE" above is decorative),
+    # so cascade must be ORM-managed here rather than relying on passive_deletes.
+    certificati_energetici = relationship("CertificatoEnergetico", back_populates="unita_immobiliare", cascade="all, delete-orphan")
+    diritti = relationship("DirittoImmobile", back_populates="unita_immobiliare", cascade="all, delete-orphan")
+    # immo_assegnazioni_conduttore and immo_spese_ricorrenti DO have a real
+    # ON DELETE CASCADE constraint, so trust the DB instead of doing N extra
+    # DELETEs — without passive_deletes, SQLAlchemy still tries to null out
+    # these non-nullable child FKs in Python and crashes.
+    assegnazioni_conduttore = relationship("AssegnazioneConduttore", back_populates="unita_immobiliare", passive_deletes=True)
     spese_ricorrenti = relationship(
         "SpesaRicorrenteImmobile",
         back_populates="unita_immobiliare",
         foreign_keys="SpesaRicorrenteImmobile.unita_immobiliare_id",
+        passive_deletes=True,
     )
     millesimi = relationship("MillesimiUnita", back_populates="unita_immobiliare", cascade="all, delete-orphan")
     categoria_catastale = relationship("CategoriaCatastale", foreign_keys=[categoria_catastale_id])
