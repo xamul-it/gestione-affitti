@@ -11,7 +11,10 @@ import pytest
 from sqlalchemy import text
 
 from affitti_brevi.models import Comunicazione, TipoComunicazione, Prenotazione, Soggiorno
-from affitti_brevi.services.compliance_scadenze_service import ComplianceScadenzeService
+from affitti_brevi.services.compliance_scadenze_service import (
+    ComplianceScadenzeService,
+    _get_admin_destinatari_ids,
+)
 from app.core.platform.models import Scadenza, ScadenzaDestinatario
 from app.core.platform_services import ScadenzaService
 from immobili.models import UnitaImmobiliare
@@ -119,6 +122,17 @@ def test_genera_scadenza_polizia_crea_comunicazione_e_scadenza(pg_session, soggi
     # 24h dal check-in
     assert scadenza.data_scadenza == soggiorno.data_checkin + timedelta(days=1)
 
+    # destinatari_ids deve arrivare fino alla Scadenza core: verifica che i
+    # ScadenzaDestinatario creati corrispondano esattamente agli admin
+    # attivi del tenant (vedi _get_admin_destinatari_ids).
+    destinatari_ids = {
+        row[0] for row in
+        pg_session.query(ScadenzaDestinatario.user_id)
+        .filter(ScadenzaDestinatario.scadenza_id == scadenza.id)
+        .all()
+    }
+    assert destinatari_ids == set(_get_admin_destinatari_ids(pg_session))
+
 
 def test_genera_scadenza_polizia_idempotente(pg_session, soggiorno):
     service = ComplianceScadenzeService(pg_session)
@@ -145,3 +159,18 @@ def test_genera_scadenza_tassa_crea_comunicazione_con_data_checkin(pg_session, s
 
     scadenza = ScadenzaService(pg_session).get_scadenza(comunicazione.scadenza_id)
     assert scadenza.data_scadenza == soggiorno.data_checkin
+
+
+def test_genera_scadenza_tassa_idempotente(pg_session, soggiorno):
+    service = ComplianceScadenzeService(pg_session)
+
+    primo = service.genera_scadenza_tassa(soggiorno)
+    secondo = service.genera_scadenza_tassa(soggiorno)
+
+    assert primo is not None
+    assert secondo is None  # no-op, già esisteva
+
+    count = pg_session.query(Comunicazione).filter_by(
+        soggiorno_id=soggiorno.id, tipo=TipoComunicazione.TASSA_DICHIARAZIONE.value
+    ).count()
+    assert count == 1

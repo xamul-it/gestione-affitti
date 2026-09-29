@@ -20,7 +20,6 @@ from affitti_brevi.models import (
     Comunicazione,
     TipoComunicazione,
     StatoComunicazione,
-    MetodoInvio,
     Soggiorno,
 )
 from app.core.auth.init_data import get_system_user_id
