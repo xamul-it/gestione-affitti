@@ -174,3 +174,22 @@ def test_genera_scadenza_tassa_idempotente(pg_session, soggiorno):
         soggiorno_id=soggiorno.id, tipo=TipoComunicazione.TASSA_DICHIARAZIONE.value
     ).count()
     assert count == 1
+
+
+def test_completa_comunicazione_marca_invio_e_completa_scadenza(pg_session, soggiorno):
+    service = ComplianceScadenzeService(pg_session)
+    comunicazione = service.genera_scadenza_polizia(soggiorno)
+
+    aggiornata = service.completa_comunicazione(comunicazione.id, note="Inviata a mano")
+
+    assert aggiornata.stato == "INVIATA"
+
+    from app.core.platform.models import StatoScadenza
+    scadenza = ScadenzaService(pg_session).get_scadenza(aggiornata.scadenza_id)
+    assert scadenza.stato == StatoScadenza.COMPLETATA
+
+
+def test_completa_comunicazione_id_inesistente_solleva_valueerror(pg_session):
+    service = ComplianceScadenzeService(pg_session)
+    with pytest.raises(ValueError):
+        service.completa_comunicazione(999999)

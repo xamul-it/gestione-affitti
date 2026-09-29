@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from affitti_brevi.models import (
     Comunicazione,
+    MetodoInvio,
     TipoComunicazione,
     StatoComunicazione,
     Soggiorno,
@@ -135,4 +136,26 @@ class ComplianceScadenzeService:
         comunicazione.scadenza_id = scadenza.id
         self.db.commit()
         self.db.refresh(comunicazione)
+        return comunicazione
+
+    def completa_comunicazione(self, comunicazione_id: int, note: Optional[str] = None) -> Comunicazione:
+        """Marca la Comunicazione come inviata (manualmente) e completa la
+        Scadenza core collegata, se presente."""
+        comunicazione = self.db.query(Comunicazione).filter(
+            Comunicazione.id == comunicazione_id
+        ).first()
+        if not comunicazione:
+            raise ValueError(f"Comunicazione {comunicazione_id} non trovata")
+
+        comunicazione.mark_inviata(MetodoInvio.MANUALE)
+        self.db.commit()
+        self.db.refresh(comunicazione)
+
+        if comunicazione.scadenza_id:
+            ScadenzaService(self.db).completa_scadenza(
+                comunicazione.scadenza_id,
+                user_id=get_system_user_id(self.db),
+                note=note or "Completata da affitti_brevi",
+            )
+
         return comunicazione
