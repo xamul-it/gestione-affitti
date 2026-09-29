@@ -27,12 +27,9 @@ def upgrade():
     op.execute("DROP TABLE IF EXISTS ab_attivita_schedulate_log")
     op.execute("DROP TABLE IF EXISTS ab_attivita_schedulate")
 
-    op.add_column(
-        'ab_comunicazioni',
-        sa.Column('scadenza_id', sa.Integer(), nullable=True,
-                  comment='FK logica a core_scadenze.id')
-    )
-    op.create_index('ix_ab_comunicazioni_scadenza_id', 'ab_comunicazioni', ['scadenza_id'])
+    op.execute("ALTER TABLE ab_comunicazioni ADD COLUMN IF NOT EXISTS scadenza_id INTEGER")
+    op.execute("COMMENT ON COLUMN ab_comunicazioni.scadenza_id IS 'FK logica a core_scadenze.id'")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_ab_comunicazioni_scadenza_id ON ab_comunicazioni (scadenza_id)")
 
 
 def downgrade():
