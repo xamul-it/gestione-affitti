@@ -13,6 +13,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal, engine
 from .ical_sync_service import ICalSyncService
+from .tenant_scan import get_active_tenant_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -68,31 +69,6 @@ def _sync_tenant(tenant_schema: str) -> dict:
         connection.close()
 
 
-def _get_active_tenant_schemas() -> list:
-    """Schemas of active tenants that actually have affitti_brevi enabled."""
-    from app.core.services.tenant_service import TenantService
-
-    db = SessionLocal()
-    try:
-        db.connection().execute(text("SET search_path TO public"))
-        rows = db.execute(
-            text("SELECT id, schema_name FROM public.core_tenants WHERE active = true OR active IS NULL")
-        ).fetchall()
-        schemas = []
-        for tenant_id, schema_name in rows:
-            try:
-                if "affitti_brevi" in TenantService.get_enabled_modules(tenant_id, db):
-                    schemas.append(schema_name)
-            except Exception as e:
-                logger.warning("Could not check enabled modules for tenant %s: %s", schema_name, e)
-        return schemas
-    except Exception as e:
-        logger.warning("Could not list tenants for iCal sync: %s", e)
-        return []
-    finally:
-        db.close()
-
-
 class SyncScheduler:
     """
     Background scheduler for iCal synchronization
@@ -124,7 +100,7 @@ class SyncScheduler:
 
         totals = dict(_EMPTY_STATS)
         del totals['dettagli']
-        for tenant_schema in _get_active_tenant_schemas():
+        for tenant_schema in get_active_tenant_schemas("affitti_brevi"):
             stats = _sync_tenant(tenant_schema)
             for key in totals:
                 totals[key] += stats.get(key, 0)
