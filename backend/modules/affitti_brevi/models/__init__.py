@@ -10,7 +10,6 @@ Complete model set for short-term rental management:
 - TassaSoggiornoConfig/Scaglione: Tax configuration
 - TassaSoggiorno: Calculated tax per stay
 - Comunicazione: Mandatory communications (Police, ISTAT)
-- AttivitaSchedulata: Scheduled tasks
 - BloccoCalendario: Manual calendar blocks
 """
 
@@ -19,6 +18,7 @@ from .canale import Canale, DEFAULT_CANALI
 
 # Property-channel link
 from .calendario_canale import CalendarioCanale, StatoSincronizzazione
+CalendarioIcal = CalendarioCanale  # backward-compat alias
 
 # Bookings from channels
 from .prenotazione import Prenotazione, StatoPrenotazione
@@ -42,15 +42,6 @@ from .comunicazione import (
     MetodoInvio
 )
 
-# Scheduled activities
-from .attivita_schedulata import (
-    AttivitaSchedulata,
-    AttivitaSchedulataLog,
-    TipoAttivita,
-    StatoAttivita,
-    Periodicita
-)
-
 # Calendar blocks
 from .blocco_calendario import BloccoCalendario, TipoBlocco
 
@@ -61,6 +52,7 @@ __all__ = [
 
     # Calendar-Channel
     "CalendarioCanale",
+    "CalendarioIcal",  # backward-compat alias for CalendarioCanale
     "StatoSincronizzazione",
 
     # Prenotazione
@@ -89,13 +81,6 @@ __all__ = [
     "TipoComunicazione",
     "StatoComunicazione",
     "MetodoInvio",
-
-    # Attività
-    "AttivitaSchedulata",
-    "AttivitaSchedulataLog",
-    "TipoAttivita",
-    "StatoAttivita",
-    "Periodicita",
 
     # Blocchi
     "BloccoCalendario",

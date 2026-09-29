@@ -24,7 +24,6 @@ for module_name in [
     "affitti_brevi.models.tassa_soggiorno_scaglione",
     "affitti_brevi.models.tassa_soggiorno",
     "affitti_brevi.models.comunicazione",
-    "affitti_brevi.models.attivita_schedulata",
 ]:
     importlib.import_module(module_name)
 

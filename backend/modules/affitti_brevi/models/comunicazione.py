@@ -65,6 +65,17 @@ class Comunicazione(Base):
         index=True
     )
 
+    # Collegamento alla scadenza core (cross-schema: core_scadenze vive in
+    # public, ab_comunicazioni nello schema tenant — nessun vincolo FK
+    # reale possibile, stesso motivo per cui Scadenza.entity_id è un
+    # intero libero verso le tabelle di modulo).
+    scadenza_id = Column(
+        Integer,
+        nullable=True,
+        index=True,
+        comment="FK logica a core_scadenze.id"
+    )
+
     # Link to property (for property-level communications)
     unita_immobiliare_id = Column(
         Integer,
