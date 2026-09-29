@@ -65,8 +65,6 @@ API endpoints for short-term rental management:
 - Prenotazioni: Booking management
 - Soggiorni: Stay operations (check-in, check-out, guests)
 - Sync: iCal synchronization
-- Comunicazioni: Compliance communications (Police, tourist tax) — deadline
-  engine only; sending/declaration logic arrives in later sub-projects.
 """
 from . import (
     canali,
@@ -75,13 +73,17 @@ from . import (
     prenotazioni,
     soggiorni,
     sync,
-    comunicazioni,
 )
 
 # NOTE: router "tasse" ancora assente — la ricostruzione del calcolo/
 # dichiarazione tassa di soggiorno contro i modelli attuali (TassaSoggiorno)
 # è compito del sotto-progetto B (vedi docs/superpowers/specs/
 # 2026-09-28-affitti-brevi-motore-scadenze-compliance-design.md).
+#
+# NOTE: router "comunicazioni" arriva con il Task 7 di questo piano — non è
+# ancora aggiunto qui per evitare un ImportError in ogni verifica intermedia
+# (import app.main, test suite) dei Task 2-6, che girano prima che quel
+# modulo esista.
 
 __all__ = [
     "canali",
@@ -90,11 +92,10 @@ __all__ = [
     "prenotazioni",
     "soggiorni",
     "sync",
-    "comunicazioni",
 ]
 ```
 
-(Il modulo `comunicazioni` non esiste ancora — verrà creato al Task 7. Questo file non sarà importabile finché quel task non è completo: è un'incoerenza temporanea accettata all'interno dello stesso piano, il branch/worktree non gira in produzione tra un task e l'altro.)
+(Il router `comunicazioni` viene aggiunto qui solo al Task 7, quando il modulo esiste — vedi la NOTE nel file sopra. Questo mantiene il modulo importabile ad ogni task intermedio.)
 
 - [ ] **Step 4: Commit**
 
@@ -1167,6 +1168,7 @@ git commit -m "feat(affitti_brevi): start hourly compliance deadline scan schedu
 - Create: `backend/modules/affitti_brevi/schemas/comunicazione.py`
 - Modify: `backend/modules/affitti_brevi/schemas/__init__.py`
 - Create: `backend/modules/affitti_brevi/routes/comunicazioni.py`
+- Modify: `backend/modules/affitti_brevi/routes/__init__.py`
 - Modify: `backend/modules/affitti_brevi/__init__.py` (`register_module`)
 - Test: `backend/tests/integration/test_modules/test_affitti_brevi/test_comunicazioni_routes.py`
 
@@ -1410,6 +1412,37 @@ In `backend/modules/affitti_brevi/__init__.py`, nella funzione `register_module`
     print("[Affitti Brevi] Routes: canali, calendari, calendario-unificato, prenotazioni, soggiorni, sync, comunicazioni")
 ```
 
+- [ ] **Step 5bis: Aggiungere `comunicazioni` a `routes/__init__.py`**
+
+Il modulo esiste ora: in `backend/modules/affitti_brevi/routes/__init__.py`, aggiungi `comunicazioni` alla tupla `from . import (...)` e alla lista `__all__` (il Task 1 li aveva deliberatamente omessi per non rompere l'import del pacchetto prima che questo task creasse il file — vedi la NOTE lasciata in quel file). Il risultato finale:
+
+```python
+from . import (
+    canali,
+    calendari,
+    calendario_unificato,
+    prenotazioni,
+    soggiorni,
+    sync,
+    comunicazioni,
+)
+
+# NOTE: router "tasse" ancora assente — la ricostruzione del calcolo/
+# dichiarazione tassa di soggiorno contro i modelli attuali (TassaSoggiorno)
+# è compito del sotto-progetto B (vedi docs/superpowers/specs/
+# 2026-09-28-affitti-brevi-motore-scadenze-compliance-design.md).
+
+__all__ = [
+    "canali",
+    "calendari",
+    "calendario_unificato",
+    "prenotazioni",
+    "soggiorni",
+    "sync",
+    "comunicazioni",
+]
+```
+
 - [ ] **Step 6: Eseguire e verificare che passino**
 
 ```bash
@@ -1432,6 +1465,7 @@ Atteso: tutti i test passano (compresi quelli dei task precedenti e quelli pre-e
 git add backend/modules/affitti_brevi/schemas/comunicazione.py \
         backend/modules/affitti_brevi/schemas/__init__.py \
         backend/modules/affitti_brevi/routes/comunicazioni.py \
+        backend/modules/affitti_brevi/routes/__init__.py \
         backend/modules/affitti_brevi/__init__.py \
         backend/tests/integration/test_modules/test_affitti_brevi/test_comunicazioni_routes.py
 git commit -m "feat(affitti_brevi): expose Comunicazione detail and manual completion routes"
