@@ -24,8 +24,8 @@ target_schema = "tenant"
 
 
 def upgrade():
-    op.drop_table('ab_attivita_schedulate_log')
-    op.drop_table('ab_attivita_schedulate')
+    op.execute("DROP TABLE IF EXISTS ab_attivita_schedulate_log")
+    op.execute("DROP TABLE IF EXISTS ab_attivita_schedulate")
 
     op.add_column(
         'ab_comunicazioni',
