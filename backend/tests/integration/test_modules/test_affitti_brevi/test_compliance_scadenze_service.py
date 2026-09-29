@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from affitti_brevi.models import Comunicazione, TipoComunicazione, Prenotazione, Soggiorno
 from affitti_brevi.services.compliance_scadenze_service import ComplianceScadenzeService
+from app.core.platform.models import Scadenza, ScadenzaDestinatario
 from app.core.platform_services import ScadenzaService
 from immobili.models import UnitaImmobiliare
 
@@ -72,10 +73,32 @@ def soggiorno(pg_session):
 
     yield s
 
+    # Le Comunicazioni create dai test possono aver generato Scadenze core
+    # collegate (ScadenzaService.create_scadenza, invocato da
+    # ComplianceScadenzeService). Queste vivono nella stessa connessione
+    # (search_path già include lo schema tenant) ma non sono coperte dal
+    # cascade su Comunicazione/Soggiorno — vanno ripulite esplicitamente
+    # per evitare accumulo tra run successivi.
+    scadenza_ids = [
+        row[0] for row in
+        pg_session.query(Comunicazione.scadenza_id)
+        .filter(Comunicazione.soggiorno_id == s.id, Comunicazione.scadenza_id.isnot(None))
+        .all()
+    ]
+
     pg_session.query(Comunicazione).filter_by(soggiorno_id=s.id).delete()
     pg_session.query(Soggiorno).filter_by(id=s.id).delete()
     pg_session.query(Prenotazione).filter_by(id=prenotazione.id).delete()
     pg_session.query(UnitaImmobiliare).filter_by(id=unita.id).delete()
+
+    if scadenza_ids:
+        pg_session.query(ScadenzaDestinatario).filter(
+            ScadenzaDestinatario.scadenza_id.in_(scadenza_ids)
+        ).delete(synchronize_session=False)
+        pg_session.query(Scadenza).filter(
+            Scadenza.id.in_(scadenza_ids)
+        ).delete(synchronize_session=False)
+
     pg_session.commit()
 
 
