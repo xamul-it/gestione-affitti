@@ -99,51 +99,10 @@ export const tasseAPI = {
   removeOverride: (prenotazioneId) => api.delete(`/tasse/prenotazioni/${prenotazioneId}/override`),
 };
 
-// Scadenze API
-export const scadenzeAPI = {
-  // Scadenze endpoints
-  getAll: (params = {}) => api.get('/scadenze/', { params }),
-  getById: (id) => api.get(`/scadenze/${id}`),
-  getUpcoming: (days = 7, tipo = null) =>
-    api.get('/scadenze/upcoming', { params: { days, tipo: tipo || undefined } }),
-  getOverdue: (tipo = null) =>
-    api.get('/scadenze/overdue', { params: { tipo: tipo || undefined } }),
-  getBadgeInfo: () => api.get('/scadenze/badge/info'),
-  create: (data) => api.post('/scadenze/', data),
-  update: (id, data) => api.put(`/scadenze/${id}`, data),
-  delete: (id) => api.delete(`/scadenze/${id}`),
-  markCompleted: (id, note = null) =>
-    api.post(`/scadenze/${id}/completa`, { note_completamento: note }),
-  generatePoliceDeadline: (prenotazioneId) =>
-    api.post(`/scadenze/generate/police/${prenotazioneId}`),
-  generateISTATDeadline: (year, month) =>
-    api.post('/scadenze/generate/istat', null, { params: { year, month } }),
-  updateStatuses: () => api.post('/scadenze/update-statuses'),
-
-  // Comunicazioni Polizia endpoints
-  getComunicazioni: (params = {}) => api.get('/scadenze/comunicazioni-polizia/', { params }),
-  getComunicazioneById: (id) => api.get(`/scadenze/comunicazioni-polizia/${id}`),
-  getComunicazioneByPrenotazione: (prenotazioneId) =>
-    api.get(`/scadenze/comunicazioni-polizia/prenotazione/${prenotazioneId}`),
-  getPendingComunicazioni: () => api.get('/scadenze/comunicazioni-polizia/pending'),
-  getOverdueComunicazioni: () => api.get('/scadenze/comunicazioni-polizia/overdue'),
-  createComunicazione: (data) => api.post('/scadenze/comunicazioni-polizia/', data),
-  updateComunicazione: (id, data) => api.put(`/scadenze/comunicazioni-polizia/${id}`, data),
-  deleteComunicazione: (id) => api.delete(`/scadenze/comunicazioni-polizia/${id}`),
-  markComunicazioneSent: (id, data) =>
-    api.post(`/scadenze/comunicazioni-polizia/${id}/invio`, data),
-  markComunicazioneConfirmed: (id) =>
-    api.post(`/scadenze/comunicazioni-polizia/${id}/conferma`),
-  markComunicazioneError: (id, erroreMessaggio) =>
-    api.post(`/scadenze/comunicazioni-polizia/${id}/errore`, { errore_messaggio: erroreMessaggio }),
-  retryComunicazione: (id) => api.post(`/scadenze/comunicazioni-polizia/${id}/retry`),
-};
-
 // Default export
 export default {
   calendariAPI,
   prenotazioniAPI,
   ospitiAPI,
   tasseAPI,
-  scadenzeAPI,
 };

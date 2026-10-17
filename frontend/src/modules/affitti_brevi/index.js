@@ -39,9 +39,6 @@ export { default as CalendarioMultiPiattaforma } from './components/Calendario/C
 // Tasse Soggiorno (Phase 4)
 export { TassaConfigList, TassaConfigForm, TassaPrenotazioneDetail } from './components/Tasse';
 
-// Scadenze e Comunicazioni Polizia (Phase 5)
-export { ScadenzeList, ScadenzaDetail, ScadenzaBadge, ComunicazioniPoliziaList } from './components/Scadenze';
-
 // Dashboard Widgets
 export { default as ScadenzeWidget } from './components/Dashboard/ScadenzeWidget';
 export { default as CalendarioWidget } from './components/Dashboard/CalendarioWidget';
