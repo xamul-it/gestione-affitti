@@ -4,6 +4,7 @@ Comunicazione Schemas
 from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
+from decimal import Decimal
 
 
 class ComunicazioneResponse(BaseModel):
@@ -18,6 +19,7 @@ class ComunicazioneResponse(BaseModel):
     data_invio: Optional[datetime] = None
     scadenza_id: Optional[int] = None
     note: Optional[str] = None
+    importo_tassa: Optional[Decimal] = None
 
 
 class SegnaCompletataRequest(BaseModel):

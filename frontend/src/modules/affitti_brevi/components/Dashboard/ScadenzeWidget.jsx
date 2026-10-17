@@ -24,8 +24,18 @@ function ScadenzeWidget() {
     try {
       setLoading(true);
       setError(null);
-      const response = await scadenzeAPI.list({ modulo: 'affitti_brevi', limit: 100 });
-      setScadenze(response.data);
+      // Richiede solo gli stati non terminali (ATTIVA/SCADUTA) via due
+      // chiamate separate, invece di un limit=100 ordinato per priorita
+      // senza filtro stato: con abbastanza scadenze completate accumulate
+      // (mai cancellate) nel tempo, le ultime 100 righe erano quasi tutte
+      // vecchie scadenze POLIZIA completate, e le scadenze attive reali
+      // (di qualsiasi tipo) finivano fuori dal risultato — vedi review
+      // finale del motore scadenze compliance.
+      const [attiveResp, scaduteResp] = await Promise.all([
+        scadenzeAPI.list({ modulo: 'affitti_brevi', stato: 'ATTIVA', limit: 100 }),
+        scadenzeAPI.list({ modulo: 'affitti_brevi', stato: 'SCADUTA', limit: 100 }),
+      ]);
+      setScadenze([...attiveResp.data, ...scaduteResp.data]);
     } catch (err) {
       console.error('Error loading scadenze:', err);
       setError('Errore nel caricamento delle scadenze');
@@ -34,10 +44,8 @@ function ScadenzeWidget() {
     }
   };
 
-  const attive = scadenze.filter((s) => s.stato !== 'COMPLETATA' && s.stato !== 'CANCELLATA');
-  const scadute = attive.filter((s) => s.is_scaduta);
-  const inScadenza = attive.filter((s) => !s.is_scaduta);
-  const completate = scadenze.filter((s) => s.stato === 'COMPLETATA');
+  const scadute = scadenze.filter((s) => s.is_scaduta);
+  const inScadenza = scadenze.filter((s) => !s.is_scaduta);
 
   const upcoming = [...scadute, ...inScadenza]
     .sort((a, b) => new Date(a.data_scadenza) - new Date(b.data_scadenza))
@@ -75,10 +83,6 @@ function ScadenzeWidget() {
         <div className="stat-item stat-warning">
           <div className="stat-value">{inScadenza.length}</div>
           <div className="stat-label">In Scadenza</div>
-        </div>
-        <div className="stat-item stat-success">
-          <div className="stat-value">{completate.length}</div>
-          <div className="stat-label">Completate</div>
         </div>
       </div>
 

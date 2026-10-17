@@ -40,12 +40,13 @@ def _scan_tenant(tenant_schema: str) -> dict:
 
         db = Session(bind=connection)
         try:
-            from affitti_brevi.models import Soggiorno
+            from affitti_brevi.models import Soggiorno, StatoSoggiorno
 
             oggi = date.today()
             limite = oggi + timedelta(days=2)
             soggiorni = db.query(Soggiorno).filter(
                 Soggiorno.valido == True,
+                Soggiorno.stato != StatoSoggiorno.ANNULLATO.value,
                 Soggiorno.data_checkin >= oggi,
                 Soggiorno.data_checkin <= limite,
             ).all()
@@ -61,6 +62,7 @@ def _scan_tenant(tenant_schema: str) -> dict:
                         create += 1
                 except Exception as exc:
                     errori += 1
+                    db.rollback()
                     logger.error(
                         "Compliance scan failed for soggiorno %s (tenant %s): %s",
                         soggiorno.id, tenant_schema, exc, exc_info=True,

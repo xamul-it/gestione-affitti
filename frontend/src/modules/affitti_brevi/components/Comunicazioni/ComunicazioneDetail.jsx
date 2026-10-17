@@ -78,6 +78,12 @@ function ComunicazioneDetail() {
             <span>{new Date(comunicazione.data_invio).toLocaleString('it-IT')}</span>
           </div>
         )}
+        {comunicazione.tipo === 'TASSA_DICHIARAZIONE' && comunicazione.importo_tassa != null && (
+          <div className="comunicazione-detail-row">
+            <span className="comunicazione-detail-label">Importo:</span>
+            <span>€ {Number(comunicazione.importo_tassa).toFixed(2)}</span>
+          </div>
+        )}
       </div>
 
       {!completata && (

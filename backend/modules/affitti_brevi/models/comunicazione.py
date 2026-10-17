@@ -65,10 +65,11 @@ class Comunicazione(Base):
         index=True
     )
 
-    # Collegamento alla scadenza core (cross-schema: core_scadenze vive in
-    # public, ab_comunicazioni nello schema tenant — nessun vincolo FK
-    # reale possibile, stesso motivo per cui Scadenza.entity_id è un
-    # intero libero verso le tabelle di modulo).
+    # Collegamento alla scadenza core: nessun vincolo FK perché Scadenza è
+    # una tabella generica di piattaforma, polimorfica — il suo stesso
+    # entity_id è già un intero libero (non FK-constrained) verso la
+    # tabella di modulo a cui punta. scadenza_id segue qui la stessa
+    # convenzione per il collegamento inverso, non per un confine di schema.
     scadenza_id = Column(
         Integer,
         nullable=True,
@@ -188,6 +189,15 @@ class Comunicazione(Base):
             StatoComunicazione.PRONTA.value,
             StatoComunicazione.ERRORE.value  # Can retry after error
         ]
+
+    @property
+    def importo_tassa(self):
+        """Importo tassa di soggiorno per questa comunicazione, se tipo=TASSA_DICHIARAZIONE e l'importo è già stato calcolato. None altrimenti."""
+        if self.tipo != TipoComunicazione.TASSA_DICHIARAZIONE.value:
+            return None
+        if not self.soggiorno or not self.soggiorno.tassa_soggiorno:
+            return None
+        return self.soggiorno.tassa_soggiorno.importo_effettivo
 
     def verifica_scadenza(self):
         """Update scaduta flag based on current time"""

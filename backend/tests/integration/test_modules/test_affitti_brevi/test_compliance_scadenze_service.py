@@ -6,11 +6,12 @@ Usa pg_session bound a singola Connection (pattern stabilito in questa
 sessione, vedi test_ical_sync.py per il razionale).
 """
 from datetime import date, timedelta
+from decimal import Decimal
 
 import pytest
 from sqlalchemy import text
 
-from affitti_brevi.models import Comunicazione, TipoComunicazione, Prenotazione, Soggiorno
+from affitti_brevi.models import Comunicazione, TipoComunicazione, Prenotazione, Soggiorno, TassaSoggiorno
 from affitti_brevi.services.compliance_scadenze_service import (
     ComplianceScadenzeService,
     _get_admin_destinatari_ids,
@@ -193,3 +194,39 @@ def test_completa_comunicazione_id_inesistente_solleva_valueerror(pg_session):
     service = ComplianceScadenzeService(pg_session)
     with pytest.raises(ValueError):
         service.completa_comunicazione(999999)
+
+
+def test_importo_tassa_su_comunicazione_tassa_con_tassa_soggiorno(pg_session, soggiorno):
+    """Comunicazione.importo_tassa deve restituire l'importo_effettivo della
+    TassaSoggiorno collegata, quando tipo=TASSA_DICHIARAZIONE."""
+    tassa = TassaSoggiorno(soggiorno_id=soggiorno.id, importo_totale=Decimal("15.50"))
+    pg_session.add(tassa)
+    pg_session.commit()
+
+    service = ComplianceScadenzeService(pg_session)
+    comunicazione = service.genera_scadenza_tassa(soggiorno)
+    pg_session.refresh(soggiorno)
+
+    assert comunicazione.importo_tassa == Decimal("15.50")
+
+
+def test_importo_tassa_none_su_comunicazione_polizia(pg_session, soggiorno):
+    """Comunicazione.importo_tassa deve restituire None per tipo=POLIZIA,
+    anche se esiste una TassaSoggiorno collegata al soggiorno."""
+    tassa = TassaSoggiorno(soggiorno_id=soggiorno.id, importo_totale=Decimal("15.50"))
+    pg_session.add(tassa)
+    pg_session.commit()
+
+    service = ComplianceScadenzeService(pg_session)
+    comunicazione = service.genera_scadenza_polizia(soggiorno)
+
+    assert comunicazione.importo_tassa is None
+
+
+def test_importo_tassa_none_senza_tassa_soggiorno_collegata(pg_session, soggiorno):
+    """Comunicazione.importo_tassa deve restituire None se il soggiorno non
+    ha ancora una TassaSoggiorno calcolata."""
+    service = ComplianceScadenzeService(pg_session)
+    comunicazione = service.genera_scadenza_tassa(soggiorno)
+
+    assert comunicazione.importo_tassa is None
