@@ -1,0 +1,38 @@
+.comunicazione-detail {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.comunicazione-detail.error {
+  color: #b91c1c;
+}
+
+.detail-grid {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.detail-label {
+  font-weight: 600;
+  min-width: 120px;
+}
+
+.completion-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.completion-section textarea {
+  width: 100%;
+  margin: 8px 0;
+}

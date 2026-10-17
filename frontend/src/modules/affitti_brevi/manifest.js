@@ -47,6 +47,12 @@ export const manifest = {
       label: 'Tasse Soggiorno',
       icon: 'euro-sign',
     },
+    {
+      path: '/affitti-brevi/comunicazioni/:id',
+      component: 'ComunicazioneDetail',
+      label: 'Comunicazione',
+      hideFromMenu: true,
+    },
   ],
 
   // Menu items (to be registered with platform)

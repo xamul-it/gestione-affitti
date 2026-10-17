@@ -64,6 +64,12 @@ export const ospitiAPI = {
   delete: (id) => api.delete(`/ospiti/${id}`),
 };
 
+// Comunicazioni Compliance API (Polizia, tassa di soggiorno)
+export const comunicazioniAPI = {
+  getById: (id) => api.get(`/comunicazioni/${id}`),
+  segnaCompletata: (id, note = null) => api.post(`/comunicazioni/${id}/segna-completata`, { note }),
+};
+
 // Tasse Soggiorno API
 export const tasseAPI = {
   // Config endpoints
@@ -104,5 +110,6 @@ export default {
   calendariAPI,
   prenotazioniAPI,
   ospitiAPI,
+  comunicazioniAPI,
   tasseAPI,
 };
