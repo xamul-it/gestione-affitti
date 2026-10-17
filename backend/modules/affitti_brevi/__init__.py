@@ -124,3 +124,14 @@ def register_module(app):
             print("[Affitti Brevi] Sync scheduler iCal avviato")
     except Exception as exc:
         logger.error("[Affitti Brevi] Impossibile avviare lo scheduler di sync iCal: %s", exc, exc_info=True)
+
+    # Avvia lo scheduler di generazione scadenze compliance (Polizia, tassa
+    # di soggiorno). Stesso motivo/pattern del blocco sopra.
+    try:
+        from .services.compliance_scheduler import get_compliance_scheduler
+        compliance_scheduler = get_compliance_scheduler()
+        if not compliance_scheduler.is_running:
+            compliance_scheduler.start()
+            print("[Affitti Brevi] Scheduler scadenze compliance avviato")
+    except Exception as exc:
+        logger.error("[Affitti Brevi] Impossibile avviare lo scheduler scadenze compliance: %s", exc, exc_info=True)
