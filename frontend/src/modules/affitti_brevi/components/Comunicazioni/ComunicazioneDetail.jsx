@@ -54,8 +54,8 @@ function ComunicazioneDetail() {
   if (error) return <div className="comunicazione-detail error">{error}</div>;
   if (!comunicazione) return null;
 
-  const completata = comunicazione.stato !== 'DA_PREPARARE' && comunicazione.stato !== 'PRONTA'
-    && comunicazione.stato !== 'ERRORE';
+  const STATI_COMPLETATI = ['INVIATA', 'CONFERMATA', 'ANNULLATA'];
+  const completata = STATI_COMPLETATI.includes(comunicazione.stato);
 
   return (
     <div className="comunicazione-detail">
