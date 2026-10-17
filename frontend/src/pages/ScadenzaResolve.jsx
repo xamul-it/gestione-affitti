@@ -17,6 +17,10 @@ const buildTarget = ({ modulo, entityType, entityId, scadenzaId }) => {
     return `/anagrafiche/scadenze/resolve?${params.toString()}`;
   }
 
+  if (normalizedModule === 'affitti_brevi' && normalizedType === 'COMUNICAZIONE') {
+    return `/affitti-brevi/comunicazioni/${entityId}`;
+  }
+
   return null;
 };
 
