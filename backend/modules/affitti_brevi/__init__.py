@@ -95,6 +95,7 @@ def register_module(app):
         prenotazioni,
         soggiorni,
         sync,
+        comunicazioni,
     )
 
     # Register routes
@@ -108,10 +109,11 @@ def register_module(app):
     app.include_router(prenotazioni.router, prefix=prefix, tags=tags)
     app.include_router(soggiorni.router, prefix=prefix, tags=tags)
     app.include_router(sync.router, prefix=prefix, tags=tags)
+    app.include_router(comunicazioni.router, prefix=prefix, tags=tags)
     # "tasse" disabilitato — vedi nota in routes/__init__.py
 
     print("[Affitti Brevi] Module registered successfully!")
-    print("[Affitti Brevi] Routes: canali, calendari, calendario-unificato, prenotazioni, soggiorni, sync")
+    print("[Affitti Brevi] Routes: canali, calendari, calendario-unificato, prenotazioni, soggiorni, sync, comunicazioni")
 
     # Avvia lo scheduler di sincronizzazione iCal automatica.
     # start() è no-op (con un warning) se già in esecuzione — protegge da

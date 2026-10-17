@@ -66,6 +66,12 @@ from .tassa_soggiorno import (
     TassaSoggiornoConfigWithScaglioni,
 )
 
+# Comunicazioni (Compliance communications)
+from .comunicazione import (
+    ComunicazioneResponse,
+    SegnaCompletataRequest,
+)
+
 __all__ = [
     # Canale
     "CanaleBase",
@@ -118,4 +124,8 @@ __all__ = [
     "TassaSoggiornoScaglioneUpdate",
     "TassaSoggiornoScaglioneResponse",
     "TassaSoggiornoConfigWithScaglioni",
+
+    # Comunicazioni
+    "ComunicazioneResponse",
+    "SegnaCompletataRequest",
 ]
