@@ -63,18 +63,18 @@ function ComunicazioneDetail() {
 
       <h2>{TIPO_LABELS[comunicazione.tipo] || comunicazione.tipo}</h2>
 
-      <div className="detail-grid">
-        <div className="detail-row">
-          <span className="detail-label">Stato:</span>
+      <div className="comunicazione-detail-grid">
+        <div className="comunicazione-detail-row">
+          <span className="comunicazione-detail-label">Stato:</span>
           <span className={`badge badge-${completata ? 'success' : 'warning'}`}>{comunicazione.stato}</span>
         </div>
-        <div className="detail-row">
-          <span className="detail-label">Scadenza:</span>
+        <div className="comunicazione-detail-row">
+          <span className="comunicazione-detail-label">Scadenza:</span>
           <span>{new Date(comunicazione.data_scadenza).toLocaleString('it-IT')}</span>
         </div>
         {comunicazione.data_invio && (
-          <div className="detail-row">
-            <span className="detail-label">Inviata il:</span>
+          <div className="comunicazione-detail-row">
+            <span className="comunicazione-detail-label">Inviata il:</span>
             <span>{new Date(comunicazione.data_invio).toLocaleString('it-IT')}</span>
           </div>
         )}

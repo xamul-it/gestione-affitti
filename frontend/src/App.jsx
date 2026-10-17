@@ -103,12 +103,14 @@ import {
   CalendarioMultiPiattaforma,
   PrenotazioniList,
   CalendariList,
-  TassaConfigList
+  TassaConfigList,
+  ComunicazioneDetail
 } from './modules/affitti_brevi';
 registerModuleComponent('CalendarioMultiPiattaforma', CalendarioMultiPiattaforma);
 registerModuleComponent('PrenotazioniList', PrenotazioniList);
 registerModuleComponent('CalendariList', CalendariList);
 registerModuleComponent('TassaConfigList', TassaConfigList);
+registerModuleComponent('ComunicazioneDetail', ComunicazioneDetail);
 
 registerModuleComponent('TipologieTerrenoList', TipologieTerrenoList);
 

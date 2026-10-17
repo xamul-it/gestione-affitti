@@ -8,20 +8,20 @@
   color: #b91c1c;
 }
 
-.detail-grid {
+.comunicazione-detail-grid {
   margin-top: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.detail-row {
+.comunicazione-detail-row {
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
-.detail-label {
+.comunicazione-detail-label {
   font-weight: 600;
   min-width: 120px;
 }
