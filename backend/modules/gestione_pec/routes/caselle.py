@@ -221,15 +221,17 @@ def test_connessione(
             num_messaggi=num_messages,
         )
     except (socket.timeout, socket.gaierror) as exc:
+        logger.warning("Errore di rete testando casella %s: %s", casella_id, exc)
         return TestConnessioneResult(
             successo=False,
-            messaggio=f"Errore di rete: {exc}",
+            messaggio="Errore di rete: host non raggiungibile o timeout",
             num_messaggi=None,
         )
     except Exception as exc:
+        logger.warning("Test connessione casella %s fallito: %s", casella_id, exc)
         return TestConnessioneResult(
             successo=False,
-            messaggio=str(exc),
+            messaggio="Connessione non riuscita: verificare host, porta e credenziali",
             num_messaggi=None,
         )
 

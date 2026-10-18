@@ -17,6 +17,21 @@ function formatDimensione(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Blocca il caricamento di risorse remote (immagini/pixel di tracking,
+// font, fogli di stile esterni) dal corpo HTML di un messaggio PEC non
+// fidato. Lo sandbox dell'iframe blocca già JS/form; questo chiude il
+// canale rimasto aperto (tracking via richieste di rete) senza dover
+// aggiungere una dipendenza di sanitizzazione HTML.
+const CORPO_HTML_CSP_META =
+  '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; font-src data:; style-src \'unsafe-inline\' data:;">';
+
+function withCspNoNetwork(html) {
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head[^>]*>/i, (match) => `${match}${CORPO_HTML_CSP_META}`);
+  }
+  return `${CORPO_HTML_CSP_META}${html}`;
+}
+
 /**
  * MessaggioDetail
  *
@@ -131,7 +146,7 @@ export default function MessaggioDetail({ messaggio, onRispondi, puoRispondere =
           <iframe
             ref={iframeRef}
             sandbox="allow-same-origin"
-            srcDoc={messaggio.corpo_html}
+            srcDoc={withCspNoNetwork(messaggio.corpo_html)}
             className="messaggio-corpo-iframe"
             title="Corpo messaggio PEC"
             onLoad={handleIframeLoad}
