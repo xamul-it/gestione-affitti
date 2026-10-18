@@ -22,9 +22,9 @@ target_schema = "public"
 
 
 def upgrade():
-    # Create categorie_esempio table
+    # Create esem_categorie_esempio table
     op.create_table(
-        'categorie_esempio',
+        'esem_categorie_esempio',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('codice', sa.String(20), nullable=False),
         sa.Column('nome', sa.String(100), nullable=False),
@@ -38,15 +38,15 @@ def upgrade():
         schema='public'
     )
     op.create_index(
-        'ix_categorie_esempio_codice',
-        'categorie_esempio',
+        'ix_esem_categorie_esempio_codice',
+        'esem_categorie_esempio',
         ['codice'],
         schema='public'
     )
 
-    # Create priorita_esempio table
+    # Create esem_priorita_esempio table
     op.create_table(
-        'priorita_esempio',
+        'esem_priorita_esempio',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('codice', sa.String(10), nullable=False),
         sa.Column('nome', sa.String(50), nullable=False),
@@ -58,15 +58,15 @@ def upgrade():
         schema='public'
     )
     op.create_index(
-        'ix_priorita_esempio_codice',
-        'priorita_esempio',
+        'ix_esem_priorita_esempio_codice',
+        'esem_priorita_esempio',
         ['codice'],
         schema='public'
     )
 
 
 def downgrade():
-    op.drop_index('ix_priorita_esempio_codice', table_name='priorita_esempio', schema='public')
-    op.drop_table('priorita_esempio', schema='public')
-    op.drop_index('ix_categorie_esempio_codice', table_name='categorie_esempio', schema='public')
-    op.drop_table('categorie_esempio', schema='public')
+    op.drop_index('ix_esem_priorita_esempio_codice', table_name='esem_priorita_esempio', schema='public')
+    op.drop_table('esem_priorita_esempio', schema='public')
+    op.drop_index('ix_esem_categorie_esempio_codice', table_name='esem_categorie_esempio', schema='public')
+    op.drop_table('esem_categorie_esempio', schema='public')

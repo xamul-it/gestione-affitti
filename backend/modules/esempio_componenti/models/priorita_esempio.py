@@ -16,7 +16,7 @@ class PrioritaEsempio(Base):
     Le priorità sono condivise tra tutti i tenant.
     I tenant possono usarle ma non modificarle.
     """
-    __tablename__ = "priorita_esempio"
+    __tablename__ = "esem_priorita_esempio"
     __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True, index=True)

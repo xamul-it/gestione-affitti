@@ -34,10 +34,10 @@ class ElementoEsempio(Base):
     """Descrizione estesa"""
 
     # === Relazioni con domini (public schema) ===
-    categoria_id = Column(Integer, ForeignKey("public.categorie_esempio.id"), nullable=True)
+    categoria_id = Column(Integer, ForeignKey("public.esem_categorie_esempio.id"), nullable=True)
     """FK alla categoria (dominio in public schema)"""
 
-    priorita_id = Column(Integer, ForeignKey("public.priorita_esempio.id"), nullable=True)
+    priorita_id = Column(Integer, ForeignKey("public.esem_priorita_esempio.id"), nullable=True)
     """FK alla priorità (dominio in public schema)"""
 
     # === Campi numerici ===

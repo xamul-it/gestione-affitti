@@ -46,8 +46,8 @@ manifest = {
 
     # Public domain tables required for registration
     "public_tables": [
-        "categorie_esempio",
-        "priorita_esempio",
+        "esem_categorie_esempio",
+        "esem_priorita_esempio",
     ],
 
     # Tenant tables (created in tenant schema when module is enabled)

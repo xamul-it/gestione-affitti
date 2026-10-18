@@ -16,7 +16,7 @@ class CategoriaEsempio(Base):
     Le categorie sono condivise tra tutti i tenant.
     I tenant possono usarle ma non modificarle.
     """
-    __tablename__ = "categorie_esempio"
+    __tablename__ = "esem_categorie_esempio"
     __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True, index=True)

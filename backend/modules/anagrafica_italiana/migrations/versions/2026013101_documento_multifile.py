@@ -16,7 +16,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '2026013101'
-down_revision = '2026012802'  # Last anagrafica migration
+down_revision = '2026012802_add_parsing_fields'  # Last anagrafica migration
 branch_labels = None
 depends_on = None
 

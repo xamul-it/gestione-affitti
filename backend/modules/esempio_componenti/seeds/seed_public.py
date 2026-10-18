@@ -57,7 +57,7 @@ def seed_categorie_esempio(db: Session) -> int:
     db.execute(text("SET search_path TO public"))
 
     # Check if already seeded
-    result = db.execute(text("SELECT COUNT(*) FROM categorie_esempio"))
+    result = db.execute(text("SELECT COUNT(*) FROM esem_categorie_esempio"))
     existing_count = result.scalar()
 
     if existing_count > 0:
@@ -71,7 +71,7 @@ def seed_categorie_esempio(db: Session) -> int:
         try:
             db.execute(
                 text("""
-                    INSERT INTO categorie_esempio
+                    INSERT INTO esem_categorie_esempio
                     (codice, nome, descrizione, colore, icona, ordine, attivo)
                     VALUES (:codice, :nome, :descrizione, :colore, :icona, :ordine, true)
                 """),
@@ -107,7 +107,7 @@ def seed_priorita_esempio(db: Session) -> int:
     db.execute(text("SET search_path TO public"))
 
     # Check if already seeded
-    result = db.execute(text("SELECT COUNT(*) FROM priorita_esempio"))
+    result = db.execute(text("SELECT COUNT(*) FROM esem_priorita_esempio"))
     existing_count = result.scalar()
 
     if existing_count > 0:
@@ -121,7 +121,7 @@ def seed_priorita_esempio(db: Session) -> int:
         try:
             db.execute(
                 text("""
-                    INSERT INTO priorita_esempio
+                    INSERT INTO esem_priorita_esempio
                     (codice, nome, livello, colore, attivo)
                     VALUES (:codice, :nome, :livello, :colore, true)
                 """),

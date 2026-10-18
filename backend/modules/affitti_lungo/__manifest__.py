@@ -9,6 +9,7 @@ manifest = {
     "module_short_code": "alng",
     "schema_target": "tenant",
     "migrations_path": "migrations/versions",
+    "seeds_path": "seeds",
     "author": "Gestione Affitti Team",
     "sequence": 100,
 
@@ -20,7 +21,9 @@ manifest = {
 
     # Entry points called by module lifecycle
     "endpoints": {
-        "register_roles": "roles:register_roles",  # called at module register
+        "register": "seeds:seed_public",
+        "install": "seeds:seed_tenant",
+        "register_roles": "roles:register_roles",
     },
 
     # Models provided

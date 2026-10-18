@@ -2,7 +2,7 @@
 Create affitti_lungo tenant tables.
 """
 from alembic import op, context
-from sqlalchemy import MetaData
+from sqlalchemy import MetaData, Table, Column, Integer
 from app.core.database import Base
 
 import affitti_lungo.models  # noqa: F401 - register models in Base metadata
@@ -29,12 +29,27 @@ def _get_target_schema():
     return context.get_x_argument(as_dictionary=True).get("schema")
 
 
+def _ensure_fk_targets(target_metadata: MetaData, schema: str) -> None:
+    # Placeholder tables for cross-module FK targets (created by other
+    # modules' own migrations) so FK resolution/sorting succeeds without
+    # this migration attempting to create them itself.
+    for table_name in ("immo_unita_immobiliari", "immo_tabelle_millesimali", "anag_soggetti_anagrafici"):
+        if table_name not in target_metadata.tables:
+            Table(
+                table_name,
+                target_metadata,
+                Column("id", Integer, primary_key=True),
+                schema=schema,
+            )
+
+
 def _get_tenant_tables(schema):
     target_metadata = MetaData()
+    _ensure_fk_targets(target_metadata, schema)
     for table in Base.metadata.sorted_tables:
         if table.name in TENANT_TABLES:
             table.to_metadata(target_metadata, schema=schema)
-    return list(target_metadata.sorted_tables)
+    return [table for table in target_metadata.sorted_tables if table.name in TENANT_TABLES]
 
 
 def upgrade():
