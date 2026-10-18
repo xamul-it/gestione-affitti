@@ -22,14 +22,28 @@ function formatDimensione(bytes) {
 // fidato. Lo sandbox dell'iframe blocca già JS/form; questo chiude il
 // canale rimasto aperto (tracking via richieste di rete) senza dover
 // aggiungere una dipendenza di sanitizzazione HTML.
-const CORPO_HTML_CSP_META =
-  '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; font-src data:; style-src \'unsafe-inline\' data:;">';
+//
+// Usa DOMParser (lo stesso parser HTML del browser) invece di regex:
+// un body malevolo può contenere testo simile a "<head>" dentro un
+// commento o il valore di un attributo, che una regex individuerebbe
+// ma che non è la vera testa del documento come la intende il
+// renderer — la CSP finirebbe iniettata nel punto sbagliato (o resa
+// inerte) mentre la vera <head> resta senza protezione.
+const CSP_CONTENT =
+  "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline' data:;";
 
 function withCspNoNetwork(html) {
-  if (/<head[^>]*>/i.test(html)) {
-    return html.replace(/<head[^>]*>/i, (match) => `${match}${CORPO_HTML_CSP_META}`);
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const meta = doc.createElement('meta');
+    meta.setAttribute('http-equiv', 'Content-Security-Policy');
+    meta.setAttribute('content', CSP_CONTENT);
+    doc.head.insertBefore(meta, doc.head.firstChild);
+    return doc.documentElement.outerHTML;
+  } catch {
+    // Fallback: documento minimale interamente sotto il nostro controllo.
+    return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${CSP_CONTENT}"></head><body></body></html>`;
   }
-  return `${CORPO_HTML_CSP_META}${html}`;
 }
 
 /**
