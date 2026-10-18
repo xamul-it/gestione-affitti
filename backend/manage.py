@@ -4,6 +4,7 @@ manage.py - CLI for Gestione Affitti module management
 
 Usage:
     python manage.py module install <path/to/module.zip>
+    python manage.py module link <path/to/module_dir>   # dev: symlink instead of copy
     python manage.py module remove <module_name> [--keep-data | --drop-data]
     python manage.py module list
     python manage.py module info <module_name>
@@ -452,6 +453,133 @@ def cmd_info(args):
         db.close()
 
 
+def cmd_link(args):
+    """
+    Dev-mode install: create symlinks instead of copying files.
+    Equivalent of 'pip install -e' for modules.
+
+    Expects either:
+      - a backend module directory containing __manifest__.py
+      - a repo root containing backend/<name>/ and optionally frontend/<name>/
+    """
+    source = Path(args.module_path).resolve()
+
+    # Determine backend module dir
+    if (source / "__manifest__.py").exists():
+        # Pointing directly at the backend module dir
+        backend_src = source
+        # Try to find frontend sibling: ../../frontend/<name> or ../frontend/<name>
+        module_name = backend_src.name
+        frontend_src = backend_src.parent.parent / "frontend" / module_name
+        if not frontend_src.exists():
+            frontend_src = backend_src.parent / "frontend" / module_name
+    elif (source / "backend").is_dir():
+        # Pointing at a repo root: backend/<name>/ must exist
+        candidates = [d for d in (source / "backend").iterdir()
+                      if d.is_dir() and (d / "__manifest__.py").exists()]
+        if not candidates:
+            print(f"Error: no module with __manifest__.py found under {source}/backend/")
+            sys.exit(1)
+        if len(candidates) > 1:
+            names = [d.name for d in candidates]
+            print(f"Error: multiple modules found ({names}). Point to a specific module dir.")
+            sys.exit(1)
+        backend_src = candidates[0]
+        module_name = backend_src.name
+        frontend_src = source / "frontend" / module_name
+    else:
+        print(f"Error: {source} does not contain __manifest__.py and is not a repo root.")
+        sys.exit(1)
+
+    # Load and validate manifest
+    manifest_file = backend_src / "__manifest__.py"
+    try:
+        manifest = parse_manifest(str(manifest_file))
+        validate_manifest(manifest)
+    except ManifestValidationError as e:
+        print(f"Error: invalid manifest: {e}")
+        sys.exit(1)
+
+    module_name = manifest["technical_name"]
+
+    # Check dependencies
+    db = _get_db()
+    try:
+        installed = set(_get_installed_module_names(db))
+        missing_deps = [d for d in manifest.get("dependencies", []) if d not in installed]
+        if missing_deps:
+            print(f"Error: missing dependencies: {', '.join(missing_deps)}")
+            print("Link or install them first.")
+            sys.exit(1)
+
+        # Create backend symlink
+        link_dir = _modules_dir() / module_name
+        if link_dir.exists() or link_dir.is_symlink():
+            if link_dir.is_symlink():
+                old_target = link_dir.resolve()
+                print(f"  Replacing existing symlink -> {old_target}")
+                link_dir.unlink()
+            else:
+                backup = link_dir.parent / f"{module_name}.bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                print(f"  Backing up existing install to: {backup.name}")
+                shutil.move(str(link_dir), str(backup))
+        link_dir.symlink_to(backend_src)
+        print(f"  Backend symlink: {link_dir} -> {backend_src}")
+
+        # Create frontend symlink (optional)
+        fe_link = None
+        fe_dir = _frontend_modules_dir()
+        if fe_dir and frontend_src.exists():
+            fe_link = fe_dir / module_name
+            if fe_link.exists() or fe_link.is_symlink():
+                fe_link.unlink() if fe_link.is_symlink() else shutil.rmtree(fe_link)
+            fe_link.symlink_to(frontend_src)
+            print(f"  Frontend symlink: {fe_link} -> {frontend_src}")
+        elif not frontend_src.exists():
+            print(f"  No frontend found at {frontend_src} — skipping")
+
+        # Register in DB
+        from app.core.module_system.models import Module
+        record = db.query(Module).filter(Module.technical_name == module_name).first()
+        if record:
+            record.version = manifest.get("version")
+            record.manifest = manifest
+            record.install_path = str(link_dir)
+            record.state = "linked"
+            record.registered = True
+        else:
+            record = Module(
+                name=manifest["name"],
+                technical_name=module_name,
+                version=manifest.get("version"),
+                manifest=manifest,
+                install_path=str(link_dir),
+                state="linked",
+                registered=True,
+                enabled=True,
+            )
+            db.add(record)
+        db.commit()
+        db.refresh(record)
+
+        # Run migrations unless skipped
+        if not args.no_migrate:
+            print("  Running migrations...")
+            _run_module_migrations(record)
+        else:
+            print("  Skipping migrations (--no-migrate)")
+
+    finally:
+        db.close()
+
+    print()
+    print(f"✅ Module '{module_name}' linked in dev mode.")
+    print("Restart the backend to load it:")
+    print("   ./start.sh")
+    if fe_link:
+        print("Frontend changes are live immediately (Vite HMR).")
+
+
 # ─── CLI Entry Point ─────────────────────────────────────────────────────────
 
 def main():
@@ -469,6 +597,11 @@ def main():
     install_parser = module_sub.add_parser("install", help="Install a module from a ZIP file")
     install_parser.add_argument("zip_path", help="Path to the module ZIP file")
     install_parser.add_argument("--no-migrate", action="store_true", help="Skip running migrations")
+
+    # module link (dev mode)
+    link_parser = module_sub.add_parser("link", help="Dev install: symlink a module directory (no ZIP needed)")
+    link_parser.add_argument("module_path", help="Path to the module backend dir or repo root")
+    link_parser.add_argument("--no-migrate", action="store_true", help="Skip running migrations")
 
     # module remove
     remove_parser = module_sub.add_parser("remove", help="Remove an installed module")
@@ -491,6 +624,8 @@ def main():
     if args.command == "module":
         if args.subcommand == "install":
             cmd_install(args)
+        elif args.subcommand == "link":
+            cmd_link(args)
         elif args.subcommand == "remove":
             cmd_remove(args)
         elif args.subcommand == "list":

@@ -18,6 +18,7 @@ Each migration can specify target_schema in its module:
 """
 from logging.config import fileConfig
 import sys
+import inspect as _inspect
 from pathlib import Path
 
 from sqlalchemy import engine_from_config, text, inspect
@@ -31,6 +32,33 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # Import Base metadata from app
 from app.core.database import Base
 from app.core.config import settings
+
+# Add modules/ directory to path so module migrations can `import <module>.models`
+# regardless of whether this runs in-process or as a standalone subprocess.
+_modules_dir = str(settings.resolved_module_dir)
+if _modules_dir not in sys.path:
+    sys.path.insert(0, _modules_dir)
+
+# Eagerly import core platform models so Base.metadata is fully populated
+# before any migration runs. A module-scoped migration subprocess only
+# imports its own module's models; without this, any cross-module foreign
+# key (e.g. a tenant table referencing public.core_document_jobs) fails to
+# resolve with NoReferencedTableError even though the target table exists
+# in the database, because the referencing model class was never imported
+# in this process. Mirrors the "ensure tables are created" imports in
+# app/main.py.
+from app.core.module_system.models import (  # noqa: F401
+    Module, ModuleDependency, ModulePermission, ModuleHook, ModuleExtension, ModuleEndpoint,
+)
+from app.core.auth.models import User, Role, Permission, user_roles, role_permissions  # noqa: F401
+from app.core.models.import_configuration import ImportConfiguration  # noqa: F401
+from app.core.models.table_configuration import TableConfiguration  # noqa: F401
+from app.core.models import RuoloDisponibile, SoggettoRuolo  # noqa: F401
+from app.core.models.tenant import Tenant, UserTenant, TenantModule  # noqa: F401
+from app.core.platform.models import (  # noqa: F401
+    MenuItem, Widget, UserDashboard, Scadenza, ScadenzaDestinatario, ScadenzaLog, DocumentJob, JobStatus,
+    Notifica, CanaleNotifica, StatoEmailNotifica,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -188,7 +216,7 @@ target_metadata = Base.metadata
 def get_all_tenant_schemas(connection) -> list:
     """Get all tenant schema names from the database."""
     result = connection.execute(text("""
-        SELECT schema_name FROM public.tenants WHERE schema_name IS NOT NULL
+        SELECT schema_name FROM public.core_tenants WHERE schema_name IS NOT NULL
     """))
     return [row[0] for row in result.fetchall()]
 
@@ -211,34 +239,76 @@ def get_target_schemas() -> list:
         return [schema_arg]
 
 
+def _get_calling_migration_target_schema():
+    """
+    Walk the call stack to find the migration script module currently
+    executing (identified by defining both `revision` and `down_revision`,
+    which every Alembic migration file defines) and return its declared
+    `target_schema`, or None if not declared / not found.
+    """
+    for frame_info in _inspect.stack():
+        g = frame_info.frame.f_globals
+        if 'revision' in g and 'down_revision' in g:
+            return g.get('target_schema')
+    return None
+
+
 def should_run_migration_for_schema(schema_name: str) -> bool:
     """
-    Check if current migration should run for the given schema.
-
-    Reads target_schema from the migration module:
+    Check if the currently-executing migration should run against the
+    given schema, based on the `target_schema` declared in the migration
+    module currently on the call stack:
     - "public": only runs in public schema
     - "tenant": only runs in tenant schemas
-    - "both": runs in all schemas (default)
+    - "both" / not declared: runs in all schemas
     """
-    # Get the current migration's target_schema setting
-    migration_context = context.get_context()
-
-    # Try to get target_schema from current migration script
-    # Default to "both" if not specified
-    script = migration_context.script
-    if script and hasattr(script, '_current_rev'):
-        current_rev = script._current_rev
-        if current_rev:
-            rev_script = script.get_revision(current_rev)
-            if rev_script and hasattr(rev_script.module, 'target_schema'):
-                target = rev_script.module.target_schema
-
-                if target == "public" and schema_name != "public":
-                    return False
-                elif target == "tenant" and schema_name == "public":
-                    return False
-
+    target = _get_calling_migration_target_schema()
+    if target == "public" and schema_name != "public":
+        return False
+    if target == "tenant" and schema_name == "public":
+        return False
     return True
+
+
+def _install_schema_gate() -> None:
+    """
+    Wrap DDL-emitting op functions so that a migration whose declared
+    target_schema doesn't match the schema currently being migrated is
+    skipped entirely instead of running against the wrong schema's
+    tables (e.g. a tenant-only migration running while migrating public).
+
+    Must be installed after _install_module_prefixing so it wraps
+    whatever is currently on `alembic_op` (prefixed or not).
+    """
+    gated_names = [
+        "create_table", "drop_table", "add_column", "drop_column",
+        "alter_column", "create_index", "drop_index",
+        "create_unique_constraint", "create_check_constraint",
+        "create_foreign_key", "drop_constraint", "execute",
+        "bulk_insert",
+    ]
+    if getattr(alembic_op, "rename_table", None):
+        gated_names.append("rename_table")
+
+    for name in gated_names:
+        original = getattr(alembic_op, name, None)
+        if original is None:
+            continue
+
+        def make_gated(fn_name, fn):
+            def gated(*args, **kwargs):
+                schema_name = _current_migration_schema["value"]
+                if schema_name is not None and not should_run_migration_for_schema(schema_name):
+                    return None
+                return fn(*args, **kwargs)
+            gated.__name__ = fn_name
+            return gated
+
+        setattr(alembic_op, name, make_gated(name, original))
+
+
+_current_migration_schema = {"value": None}
+_install_schema_gate()
 
 
 def run_migrations_offline() -> None:
@@ -268,6 +338,8 @@ def run_migrations_for_schema(connection, schema_name: str) -> None:
     # Set search_path to the target schema
     connection.execute(text(f"SET search_path TO {schema_name}, public"))
     connection.commit()
+
+    _current_migration_schema["value"] = schema_name
 
     # Configure context for this schema
     context.configure(

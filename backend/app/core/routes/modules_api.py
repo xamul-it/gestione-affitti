@@ -21,6 +21,7 @@ from app.core.services.tenant_module_service import TenantModuleService
 from app.core.platform.models.menu import MenuItem
 from app.core.platform.models.dashboard import Widget
 from app.core.services.role_registry import RoleRegistry
+from app.core.auth.seed_platform_permissions import sync_module_permissions
 import logging
 from pathlib import Path
 import subprocess
@@ -422,6 +423,8 @@ def register_module_resources(
         )
 
     menu_items, widgets = _load_module_resources(module_record)
+
+    sync_module_permissions(db, manifest)
 
     menu_registered = 0
     widgets_registered = 0

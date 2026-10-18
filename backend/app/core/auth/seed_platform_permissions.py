@@ -5,6 +5,99 @@ from sqlalchemy.orm import Session
 from app.core.auth.models import Permission, Role, role_permissions
 
 
+def _normalize_manifest_permissions(manifest: dict) -> list[dict]:
+    """
+    Normalize module manifest permissions to the auth Permission schema.
+
+    Supported manifest entries:
+    - "pec.read"
+    - {"name": "pec.read", "description": "..."}
+    - {"code": "affitti_brevi.view", "description": "..."}
+    """
+    normalized = []
+
+    for entry in manifest.get("permissions", []) or []:
+        if isinstance(entry, str):
+            name = entry.strip()
+            description = None
+        elif isinstance(entry, dict):
+            name = (entry.get("name") or entry.get("code") or "").strip()
+            description = entry.get("description")
+        else:
+            continue
+
+        if not name:
+            continue
+
+        parts = name.split(".")
+        resource = parts[0]
+        action = ".".join(parts[1:]) if len(parts) > 1 else "access"
+
+        normalized.append({
+            "name": name,
+            "description": description or f"Module permission: {name}",
+            "resource": resource,
+            "action": action,
+        })
+
+    return normalized
+
+
+def sync_module_permissions(db: Session, manifest: dict) -> dict:
+    """
+    Ensure module permissions exist in core_permissions and grant them to
+    the standard admin roles used by the platform.
+    """
+    permissions_data = _normalize_manifest_permissions(manifest)
+    if not permissions_data:
+        return {
+            "permissions_created": 0,
+            "permissions_existing": 0,
+            "roles_updated": 0,
+        }
+
+    created = 0
+    existing = 0
+    permission_objects = []
+
+    for perm_data in permissions_data:
+        perm = db.query(Permission).filter_by(name=perm_data["name"]).first()
+        if not perm:
+            perm = Permission(**perm_data)
+            db.add(perm)
+            db.flush()
+            created += 1
+        else:
+            existing += 1
+        permission_objects.append(perm)
+
+    admin_role_names = ["Admin", "Platform Administrator", "Tenant Administrator"]
+    roles_updated = 0
+
+    for role_name in admin_role_names:
+        role = db.query(Role).filter_by(name=role_name).first()
+        if not role:
+            continue
+
+        added_any = False
+        current_permission_names = {perm.name for perm in role.permissions}
+        for perm in permission_objects:
+            if perm.name not in current_permission_names:
+                role.permissions.append(perm)
+                added_any = True
+
+        if added_any:
+            roles_updated += 1
+
+    db.commit()
+
+    return {
+        "permissions_created": created,
+        "permissions_existing": existing,
+        "roles_updated": roles_updated,
+    }
+
+
 def seed_platform_permissions(db: Session):
     """Seed platform-level permissions."""
 
