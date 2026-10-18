@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
 from ..models import CalendarioIcal
-from ..schemas.calendario_ical import CalendarioIcalCreate, CalendarioIcalUpdate, CalendarioIcalResponse
+from ..schemas.calendario import (
+    CalendarioCanaleCreate as CalendarioIcalCreate,
+    CalendarioCanaleUpdate as CalendarioIcalUpdate,
+    CalendarioCanaleResponse as CalendarioIcalResponse,
+)
 
 router = APIRouter(prefix="/calendari", tags=["Calendari iCal"])
 

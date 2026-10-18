@@ -230,3 +230,12 @@ def init_auth_data(db: Session) -> None:
         logger.error(f"Error initializing auth data: {e}")
         db.rollback()
         raise
+
+
+def get_system_user_id(db: Session) -> int:
+    """Return the ID of the first active superuser, used for system-generated scadenze."""
+    user = db.query(User).filter_by(is_superuser=True, is_active=True).first()
+    if user:
+        return user.id
+    # Fallback: return 1 (pre-existing behavior) if no superuser found
+    return 1
