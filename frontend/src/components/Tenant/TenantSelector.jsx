@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTenant } from '../../contexts/TenantContext';
 import axios from 'axios';
 import './TenantSelector.css';
@@ -10,27 +10,16 @@ export function TenantSelector({ onTenantSelected }) {
   const [selectedTenantId, setSelectedTenantId] = useState(null);
   const [switching, setSwitching] = useState(false);
   const [settingDefault, setSettingDefault] = useState(null);
+  const fetchedRef = useRef(false);
 
-  // Fetch tenants on mount - use a flag to prevent infinite loops
+  // Fetch tenants on mount — un'unica chiamata grazie al ref
   useEffect(() => {
-    let isMounted = true;
-    const hasFetched = sessionStorage.getItem('tenants_fetched');
-
-    if (fetchUserTenants && availableTenants.length === 0 && isMounted) {
-      if (!hasFetched) {
-        sessionStorage.setItem('tenants_fetched', 'true');
-      } else {
-        sessionStorage.removeItem('tenants_fetched');
-      }
-      fetchUserTenants().catch(err => {
-        console.error('Failed to fetch tenants:', err);
-        sessionStorage.removeItem('tenants_fetched');
-      });
-    }
-
-    return () => {
-      isMounted = false;
-    };
+    if (fetchedRef.current || availableTenants.length > 0) return;
+    fetchedRef.current = true;
+    fetchUserTenants().catch(err => {
+      console.error('Failed to fetch tenants:', err);
+      fetchedRef.current = false; // consenti retry se fallisce
+    });
   }, []);
 
   useEffect(() => {

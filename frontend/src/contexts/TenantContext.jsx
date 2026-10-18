@@ -7,7 +7,16 @@ const TenantContext = createContext(null);
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 export function TenantProvider({ children }) {
-  const [currentTenant, setCurrentTenant] = useState(null);
+  // Inizializzazione sincrona da localStorage per evitare il redirect a /tenant-select
+  // prima che l'useEffect abbia modo di girare (race condition al primo render).
+  const [currentTenant, setCurrentTenant] = useState(() => {
+    try {
+      const saved = localStorage.getItem('current_tenant');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [availableTenants, setAvailableTenants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -51,29 +60,6 @@ export function TenantProvider({ children }) {
       console.log('[TenantContext] Synced current tenant to token:', nextTenant.schema_name);
     }
   };
-
-  // Initialize tenant state from localStorage
-  useEffect(() => {
-    const savedTenant = localStorage.getItem('current_tenant');
-    if (savedTenant) {
-      try {
-        setCurrentTenant(JSON.parse(savedTenant));
-      } catch (err) {
-        console.error('Failed to parse saved tenant:', err);
-        localStorage.removeItem('current_tenant');
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token || availableTenants.length > 0 || isFetchingRef.current) {
-      return;
-    }
-    fetchUserTenants().catch(() => {
-      // Errors are handled inside fetchUserTenants
-    });
-  }, [availableTenants.length]);
 
   /**
    * Fetch accessible tenants for the current user

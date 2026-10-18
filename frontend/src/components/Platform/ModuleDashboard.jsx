@@ -46,10 +46,12 @@ function ModuleDashboard({ moduleId, moduleLabel }) {
         { headers: { 'Authorization': `Bearer ${token}` } }
       )
 
-      // Filter layout to show only this module's widgets
+      // Filter layout using the widgets registered for this module.
+      // Widget ids are not guaranteed to be prefixed with the module id.
+      const moduleWidgetIds = new Set(moduleWidgets.map(widget => widget.id))
       const activeModuleWidgetIds = dashboardResponse.data.layout
         .map(item => item.i)
-        .filter(id => id.startsWith(`${moduleId}.`))
+        .filter(id => moduleWidgetIds.has(id))
 
       // Build widget list with layout info
       const widgetsWithLayout = activeModuleWidgetIds

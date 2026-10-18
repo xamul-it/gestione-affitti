@@ -15,6 +15,7 @@ function ModuleDashboard() {
     'immobili': 'Immobili',
     'anagrafica_italiana': 'Anagrafica Italiana',
     'affitti_lungo': 'Affitti Lungo Termine',
+    'gestione_pec': 'Gestione PEC',
     'hello_module': 'Hello Module',
   };
 
