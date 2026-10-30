@@ -12,7 +12,9 @@ set -euo pipefail
 
 DEV_REPO="/home/htpc/test/gestione-affitti"
 STABLE_DIR="/home/htpc/apps/gestione-affitti-stable"
-BACKUP_DIR="$STABLE_DIR/backups"
+# Fuori dal worktree: dentro, i dump risulterebbero file non tracciati e
+# bloccherebbero la promozione successiva.
+BACKUP_DIR="${GESTIONE_AFFITTI_BACKUP_DIR:-$HOME/apps/gestione-affitti-backups}"
 TARGET_REF="${1:-master}"
 
 # Credenziali del DB di produzione: NON in questo file (che e' nel repo),
@@ -64,9 +66,12 @@ npm install --silent
 npm run build
 
 echo "==> Backup del DB di produzione prima della migrazione"
-mkdir -p "$BACKUP_DIR"
+# I dump contengono tutti i dati di produzione (hash password inclusi):
+# leggibili solo dall'utente.
+(umask 077; mkdir -p "$BACKUP_DIR")
+chmod 700 "$BACKUP_DIR"
 BACKUP_FILE="$BACKUP_DIR/${PROD_DB}_$(date +%Y%m%d_%H%M%S).sql"
-pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$PROD_DB" > "$BACKUP_FILE"
+(umask 077; pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$PROD_DB" > "$BACKUP_FILE")
 echo "    backup salvato in: $BACKUP_FILE"
 
 # Tiene solo gli ultimi 14 backup per non saturare lo spazio disco
