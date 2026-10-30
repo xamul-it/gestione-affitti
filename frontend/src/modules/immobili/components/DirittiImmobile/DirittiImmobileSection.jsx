@@ -9,6 +9,10 @@ const TIPO_DIRITTO_LABELS = {
   COMPROPRIETARIO: 'Comproprietario',
   USUFRUTTUARIO: 'Usufruttuario',
   NUDA_PROPRIETA: 'Nuda Proprietà',
+  USO: 'Uso',
+  ABITAZIONE: 'Abitazione',
+  SUPERFICIE: 'Superficie',
+  ENFITEUSI: 'Enfiteusi',
   ALTRO: 'Altro'
 };
 

@@ -23,6 +23,22 @@ api.interceptors.request.use(
   }
 );
 
+// Import unità immobiliari da visura catastale ("Carica da documento")
+export const visuraImportAPI = {
+  preview: (file, tipoDocumento = 'VISURA_CATASTALE') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('tipo_documento', tipoDocumento);
+    return api.post('/unita-immobiliari/import-visura/preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  apply: (uploadToken, proposta) => api.post('/unita-immobiliari/import-visura/apply', {
+    upload_token: uploadToken,
+    proposta,
+  }),
+};
+
 // Unita Immobiliari API
 export const unitaImmobiliariAPI = {
   getAll: () => api.get('/unita-immobiliari/'),
@@ -171,6 +187,7 @@ export const speseRicorrentiAPI = {
 
 export default {
   unitaImmobiliariAPI,
+  visuraImportAPI,
   proprietariAPI,
   dirittiImmobileAPI,
   condominAPI,

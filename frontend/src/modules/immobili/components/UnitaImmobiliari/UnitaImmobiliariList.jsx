@@ -1,6 +1,9 @@
 import { DataTable } from '../../../../core/components';
 import UnitaImmobiliareForm from './UnitaImmobiliareForm';
+import { useState } from 'react';
 import ImportButton from '../../../../components/Platform/ImportButton';
+import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
+import ImportVisuraModal from '../ImportVisura/ImportVisuraModal';
 import './UnitaImmobiliari.css';
 
 const unitaTableConfig = {
@@ -64,6 +67,8 @@ function UnitaImmobiliareFormModal({ entity, onClose }) {
 }
 
 function UnitaImmobiliariList() {
+  const [showVisuraImport, setShowVisuraImport] = useState(false);
+
   return (
     <div className="unita-immobiliari-container">
       <DataTable
@@ -76,12 +81,30 @@ function UnitaImmobiliariList() {
           pageSize: 20,
         }}
         customActions={({ table }) => (
-          <ImportButton
-            moduleName="affitti_lungo"
-            entityName="UnitaImmobiliare"
-            entityLabel="Unita Immobiliari"
-            onImportComplete={() => table.refresh()}
-          />
+          <>
+            <button
+              className="btn-import"
+              onClick={() => setShowVisuraImport(true)}
+              title="Importa unità immobiliari e proprietari da una visura catastale"
+            >
+              <span className="btn-import-icon" aria-hidden="true">
+                {renderIcon('upload', { size: 16, className: 'btn-import-icon-svg', fallbackClassName: 'btn-import-icon-svg' })}
+              </span>
+              Carica da documento
+            </button>
+            <ImportButton
+              moduleName="affitti_lungo"
+              entityName="UnitaImmobiliare"
+              entityLabel="Unita Immobiliari"
+              onImportComplete={() => table.refresh()}
+            />
+            {showVisuraImport && (
+              <ImportVisuraModal
+                onClose={() => setShowVisuraImport(false)}
+                onImported={() => table.refresh()}
+              />
+            )}
+          </>
         )}
       />
     </div>

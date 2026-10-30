@@ -8,6 +8,10 @@ const TIPI_DIRITTO = [
   { value: 'COMPROPRIETARIO', label: 'Comproprietario' },
   { value: 'USUFRUTTUARIO', label: 'Usufruttuario' },
   { value: 'NUDA_PROPRIETA', label: 'Nuda Proprietà' },
+  { value: 'USO', label: 'Uso' },
+  { value: 'ABITAZIONE', label: 'Abitazione' },
+  { value: 'SUPERFICIE', label: 'Superficie' },
+  { value: 'ENFITEUSI', label: 'Enfiteusi' },
   { value: 'ALTRO', label: 'Altro' }
 ];
 

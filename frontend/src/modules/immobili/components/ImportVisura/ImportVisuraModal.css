@@ -1,0 +1,119 @@
+.visura-modal {
+  max-width: 820px;
+  width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.visura-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.visura-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  flex: 1;
+}
+
+.visura-field input,
+.visura-field select {
+  padding: 6px 8px;
+  border: 1px solid #ccd3da;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.visura-field--small {
+  flex: 0 0 90px;
+}
+
+.visura-field--missing input {
+  border-color: #e74c3c;
+  background: #fdf1f0;
+}
+
+.visura-muted {
+  color: #6b7785;
+  font-size: 0.85rem;
+}
+
+.visura-error {
+  background: #fdecea;
+  color: #b3261e;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.visura-summary {
+  font-weight: 600;
+  margin-top: 0;
+}
+
+.visura-review section {
+  margin-bottom: 20px;
+}
+
+.visura-review h3 {
+  font-size: 1rem;
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e3e7eb;
+}
+
+.visura-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.visura-unit {
+  border: 1px solid #e3e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.visura-unit-fields {
+  display: flex;
+  gap: 10px;
+  margin: 6px 0 6px 24px;
+}
+
+.visura-diritti,
+.visura-modifiche,
+.visura-avvisi {
+  list-style: none;
+  margin: 4px 0 0 24px;
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.visura-avvisi li {
+  color: #9a6700;
+}
+
+.visura-old {
+  text-decoration: line-through;
+  color: #8a94a0;
+}
+
+.visura-new {
+  font-weight: 600;
+}
+
+.visura-invariati summary {
+  cursor: pointer;
+  color: #4a5662;
+}
+
+.visura-result ul {
+  line-height: 1.8;
+}
