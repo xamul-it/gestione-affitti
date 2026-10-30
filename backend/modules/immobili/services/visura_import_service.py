@@ -12,14 +12,20 @@ Matching rules (spec docs/superpowers/specs/2026-10-30-import-visure-catastali-d
 - unità: by città + foglio + particella + subalterno (leading zeros ignored)
 - diritto: same unità + same soggetto's Proprietario + same tipo_diritto
 """
+import io
+import logging
 import re
 import unicodedata
+from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from anagrafica_italiana.models import ComuneItalia, SoggettoAnagrafico, TipoSoggetto
+from app.core.file_storage import file_storage
+from app.core.platform.models import Documento, EntityType, TipoDocumento, TipoDocumentoEnum
 
 from ..models import (
     CategoriaCatastale,
@@ -35,8 +41,11 @@ from ..schemas.visura_import import (
     UnitaProposta,
     VisuraProposta,
 )
+from .codice_generator_service import CodiceGeneratorService
 from .visura.models import FabbricatoParsed, IntestatoParsed, VisuraParsed
 from .visura.text import strip_zeros
+
+logger = logging.getLogger(__name__)
 
 NOTE_BLOCK_RE = re.compile(r"--- Dati catastali \(da visura [^\n]*\) ---\n.*?--- fine dati catastali ---", re.S)
 
@@ -337,3 +346,221 @@ def build_proposal(db: Session, visura: VisuraParsed) -> VisuraProposta:
         unita=unita,
         avvisi=avvisi_globali,
     )
+
+
+# --- apply ------------------------------------------------------------------
+
+UPDATABLE_FIELDS = {"categoria_catastale_id", "rendita_catastale", "superficie_mq", "indirizzo", "piano"}
+
+
+class VisuraImportError(ValueError):
+    """The confirmed proposal cannot be applied; message is shown to the user."""
+
+
+@dataclass
+class ImportResult:
+    soggetti_creati: int = 0
+    soggetti_aggiornati: int = 0
+    unita_create: List[int] = field(default_factory=list)
+    unita_aggiornate: List[int] = field(default_factory=list)
+    diritti_creati: int = 0
+    documenti_allegati: int = 0
+
+
+def _label(u: UnitaProposta) -> str:
+    return f"foglio {u.foglio} particella {u.particella} sub {u.subalterno or '-'}"
+
+
+def _validate(db: Session, proposta: VisuraProposta) -> Dict[str, UnitaImmobiliare]:
+    """Check everything before writing anything; returns existing units by key."""
+    for s in proposta.soggetti:
+        if s.azione != "crea" and (s.soggetto_id is None or db.get(SoggettoAnagrafico, s.soggetto_id) is None):
+            raise VisuraImportError(f"Anagrafica {s.nominativo} non più presente: ricarica la visura")
+    existing: Dict[str, UnitaImmobiliare] = {}
+    for u in proposta.unita:
+        if not u.selezionato:
+            continue
+        if u.azione == "crea":
+            missing = [c for c in ("tipo", "indirizzo", "citta") if not (getattr(u, c) or "").strip()]
+            if missing:
+                raise VisuraImportError(f"{', '.join(missing).capitalize()} mancante per l'unità {_label(u)}")
+            continue
+        unit = db.get(UnitaImmobiliare, u.unita_id) if u.unita_id else None
+        if unit is None or _unit_key("", unit.foglio, unit.particella, unit.subalterno)[1:] != \
+                _unit_key("", u.foglio, u.particella, u.subalterno)[1:]:
+            raise VisuraImportError(f"Unità {_label(u)} non più corrispondente: ricarica la visura")
+        existing[u.key] = unit
+    return existing
+
+
+def _create_soggetto(s: SoggettoProposta) -> SoggettoAnagrafico:
+    if s.persona_giuridica:
+        piva = s.codice_fiscale if s.codice_fiscale and s.codice_fiscale.isdigit() else None
+        return SoggettoAnagrafico(
+            tipo_soggetto=TipoSoggetto.PERSONA_GIURIDICA,
+            ragione_sociale=s.ragione_sociale or s.nominativo,
+            codice_fiscale=s.codice_fiscale,
+            partita_iva=piva,
+        )
+    return SoggettoAnagrafico(
+        tipo_soggetto=TipoSoggetto.PERSONA_FISICA,
+        cognome=s.cognome,
+        nome=s.nome,
+        codice_fiscale=s.codice_fiscale,
+        data_nascita=s.data_nascita,
+        luogo_nascita=s.luogo_nascita,
+    )
+
+
+def _proprietario_for(db: Session, soggetto_id: int, cache: Dict[int, Proprietario]) -> Proprietario:
+    if soggetto_id not in cache:
+        p = db.query(Proprietario).filter(Proprietario.soggetto_id == soggetto_id).order_by(Proprietario.id).first()
+        if p is None:
+            p = Proprietario(soggetto_id=soggetto_id)
+            db.add(p)
+            db.flush()
+        cache[soggetto_id] = p
+    return cache[soggetto_id]
+
+
+def _has_visura(db: Session, unit_id: int, numero: str) -> bool:
+    docs = db.query(Documento).filter(
+        Documento.entity_type == EntityType.IMMOBILE, Documento.entity_id == unit_id
+    ).all()
+    return any((d.metadata_parsato or {}).get("numero_visura") == numero for d in docs)
+
+
+def apply_proposal(
+    db: Session,
+    proposta: VisuraProposta,
+    pdf_bytes: bytes,
+    filename: str,
+    tenant_schema: str,
+) -> ImportResult:
+    existing_units = _validate(db, proposta)
+    result = ImportResult()
+    saved_files: List[str] = []
+    try:
+        soggetto_ids: Dict[str, int] = {}
+        for s in proposta.soggetti:
+            if s.azione == "crea":
+                if not s.selezionato:
+                    continue
+                nuovo = _create_soggetto(s)
+                db.add(nuovo)
+                db.flush()
+                soggetto_ids[s.key] = nuovo.id
+                result.soggetti_creati += 1
+                continue
+            soggetto_ids[s.key] = s.soggetto_id
+            if s.azione == "aggiorna" and s.selezionato:
+                target = db.get(SoggettoAnagrafico, s.soggetto_id)
+                changed = False
+                for campo in s.campi_da_completare:
+                    if campo in SOGGETTO_CAMPI_COMPLETABILI and getattr(target, campo) in (None, ""):
+                        setattr(target, campo, getattr(s, campo))
+                        changed = True
+                result.soggetti_aggiornati += int(changed)
+
+        generator = CodiceGeneratorService(db)
+        proprietari: Dict[int, Proprietario] = {}
+        tipo_visura = db.query(TipoDocumento).filter(TipoDocumento.codice == "VISURA_CATASTALE").first()
+
+        for u in proposta.unita:
+            if not u.selezionato:
+                continue
+            if u.azione == "crea":
+                unit = UnitaImmobiliare(
+                    codice=generator.generate_codice(u.provincia, UnitaImmobiliare),
+                    codice_auto_generated=True,
+                    tipo=u.tipo.strip(),
+                    indirizzo=u.indirizzo.strip(),
+                    citta=u.citta.strip(),
+                    cap=u.cap,
+                    provincia=u.provincia,
+                    piano=u.piano,
+                    superficie_mq=u.superficie_mq,
+                    locali=u.locali,
+                    rendita_catastale=u.rendita_catastale,
+                    foglio=u.foglio,
+                    particella=u.particella,
+                    subalterno=u.subalterno,
+                    categoria_catastale_id=u.categoria_catastale_id,
+                    note=u.note_catastali,
+                )
+                db.add(unit)
+                db.flush()
+                result.unita_create.append(unit.id)
+            else:
+                unit = existing_units[u.key]
+                changed = False
+                for m in u.modifiche:
+                    if not m.selezionato:
+                        continue
+                    if m.campo in UPDATABLE_FIELDS:
+                        setattr(unit, m.campo, m.nuovo)
+                        changed = True
+                    elif m.campo == "note_catastali":
+                        unit.note = replace_note_block(unit.note, u.note_catastali)
+                        changed = True
+                if changed:
+                    result.unita_aggiornate.append(unit.id)
+            esistenti = {(sid, d.tipo_diritto) for d, sid in _diritti_esistenti(db, unit.id)}
+
+            diritti_aggiunti = 0
+            for d in u.diritti:
+                soggetto_id = soggetto_ids.get(d.soggetto_key)
+                if not d.selezionato or d.azione != "crea" or soggetto_id is None:
+                    continue
+                if (soggetto_id, d.tipo_diritto) in esistenti:
+                    continue
+                proprietario = _proprietario_for(db, soggetto_id, proprietari)
+                db.add(DirittoImmobile(
+                    unita_immobiliare_id=unit.id,
+                    proprietario_id=proprietario.id,
+                    tipo_diritto=d.tipo_diritto,
+                    quota_percentuale=Decimal(str(d.quota_percentuale)) if d.quota_percentuale is not None else None,
+                    note=d.note[:500],
+                ))
+                esistenti.add((soggetto_id, d.tipo_diritto))
+                diritti_aggiunti += 1
+            result.diritti_creati += diritti_aggiunti
+            if diritti_aggiunti and u.azione != "crea" and unit.id not in result.unita_aggiornate:
+                result.unita_aggiornate.append(unit.id)
+
+            if _has_visura(db, unit.id, proposta.numero_visura):
+                continue
+            path = file_storage.save_file(
+                io.BytesIO(pdf_bytes), EntityType.IMMOBILE.value, unit.id, filename, tenant_schema=tenant_schema
+            )
+            saved_files.append(path)
+            db.add(Documento(
+                entity_type=EntityType.IMMOBILE,
+                entity_id=unit.id,
+                tipo_documento=TipoDocumentoEnum.VISURA_CATASTALE,
+                tipo_documento_id=tipo_visura.id if tipo_visura else None,
+                nome_file=filename,
+                file_path=path,
+                mime_type="application/pdf",
+                dimensione=len(pdf_bytes),
+                descrizione=(
+                    f"Visura catastale {proposta.formato.value.lower()} n. {proposta.numero_visura} "
+                    f"del {proposta.data_visura.strftime('%d/%m/%Y')}"
+                ),
+                metadata_parsato={
+                    "numero_visura": proposta.numero_visura,
+                    "data_visura": proposta.data_visura.isoformat(),
+                    "formato": proposta.formato.value,
+                },
+            ))
+            db.flush()
+            result.documenti_allegati += 1
+
+        db.commit()
+    except Exception:
+        db.rollback()
+        for path in saved_files:
+            file_storage.delete_file(path, tenant_schema)
+        logger.exception("Import visura %s fallito: rollback eseguito", proposta.numero_visura)
+        raise
+    return result

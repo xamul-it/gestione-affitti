@@ -18,7 +18,12 @@ from anagrafica_italiana.seeds.seed_tipi_documento import seed_tipi_documento
 from immobili.models import DirittoImmobile, Proprietario, UnitaImmobiliare
 from immobili.models.diritti_immobile import TipoDiritto
 from immobili.services.visura import parse_visura
-from immobili.services.visura_import_service import build_proposal
+from immobili.services.visura_import_service import (
+    VisuraImportError,
+    apply_proposal,
+    build_proposal,
+)
+from app.core.platform.models import Documento, EntityType, TipoDocumentoEnum
 
 TENANT = "tenant_qa_test"
 
@@ -195,3 +200,146 @@ def test_quota_mismatch_warning(pg_session, sintetica):
     assert any("Quota diversa" in a for a in u.avvisi)
     demanio_diritto = next(d for d in u.diritti if d.tipo_diritto == TipoDiritto.PROPRIETARIO)
     assert demanio_diritto.azione == "invariato"
+
+
+# --- Task 5: apply_proposal -------------------------------------------------
+
+@pytest.fixture
+def storage(tmp_path, monkeypatch):
+    from app.core.file_storage import file_storage
+    monkeypatch.setattr(file_storage, "base_path", tmp_path)
+    return file_storage
+
+
+@pytest.fixture
+def pdf_sintetica():
+    return (FIXTURES / "sintetica.pdf").read_bytes()
+
+
+@pytest.fixture
+def pdf_analitica():
+    return (FIXTURES / "analitica.pdf").read_bytes()
+
+
+def _apply(pg_session, proposta, pdf):
+    seed_tipi_documento(pg_session)
+    return apply_proposal(pg_session, proposta, pdf, "visura.pdf", TENANT)
+
+
+def _find_unit(pg_session, particella, sub):
+    return pg_session.query(UnitaImmobiliare).filter_by(
+        foglio="99", particella=particella, subalterno=sub
+    ).one_or_none()
+
+
+def test_apply_creates_everything(pg_session, storage, sintetica, pdf_sintetica):
+    result = _apply(pg_session, build_proposal(pg_session, sintetica), pdf_sintetica)
+    assert len(result.unita_create) == 9
+    assert result.soggetti_creati == 3
+    assert result.diritti_creati == 18
+    assert result.documenti_allegati == 9
+
+    u = _find_unit(pg_session, "666", "19")
+    assert u.rendita_catastale == 1316.97
+    assert u.superficie_mq == 294
+    assert u.codice
+    assert "--- Dati catastali (da visura T234664/2025 del 16/12/2025) ---" in u.note
+    docs = pg_session.query(Documento).filter_by(entity_type=EntityType.IMMOBILE, entity_id=u.id).all()
+    assert len(docs) == 1
+    assert docs[0].tipo_documento == TipoDocumentoEnum.VISURA_CATASTALE
+    assert docs[0].metadata_parsato["numero_visura"] == "T234664/2025"
+    assert (storage.base_path / docs[0].file_path).exists()
+
+    luigi = pg_session.query(SoggettoAnagrafico).filter_by(codice_fiscale="ZNDLMT73E17F205F").one()
+    assert (luigi.cognome, luigi.nome) == ("ZANDERIGHI", "Luigi Matteo Massimiliano")
+    u592 = _find_unit(pg_session, "592", "2")
+    tipi = sorted(d.tipo_diritto.value for d in u592.diritti)
+    assert tipi == ["PROPRIETARIO", "USO"]
+
+
+def test_reimport_is_noop(pg_session, storage, sintetica, pdf_sintetica):
+    _apply(pg_session, build_proposal(pg_session, sintetica), pdf_sintetica)
+    proposta = build_proposal(pg_session, sintetica)
+    assert all(u.azione == "invariato" for u in proposta.unita)
+    assert all(s.azione == "invariato" for s in proposta.soggetti)
+    assert all(d.azione == "invariato" for u in proposta.unita for d in u.diritti)
+    result = _apply(pg_session, proposta, pdf_sintetica)
+    assert result.diritti_creati == 0
+    assert result.documenti_allegati == 0
+    assert result.unita_create == []
+
+
+def test_analitica_after_sintetica_attaches_new_document_only(
+    pg_session, storage, sintetica, analitica, pdf_sintetica, pdf_analitica
+):
+    _apply(pg_session, build_proposal(pg_session, sintetica), pdf_sintetica)
+    proposta = build_proposal(pg_session, analitica)
+    assert not any(u.azione == "crea" for u in proposta.unita)
+    result = _apply(pg_session, proposta, pdf_analitica)
+    assert result.unita_create == []
+    assert result.documenti_allegati == 9
+
+
+def test_apply_rejects_missing_tipo(pg_session, storage, sintetica, pdf_sintetica):
+    proposta = build_proposal(pg_session, sintetica)
+    proposta.unita[0].tipo = None
+    with pytest.raises(VisuraImportError):
+        _apply(pg_session, proposta, pdf_sintetica)
+    assert _find_unit(pg_session, "666", "19") is None
+
+
+def test_apply_respects_deselection(pg_session, storage, sintetica, pdf_sintetica):
+    unit = UnitaImmobiliare(
+        codice="TEST-VIS-020", tipo="Appartamento", indirizzo="x", citta="Bologna",
+        foglio="99", particella="666", subalterno="20", rendita_catastale=1.0,
+    )
+    pg_session.add(unit)
+    pg_session.flush()
+    proposta = build_proposal(pg_session, sintetica)
+    skip = next(u for u in proposta.unita if u.subalterno == "21")
+    skip.selezionato = False
+    upd = next(u for u in proposta.unita if u.subalterno == "20")
+    for m in upd.modifiche:
+        if m.campo == "rendita_catastale":
+            m.selezionato = False
+    _apply(pg_session, proposta, pdf_sintetica)
+    assert _find_unit(pg_session, "666", "21") is None
+    pg_session.refresh(unit)
+    assert unit.rendita_catastale == 1.0
+    assert unit.indirizzo == "VIA EMILIA PONENTE n. 356"
+
+
+def test_apply_rolls_back_on_error(pg_session, storage, sintetica, pdf_sintetica, monkeypatch):
+    saved, deleted = [], []
+    real_save = storage.save_file
+
+    def flaky_save(*args, **kwargs):
+        if len(saved) == 2:
+            raise OSError("disk full")
+        path = real_save(*args, **kwargs)
+        saved.append(path)
+        return path
+
+    monkeypatch.setattr(storage, "save_file", flaky_save)
+    monkeypatch.setattr(storage, "delete_file", lambda path, *a, **k: deleted.append(path) or True)
+    proposta = build_proposal(pg_session, sintetica)
+    with pytest.raises(OSError):
+        _apply(pg_session, proposta, pdf_sintetica)
+    assert _find_unit(pg_session, "666", "19") is None
+    assert pg_session.query(SoggettoAnagrafico).filter_by(codice_fiscale="ZNDLMT73E17F205F").first() is None
+    assert sorted(deleted) == sorted(saved)
+
+
+def test_existing_user_fields_untouched(pg_session, storage, sintetica, pdf_sintetica):
+    unit = UnitaImmobiliare(
+        codice="TEST-VIS-018", tipo="Villa", indirizzo="vecchio", citta="Bologna",
+        foglio="99", particella="666", subalterno="18",
+        classe_energetica="B", descrizione="mia", note="nota utente",
+    )
+    pg_session.add(unit)
+    pg_session.flush()
+    _apply(pg_session, build_proposal(pg_session, sintetica), pdf_sintetica)
+    pg_session.refresh(unit)
+    assert (unit.tipo, unit.classe_energetica, unit.descrizione, unit.codice) == ("Villa", "B", "mia", "TEST-VIS-018")
+    assert unit.note.startswith("nota utente")
+    assert "--- Dati catastali" in unit.note
