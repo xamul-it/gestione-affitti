@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import require_permission
@@ -27,11 +28,18 @@ from app.core.file_storage import file_storage
 
 from ..schemas.visura_import import VisuraApplyRequest, VisuraImportResult, VisuraProposta
 from ..services.visura import VisuraFormatError, parse_visura
-from ..services.visura_import_service import VisuraImportError, apply_proposal, build_proposal
+from ..services.visura_import_service import (
+    VisuraImportError,
+    apply_proposal,
+    build_proposal,
+    merge_client_choices,
+)
 
 router = APIRouter(prefix="/unita-immobiliari/import-visura", tags=["Import visura catastale"])
 logger = logging.getLogger(__name__)
 
+# Apply creates/updates anagrafiche, unità, diritti and attaches documents.
+REQUIRED_PERMISSIONS = ["documenti.write", "soggetto.create", "soggetto.edit"]
 TIPI_DOCUMENTO_SUPPORTATI = {"VISURA_CATASTALE"}
 MAX_SIZE = 10 * 1024 * 1024
 TEMP_TTL_SECONDS = 24 * 3600
@@ -67,19 +75,21 @@ def _require_tenant(tenant_schema: Optional[str]) -> str:
 
 
 @router.post("/preview", response_model=VisuraProposta)
-async def preview_import_visura(
+def preview_import_visura(
     file: UploadFile = File(...),
     tipo_documento: str = Form("VISURA_CATASTALE"),
     db: Session = Depends(get_db),
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
-    current_user: User = Depends(require_permission("documenti.write")),
+    current_user: User = Depends(require_permission(REQUIRED_PERMISSIONS)),
 ):
     tenant_schema = _require_tenant(tenant_schema)
     if tipo_documento not in TIPI_DOCUMENTO_SUPPORTATI:
         raise HTTPException(status_code=422, detail="Tipo documento non supportato per l'import")
     if not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=422, detail="Carica un file PDF")
-    content = await file.read(MAX_SIZE + 1)
+    # Plain `def` route: FastAPI runs it in the threadpool, so the pdftotext
+    # subprocess and DB work don't block the event loop.
+    content = file.file.read(MAX_SIZE + 1)
     if len(content) > MAX_SIZE:
         raise HTTPException(status_code=422, detail="File troppo grande (massimo 10 MB)")
 
@@ -102,7 +112,7 @@ def apply_import_visura(
     body: VisuraApplyRequest,
     db: Session = Depends(get_db),
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
-    current_user: User = Depends(require_permission("documenti.write")),
+    current_user: User = Depends(require_permission(REQUIRED_PERMISSIONS)),
 ):
     tenant_schema = _require_tenant(tenant_schema)
     token_dir = _token_dir(tenant_schema, body.upload_token)
@@ -115,15 +125,16 @@ def apply_import_visura(
         visura = parse_visura(content)
     except VisuraFormatError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    proposta = body.proposta
-    if visura.numero != proposta.numero_visura or visura.formato != proposta.formato:
-        raise HTTPException(status_code=422, detail="La proposta non corrisponde alla visura caricata")
-
-    filename = f"visura_{proposta.formato.value.lower()}_{visura.numero.replace('/', '-')}.pdf"
+    filename = f"visura_{visura.formato.value.lower()}_{visura.numero.replace('/', '-')}.pdf"
     try:
+        # Values always come from the PDF re-parsed server-side; the client
+        # only contributes its selections and the editable fields.
+        proposta = merge_client_choices(build_proposal(db, visura), body.proposta)
         result = apply_proposal(db, proposta, content, filename, tenant_schema)
     except VisuraImportError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="Dati modificati nel frattempo: ricarica la visura")
 
     shutil.rmtree(token_dir, ignore_errors=True)
     return VisuraImportResult(**vars(result))

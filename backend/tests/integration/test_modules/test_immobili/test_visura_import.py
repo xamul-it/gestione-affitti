@@ -348,6 +348,7 @@ def test_existing_user_fields_untouched(pg_session, storage, sintetica, pdf_sint
 # --- Task 6: routes -------------------------------------------------------------
 
 import asyncio
+import inspect
 import io
 
 from fastapi import HTTPException, UploadFile
@@ -360,11 +361,16 @@ def _upload(name: str) -> UploadFile:
     return UploadFile(filename=name, file=io.BytesIO((FIXTURES / name).read_bytes()))
 
 
+def _call(fn, **kwargs):
+    result = fn(**kwargs)
+    return asyncio.run(result) if inspect.isawaitable(result) else result
+
+
 def _preview(pg_session, name):
-    return asyncio.run(preview_import_visura(
-        file=_upload(name), tipo_documento="VISURA_CATASTALE",
+    return _call(
+        preview_import_visura, file=_upload(name), tipo_documento="VISURA_CATASTALE",
         db=pg_session, tenant_schema=TENANT, current_user=None,
-    ))
+    )
 
 
 def test_preview_returns_token_and_proposal(pg_session, storage):
@@ -383,10 +389,10 @@ def test_preview_rejects_riepilogo_imu(pg_session, storage):
 
 def test_preview_rejects_other_tipo_documento(pg_session, storage):
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(preview_import_visura(
-            file=_upload("sintetica.pdf"), tipo_documento="CARTA_IDENTITA",
+        _call(
+            preview_import_visura, file=_upload("sintetica.pdf"), tipo_documento="CARTA_IDENTITA",
             db=pg_session, tenant_schema=TENANT, current_user=None,
-        ))
+        )
     assert exc.value.status_code == 422
 
 
@@ -419,3 +425,85 @@ def test_apply_end_to_end(pg_session, storage):
     )
     assert len(result.unita_create) == 9
     assert not (storage.base_path / TENANT / "temp_uploads" / proposta.upload_token).exists()
+
+
+# --- Final review fixes ---------------------------------------------------------
+
+import copy
+import inspect
+from datetime import date as _date
+
+from immobili.routes import visura_import as visura_import_routes
+from immobili.services.visura.models import FabbricatoParsed, FormatoVisura, VisuraParsed
+from immobili.services.visura.text import build_intestato
+from immobili.services.visura_import_service import merge_client_choices
+
+
+def test_apply_ignores_tampered_values(pg_session, storage, sintetica, pdf_sintetica):
+    server = build_proposal(pg_session, sintetica)
+    client = copy.deepcopy(server)
+    u = next(x for x in client.unita if x.subalterno == "19")
+    u.rendita_catastale = 1.0
+    u.foglio = "1"
+    u.note_catastali = "hacked"
+    u.tipo = "Villa"
+    client.soggetti[0].codice_fiscale = "XXXXXX00X00X000X"
+    merged = merge_client_choices(build_proposal(pg_session, sintetica), client)
+    _apply(pg_session, merged, pdf_sintetica)
+    unit = _find_unit(pg_session, "666", "19")
+    assert unit.rendita_catastale == 1316.97
+    assert unit.tipo == "Villa"
+    assert "hacked" not in unit.note
+    assert pg_session.query(SoggettoAnagrafico).filter_by(codice_fiscale="XXXXXX00X00X000X").first() is None
+
+
+def test_apply_ignores_tampered_modifica(pg_session, storage, sintetica, pdf_sintetica):
+    unit = UnitaImmobiliare(
+        codice="TEST-VIS-T20", tipo="Appartamento", indirizzo="x", citta="Bologna",
+        foglio="99", particella="666", subalterno="20", rendita_catastale=1.0,
+    )
+    pg_session.add(unit)
+    pg_session.flush()
+    client = build_proposal(pg_session, sintetica)
+    upd = next(x for x in client.unita if x.subalterno == "20")
+    next(m for m in upd.modifiche if m.campo == "rendita_catastale").nuovo = "not a number"
+    merged = merge_client_choices(build_proposal(pg_session, sintetica), client)
+    _apply(pg_session, merged, pdf_sintetica)
+    pg_session.refresh(unit)
+    assert unit.rendita_catastale == 499.67
+
+
+def test_stale_proposal_rejected(pg_session, storage, sintetica, pdf_sintetica):
+    stale = build_proposal(pg_session, sintetica)
+    _apply(pg_session, merge_client_choices(build_proposal(pg_session, sintetica), stale), pdf_sintetica)
+    with pytest.raises(VisuraImportError, match="ricarica la visura"):
+        merge_client_choices(build_proposal(pg_session, sintetica), stale)
+
+
+def test_company_matched_by_partita_iva(pg_session):
+    existing = _soggetto(
+        pg_session, tipo_soggetto=TipoSoggetto.PERSONA_GIURIDICA,
+        ragione_sociale="Immobiliare Test Srl", partita_iva="01234567890",
+    )
+    intestato = build_intestato("IMMOBILIARE TEST SRL", "01234567890", None, None, "Proprieta' 1/1")
+    visura = VisuraParsed(
+        formato=FormatoVisura.SINTETICA, numero="T1/2025", data=_date(2025, 1, 1), soggetto_cf=None,
+        fabbricati=[FabbricatoParsed(
+            comune="BOLOGNA", codice_catastale_comune="A944", provincia=None, sezione_urbana=None,
+            foglio="1", particella="2", subalterno="3", zona_censuaria=None, micro_zona=None,
+            categoria="A/3", classe=None, consistenza=None, vani=None, superficie_totale=None,
+            superficie_escluse_aree=None, rendita=None, indirizzo="VIA X n. 1", piano=None,
+            intestati=[intestato],
+        )],
+        terreni_count=0,
+    )
+    proposta = build_proposal(pg_session, visura)
+    assert proposta.soggetti[0].soggetto_id == existing.id
+
+
+def test_routes_require_anagrafica_permissions():
+    assert {"documenti.write", "soggetto.create", "soggetto.edit"} <= set(visura_import_routes.REQUIRED_PERMISSIONS)
+
+
+def test_preview_does_not_block_event_loop():
+    assert not inspect.iscoroutinefunction(visura_import_routes.preview_import_visura)

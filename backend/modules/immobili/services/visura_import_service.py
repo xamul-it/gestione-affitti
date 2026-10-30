@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from anagrafica_italiana.models import ComuneItalia, SoggettoAnagrafico, TipoSoggetto
@@ -160,7 +160,15 @@ def _intestato_key(i: IntestatoParsed) -> str:
 
 def _match_soggetto(db: Session, i: IntestatoParsed) -> Optional[SoggettoAnagrafico]:
     if i.codice_fiscale:
-        return db.query(SoggettoAnagrafico).filter(SoggettoAnagrafico.codice_fiscale == i.codice_fiscale).first()
+        q = db.query(SoggettoAnagrafico)
+        if i.codice_fiscale.isdigit():
+            # Companies: the 11-digit CF often equals the P.IVA, and manually
+            # entered companies may have only partita_iva set.
+            return q.filter(or_(
+                SoggettoAnagrafico.codice_fiscale == i.codice_fiscale,
+                SoggettoAnagrafico.partita_iva == i.codice_fiscale,
+            )).first()
+        return q.filter(SoggettoAnagrafico.codice_fiscale == i.codice_fiscale).first()
     return (
         db.query(SoggettoAnagrafico)
         .filter(
@@ -365,6 +373,48 @@ class ImportResult:
     unita_aggiornate: List[int] = field(default_factory=list)
     diritti_creati: int = 0
     documenti_allegati: int = 0
+
+
+STALE_MSG = "La situazione è cambiata dall'anteprima: ricarica la visura"
+EDITABLE_MAX_LEN = {"tipo": 50, "indirizzo": 255, "piano": 20}
+
+
+def merge_client_choices(server: VisuraProposta, client: VisuraProposta) -> VisuraProposta:
+    """Apply the user's choices onto a proposal re-derived server-side from
+    the uploaded PDF. Only selection flags and, for new units, tipo /
+    indirizzo / piano are taken from the client; every other value comes
+    from the server. A proposal whose actions no longer match the DB state
+    (already imported, soggetto created meanwhile...) is rejected."""
+    if (client.numero_visura, client.formato) != (server.numero_visura, server.formato):
+        raise VisuraImportError("La proposta non corrisponde alla visura caricata")
+
+    client_soggetti = {s.key: s for s in client.soggetti}
+    for s in server.soggetti:
+        c = client_soggetti.get(s.key)
+        if c is None or (c.azione, c.soggetto_id) != (s.azione, s.soggetto_id):
+            raise VisuraImportError(STALE_MSG)
+        s.selezionato = c.selezionato
+
+    client_unita = {u.key: u for u in client.unita}
+    for u in server.unita:
+        c = client_unita.get(u.key)
+        if c is None or (c.azione, c.unita_id) != (u.azione, u.unita_id):
+            raise VisuraImportError(STALE_MSG)
+        u.selezionato = c.selezionato
+        if u.azione == "crea":
+            for campo, max_len in EDITABLE_MAX_LEN.items():
+                value = getattr(c, campo)
+                value = value.strip() if isinstance(value, str) else None
+                if value and len(value) > max_len:
+                    raise VisuraImportError(f"{campo.capitalize()} troppo lungo per l'unità {_label(u)}")
+                setattr(u, campo, value or None if campo != "indirizzo" else value or "")
+        scelte_modifiche = {m.campo: m.selezionato for m in c.modifiche}
+        for m in u.modifiche:
+            m.selezionato = scelte_modifiche.get(m.campo, False)
+        scelte_diritti = {(d.soggetto_key, d.tipo_diritto): d.selezionato for d in c.diritti}
+        for d in u.diritti:
+            d.selezionato = scelte_diritti.get((d.soggetto_key, d.tipo_diritto), False)
+    return server
 
 
 def _label(u: UnitaProposta) -> str:
