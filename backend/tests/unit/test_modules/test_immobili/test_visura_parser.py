@@ -124,3 +124,42 @@ def test_sintetica_unit_666_19(sintetica):
 ])
 def test_parse_diritto(testo, tipo, quota):
     assert parse_diritto(testo) == (tipo, quota)
+
+
+@pytest.fixture(scope="module")
+def analitica():
+    return parse_visura(_load("analitica.pdf"))
+
+
+def test_analitica_header(analitica):
+    assert analitica.formato == FormatoVisura.ANALITICA
+    assert analitica.numero == "T233852/2025"
+    assert analitica.data == date(2025, 12, 16)
+    assert len(analitica.fabbricati) == 9
+    assert analitica.terreni_count == 0
+
+
+def _signature(visura):
+    return {
+        (f.foglio, f.particella, f.subalterno): (
+            f.categoria, f.classe, f.rendita, f.indirizzo, f.piano,
+            [(i.codice_fiscale, i.tipo_diritto, i.quota_percentuale) for i in f.intestati],
+        )
+        for f in visura.fabbricati
+    }
+
+
+def test_analitica_matches_sintetica(analitica, sintetica):
+    assert _signature(analitica) == _signature(sintetica)
+
+
+def test_analitica_unit_666_19(analitica):
+    u = _unit(analitica, "99", "666", "19")
+    assert u.zona_censuaria == "2"
+    assert u.categoria == "A/3"
+    assert u.consistenza == "10,0 vani"
+    assert u.superficie_escluse_aree == Decimal("294")
+    assert u.provincia == "BO"
+    for value in vars(u).values():
+        if isinstance(value, str):
+            assert "FRAZIONAMENTO" not in value
