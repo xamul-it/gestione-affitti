@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../services/api';
+import { formatApiError } from '../utils/errorHandling';
 import './Settings.css';
 
 export default function Settings() {
@@ -66,9 +67,8 @@ export default function Settings() {
     setLoading(true);
 
     try {
-      // Note: You'll need to implement this endpoint in the backend
       await authAPI.changePassword({
-        current_password: passwordData.current_password,
+        old_password: passwordData.current_password,
         new_password: passwordData.new_password
       }, token);
 
@@ -80,7 +80,7 @@ export default function Settings() {
       });
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError('Errore nel cambio password: ' + (err.response?.data?.detail || err.message));
+      setError('Errore nel cambio password: ' + formatApiError(err));
     } finally {
       setLoading(false);
     }
