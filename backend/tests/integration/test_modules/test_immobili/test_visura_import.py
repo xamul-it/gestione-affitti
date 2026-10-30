@@ -343,3 +343,79 @@ def test_existing_user_fields_untouched(pg_session, storage, sintetica, pdf_sint
     assert (unit.tipo, unit.classe_energetica, unit.descrizione, unit.codice) == ("Villa", "B", "mia", "TEST-VIS-018")
     assert unit.note.startswith("nota utente")
     assert "--- Dati catastali" in unit.note
+
+
+# --- Task 6: routes -------------------------------------------------------------
+
+import asyncio
+import io
+
+from fastapi import HTTPException, UploadFile
+
+from immobili.routes.visura_import import apply_import_visura, preview_import_visura
+from immobili.schemas.visura_import import VisuraApplyRequest
+
+
+def _upload(name: str) -> UploadFile:
+    return UploadFile(filename=name, file=io.BytesIO((FIXTURES / name).read_bytes()))
+
+
+def _preview(pg_session, name):
+    return asyncio.run(preview_import_visura(
+        file=_upload(name), tipo_documento="VISURA_CATASTALE",
+        db=pg_session, tenant_schema=TENANT, current_user=None,
+    ))
+
+
+def test_preview_returns_token_and_proposal(pg_session, storage):
+    proposta = _preview(pg_session, "sintetica.pdf")
+    assert len(proposta.unita) == 9
+    assert len(proposta.upload_token) == 32
+    assert all(c in "0123456789abcdef" for c in proposta.upload_token)
+
+
+def test_preview_rejects_riepilogo_imu(pg_session, storage):
+    with pytest.raises(HTTPException) as exc:
+        _preview(pg_session, "riepilogo_imu.pdf")
+    assert exc.value.status_code == 422
+    assert "Formato non supportato" in exc.value.detail
+
+
+def test_preview_rejects_other_tipo_documento(pg_session, storage):
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(preview_import_visura(
+            file=_upload("sintetica.pdf"), tipo_documento="CARTA_IDENTITA",
+            db=pg_session, tenant_schema=TENANT, current_user=None,
+        ))
+    assert exc.value.status_code == 422
+
+
+def test_apply_unknown_token_404(pg_session, storage):
+    proposta = _preview(pg_session, "sintetica.pdf")
+    with pytest.raises(HTTPException) as exc:
+        apply_import_visura(
+            body=VisuraApplyRequest(upload_token="0" * 32, proposta=proposta),
+            db=pg_session, tenant_schema=TENANT, current_user=None,
+        )
+    assert exc.value.status_code == 404
+
+
+def test_apply_token_must_be_hex(pg_session, storage):
+    proposta = _preview(pg_session, "sintetica.pdf")
+    with pytest.raises(HTTPException) as exc:
+        apply_import_visura(
+            body=VisuraApplyRequest(upload_token="../../etc", proposta=proposta),
+            db=pg_session, tenant_schema=TENANT, current_user=None,
+        )
+    assert exc.value.status_code == 404
+
+
+def test_apply_end_to_end(pg_session, storage):
+    seed_tipi_documento(pg_session)
+    proposta = _preview(pg_session, "sintetica.pdf")
+    result = apply_import_visura(
+        body=VisuraApplyRequest(upload_token=proposta.upload_token, proposta=proposta),
+        db=pg_session, tenant_schema=TENANT, current_user=None,
+    )
+    assert len(result.unita_create) == 9
+    assert not (storage.base_path / TENANT / "temp_uploads" / proposta.upload_token).exists()
