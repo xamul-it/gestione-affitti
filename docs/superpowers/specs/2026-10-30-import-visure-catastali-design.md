@@ -42,7 +42,10 @@ Caratteristiche da tenere presenti:
 ## Non obiettivi
 
 - Riepilogo IMU/TASI e calcolo IMU.
-- Import di **terreni** (catasto terreni). Se la visura ne contiene, vengono mostrati in un avviso ("N terreni trovati, non importati") e ignorati. *(Scelta mia: l'utente ha chiesto unità immobiliari.)*
+- Import di **terreni** (catasto terreni) **in questa fase**. Se la visura ne contiene, vengono mostrati in un avviso ("N terreni trovati, non importati"). L'utente ha però confermato che **i terreni verranno dopo**, quindi il design deve preparare il terreno:
+  - il parser e il modello `VisuraParsed` distinguono già "fabbricati" e "terreni" in liste separate, e l'intestazione è collegata a un immobile generico (fabbricato o terreno);
+  - il servizio di import e la proposta sono organizzati per "tipo di bene", così i terreni (`Terreno`, che ha già foglio, particella, qualità, classe, redditi) si aggiungono come nuova sezione senza riscrivere il flusso;
+  - per ora non serve estrarre i campi specifici dei terreni (non ci sono campioni): basta riconoscerli e contarli.
 - Rimozione o chiusura automatica di diritti presenti a sistema ma assenti nella visura (vedi "Aggiornamenti").
 - Scansioni o PDF senza testo (OCR).
 - Import di più PDF in un'unica operazione: si carica una visura alla volta.
