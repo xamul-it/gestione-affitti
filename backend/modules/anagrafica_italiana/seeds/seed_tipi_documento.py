@@ -138,6 +138,15 @@ def seed_tipi_documento(db: Session):
             "richiede_scadenza": True
         },
 
+        # Documenti immobiliari
+        {
+            "codice": "VISURA_CATASTALE",
+            "nome": "Visura Catastale",
+            "descrizione": "Visura catastale Agenzia delle Entrate",
+            "categoria": "immobiliare",
+            "richiede_scadenza": False
+        },
+
         # Altri documenti
         {
             "codice": "CONTRATTO",
