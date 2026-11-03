@@ -4,7 +4,10 @@
 # (worktree separato ~/apps/gestione-affitti-stable, branch "stable").
 #
 # Non tocca mai il DB di sviluppo: lavora solo sul DB di produzione
-# (gestione_affitti_prod), e lo fa sempre dopo averne fatto un backup.
+# (gestione_affitti_prod), e lo fa sempre dopo averne fatto un backup
+# verificato. Migra la catena core e quelle dei moduli su tutti gli schema,
+# applica i dati di base pubblici dei moduli, e confronta il numero di righe
+# di ogni tabella prima e dopo: se qualcosa diminuisce si ferma.
 #
 # Uso: scripts/promote.sh [ref-da-promuovere]   (default: master)
 
@@ -65,30 +68,104 @@ cd "$STABLE_DIR/frontend"
 npm install --silent
 npm run build
 
+PSQL=(psql -X -q -At -v ON_ERROR_STOP=1 -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$PROD_DB")
+STAMP="$(date +%Y%m%d_%H%M%S)"
+BACKUP_FILE="$BACKUP_DIR/${PROD_DB}_${STAMP}.sql"
+SNAP_BEFORE="$BACKUP_DIR/${PROD_DB}_${STAMP}.before.txt"
+SNAP_AFTER="$BACKUP_DIR/${PROD_DB}_${STAMP}.after.txt"
+SNAPSHOT_SQL="$STABLE_DIR/scripts/sql/db_snapshot.sql"
+
+print_restore() {
+    echo "    Ripristino dal backup (dopo: systemctl --user stop gestione-affitti-backend.service):" >&2
+    echo "    dropdb -h $PGHOST -p $PGPORT -U $PGUSER $PROD_DB" >&2
+    echo "    createdb -h $PGHOST -p $PGPORT -U $PGUSER $PROD_DB" >&2
+    echo "    psql -h $PGHOST -p $PGPORT -U $PGUSER $PROD_DB < $BACKUP_FILE" >&2
+}
+
+# Backend fermo durante backup e migrazione: nessuna scrittura (scheduler
+# compresi) tra la fotografia "prima", il dump e la migrazione.
+echo "==> Arresto backend"
+systemctl --user stop gestione-affitti-backend.service
+# Fino all'inizio della migrazione il DB non e' stato toccato: su errore si
+# riavvia il backend com'era.
+trap 'echo "ERRORE prima della migrazione: DB non modificato, riavvio backend." >&2; systemctl --user start gestione-affitti-backend.service' ERR
+
 echo "==> Backup del DB di produzione prima della migrazione"
 # I dump contengono tutti i dati di produzione (hash password inclusi):
 # leggibili solo dall'utente.
 (umask 077; mkdir -p "$BACKUP_DIR")
 chmod 700 "$BACKUP_DIR"
-BACKUP_FILE="$BACKUP_DIR/${PROD_DB}_$(date +%Y%m%d_%H%M%S).sql"
+(umask 077; "${PSQL[@]}" -f "$SNAPSHOT_SQL" > "$SNAP_BEFORE" 2>/dev/null)
 (umask 077; pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$PROD_DB" > "$BACKUP_FILE")
-echo "    backup salvato in: $BACKUP_FILE"
+if [ ! -s "$BACKUP_FILE" ] || ! tail -n 20 "$BACKUP_FILE" | grep -q "PostgreSQL database dump complete"; then
+    echo "ERRORE: backup incompleto ($BACKUP_FILE). Migrazione NON eseguita." >&2
+    systemctl --user start gestione-affitti-backend.service
+    exit 1
+fi
+echo "    backup verificato: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1), $(wc -l < "$SNAP_BEFORE") tabelle fotografate)"
 
-# Tiene solo gli ultimi 14 backup per non saturare lo spazio disco
-ls -t "$BACKUP_DIR"/${PROD_DB}_*.sql 2>/dev/null | tail -n +15 | xargs -r rm -f
+# Tiene solo gli ultimi 14 backup (con le loro fotografie)
+ls -t "$BACKUP_DIR"/${PROD_DB}_*.sql 2>/dev/null | tail -n +15 | while read -r old; do
+    rm -f "$old" "${old%.sql}.before.txt" "${old%.sql}.after.txt"
+done
 
-echo "==> Migrazione del DB di produzione (tutti gli schema)"
+# Da qui un errore lascia il backend fermo: va prima capito cosa e' successo.
+trap 'echo "ERRORE durante la migrazione: backend lasciato fermo." >&2; print_restore' ERR
+
+echo "==> Migrazione del DB di produzione: catena core (tutti gli schema)"
 cd "$STABLE_DIR/backend"
 alembic -x schema=all upgrade head
 
-echo "==> Riavvio backend (il frontend e' servito da Apache direttamente da dist/)"
-systemctl --user restart gestione-affitti-backend.service
+echo "==> Migrazioni e dati di base dei moduli (public + tenant)"
+python scripts/sync_modules.py
 
-sleep 2
-systemctl --user --no-pager status gestione-affitti-backend.service
+trap - ERR
+
+echo "==> Verifica preservazione dati"
+(umask 077; "${PSQL[@]}" -f "$SNAPSHOT_SQL" > "$SNAP_AFTER" 2>/dev/null)
+# Errore se una tabella sparisce o perde righe; le versioni alembic e le
+# tabelle/righe nuove sono solo riportate.
+if ! awk '
+    NR == FNR { before[$1] = $2; next }
+    { after[$1] = $2 }
+    END {
+        bad = 0
+        for (t in before) {
+            if (!(t in after)) { print "  PERSA tabella " t " (" before[t] ")"; bad = 1; continue }
+            if (before[t] ~ /^rows=/) {
+                b = substr(before[t], 6) + 0; a = substr(after[t], 6) + 0
+                if (a < b) { print "  RIGHE PERSE " t ": " b " -> " a; bad = 1 }
+                else if (a > b) print "  righe aggiunte " t ": " b " -> " a
+            } else if (before[t] != after[t]) print "  migrata " t ": " substr(before[t], 9) " -> " substr(after[t], 9)
+        }
+        for (t in after) if (!(t in before)) print "  nuova tabella " t
+        exit bad
+    }' "$SNAP_BEFORE" "$SNAP_AFTER" | sort; then
+    echo "ERRORE: dati persi durante la migrazione. Backend lasciato fermo." >&2
+    echo "    Fotografie: $SNAP_BEFORE  $SNAP_AFTER" >&2
+    print_restore
+    exit 1
+fi
+echo "    nessuna tabella o riga persa"
+
+echo "==> Avvio backend (il frontend e' servito da Apache direttamente da dist/)"
+systemctl --user start gestione-affitti-backend.service
+
+for _ in $(seq 1 30); do
+    if curl -sf -m 2 http://127.0.0.1:8001/health > /dev/null; then
+        break
+    fi
+    sleep 1
+done
+if ! curl -sf -m 2 http://127.0.0.1:8001/health > /dev/null; then
+    echo "ERRORE: il backend non risponde su /health dopo 30s" >&2
+    systemctl --user --no-pager status gestione-affitti-backend.service >&2 || true
+    print_restore
+    exit 1
+fi
+echo "    backend attivo, /health ok"
 
 echo
-echo "==> Promozione completata. In caso di problemi, ripristino da backup:"
-echo "    dropdb -h $PGHOST -p $PGPORT -U $PGUSER $PROD_DB"
-echo "    createdb -h $PGHOST -p $PGPORT -U $PGUSER $PROD_DB"
-echo "    psql -h $PGHOST -p $PGPORT -U $PGUSER $PROD_DB < $BACKUP_FILE"
+echo "==> Promozione completata."
+echo "    Backup: $BACKUP_FILE"
+echo "    Fotografie: $SNAP_BEFORE  $SNAP_AFTER"
