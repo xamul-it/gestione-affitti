@@ -13,6 +13,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload, selectinload
 
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from app.core.database import get_db
 from app.core.platform.models import Documento, EntityType, TipoDocumento
 from app.core.platform_services.documento_service import DocumentoService
@@ -53,7 +55,9 @@ def _out(documento: Documento) -> CertificatoEnergeticoResponse:
 
 
 @router.get("/", response_model=List[CertificatoEnergeticoResponse])
-def get_certificati(skip: int = 0, limit: int = 100, validi_solo: bool = False, db: Session = Depends(get_db)):
+def get_certificati(skip: int = 0, limit: int = 100, validi_solo: bool = False, db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("documenti.read")),
+):
     """APE in vigore di tutte le unità."""
     result = [_out(d) for d in _query(db).order_by(Documento.data_riferimento.desc()).all()]
     if validi_solo:
@@ -63,7 +67,9 @@ def get_certificati(skip: int = 0, limit: int = 100, validi_solo: bool = False, 
 
 
 @router.get("/{certificato_id}", response_model=CertificatoEnergeticoResponse)
-def get_certificato(certificato_id: int, db: Session = Depends(get_db)):
+def get_certificato(certificato_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("documenti.read")),
+):
     """Un APE (id del documento)."""
     documento = _query(db).filter(Documento.id == certificato_id).first()
     if documento is None:
@@ -75,13 +81,17 @@ def get_certificato(certificato_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/unita-immobiliare/{unita_immobiliare_id}", response_model=List[CertificatoEnergeticoResponse])
-def get_certificati_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db)):
+def get_certificati_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("documenti.read")),
+):
     """APE in vigore dell'unità (lo storico è in /documenti/{id}/storico)."""
     return [_out(d) for d in _query(db).filter(Documento.entity_id == unita_immobiliare_id).all()]
 
 
 @router.get("/unita-immobiliare/{unita_immobiliare_id}/valido", response_model=CertificatoEnergeticoResponse)
-def get_certificato_valido_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db)):
+def get_certificato_valido_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("documenti.read")),
+):
     """APE in vigore e non scaduto (né decaduto) dell'unità."""
     oggi = date.today()
     for documento in _query(db).filter(Documento.entity_id == unita_immobiliare_id).all():

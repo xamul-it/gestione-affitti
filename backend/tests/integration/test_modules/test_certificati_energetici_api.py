@@ -74,3 +74,11 @@ def test_create_is_gone(db_session):
     with pytest.raises(HTTPException) as exc:
         create_certificato()
     assert exc.value.status_code == 410
+
+
+def test_requires_authentication():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    with TestClient(app) as http:
+        assert http.get("/api/v1/certificati-energetici/").status_code in (401, 403)
+        assert http.get("/api/v1/certificati-energetici/unita-immobiliare/1").status_code in (401, 403)
