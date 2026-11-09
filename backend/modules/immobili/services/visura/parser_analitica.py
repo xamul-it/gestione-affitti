@@ -31,6 +31,9 @@ _LEFT_MARGIN = 20
 _UNIT_HDR = re.compile(r"^Immobile di catasto (fabbricati|terreni)\b")
 _UNIT_N = re.compile(r"^n\.\s*(\d+)$")
 _COMUNE = re.compile(r"^Comune di (.+?) \((\w{4})\)(?: \((\w{2})\))?")
+# Long comune names push "(C310) (GR)" to the next line.
+_COMUNE_NOME = re.compile(r"^Comune di (.+?)$")
+_COMUNE_CODICE = re.compile(r"^\((\w{4})\)(?: \((\w{2})\))?$")
 _IDENT = re.compile(
     r"^(?:Sezione Urbana (?P<sez>\S+) )?Foglio (?P<foglio>\S+) Particella (?P<particella>\S+)"
     r"(?: Subalterno (?P<sub>\S+))?"
@@ -199,12 +202,21 @@ def parse_analitica(text: str, per_immobile: bool = False) -> VisuraParsed:
             mode = "terreni_corr"
             continue
         if mode == "terreni_corr":
-            if _COMUNE.match(line) or _IDENT.match(line):
+            if _COMUNE_NOME.match(line) or _COMUNE_CODICE.match(line) or _IDENT.match(line):
                 continue
             mode = "unit"
+        if current.pop("codice_a_capo", False):
+            m = _COMUNE_CODICE.match(line)
+            if m:
+                current["codice"], current["provincia"] = m.group(1), m.group(2)
+                continue
         m = _COMUNE.match(line)
         if m and "comune" not in current:
             current["comune"], current["codice"], current["provincia"] = m.group(1), m.group(2), m.group(3)
+            continue
+        m = _COMUNE_NOME.match(line)
+        if m and "comune" not in current:
+            current["comune"], current["codice_a_capo"] = m.group(1).strip(), True
             continue
         m = _IDENT.match(line)
         if m and "foglio" not in current:

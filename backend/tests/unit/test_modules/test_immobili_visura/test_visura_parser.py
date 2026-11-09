@@ -260,3 +260,68 @@ def test_analitica_bullet_keeps_subalterni(analitica_bullet):
     assert len(set(idents)) == 4
     assert ("483", "65", "54") in idents
     assert ("393", "457", "716") in idents
+
+
+# --- Analitica with a long comune name: "(C310) (GR)" wraps to the next line --
+# Layout as produced by pdftotext -layout on a real visura; people are fictitious.
+
+_COMUNE_A_CAPO = """\
+                                                                                  Data: 10/11/2026
+Direzione Provinciale di Grosseto                                                 Ora: 00:06:01
+Ufficio Provinciale - Territorio                                                  Numero Pratica: T999/2026
+Servizi Catastali                                                                 Pag: 1 - Segue
+
+                                Visura attuale per soggetto
+                        Situazione degli atti informatizzati al 10/11/2026
+
+Dati della richiesta
+Terreni e Fabbricati siti in tutta la provincia di GROSSETO
+
+          Soggetto richiesto:
+          ROSSI Mario nato a MILANO (MI) il 01/01/1970 (CF: RSSMRA70A01F205X)
+          Totali immobili: di catasto fabbricati 1
+
+          Immobile di catasto fabbricati -                       Causali di aggiornamento ed annotazioni
+          n.1
+
+  Dati identificativi
+  Comune di CASTIGLIONE DELLA PESCAIA                    VARIAZIONE DELLA DESTINAZIONE del 25/06/2013
+  (C310) (GR)                                            Pratica n. GR0000001 in atti dal 25/06/2013 UFFICIO-
+                                                         ABITAZIONE (n. 1.1/2013)
+  Foglio 106 Particella 105 Subalterno 7
+
+  Particelle corrispondenti al catasto terreni
+  Comune di CASTIGLIONE DELLA PESCAIA
+  (C310) (GR)
+  Foglio 106 Particella 105
+
+  Indirizzo
+  VIA DEL MARE n. 5 Piano 2                              VARIAZIONE DELLA DESTINAZIONE del 25/06/2013
+
+  Dati di classamento
+  Rendita: Euro 650,74                                   VARIAZIONE NEL CLASSAMENTO del 23/04/2014
+  Categoria A/2a), Classe 5, Consistenza 3,5 vani        Pratica n. GR0000002      in atti dal 23/04/2014
+
+  Dati di superficie
+  Totale: 79 m2                                        Superficie di impianto pubblicata il 09/11/2015
+  Totale escluse aree scoperte b): 79 m2
+
+  Intestazione attuale dell'immobile n. 1 - totale righe intestati: 1
+
+  1. ROSSI Mario                                       1. Atto del 17/06/2022 Pubblico ufficiale
+  (CF RSSMRA70A01F205X)
+  nato a MILANO (MI) il 01/01/1970
+  Diritto di: Proprieta' per 1/1
+
+"""
+
+
+def test_analitica_comune_wrapped_code():
+    from immobili.services.visura.parser_analitica import parse_analitica
+    visura = parse_analitica(_COMUNE_A_CAPO)
+    assert visura.warnings == []
+    [f] = visura.fabbricati
+    assert (f.comune, f.codice_catastale_comune, f.provincia) == ("CASTIGLIONE DELLA PESCAIA", "C310", "GR")
+    assert (f.foglio, f.particella, f.subalterno) == ("106", "105", "7")
+    assert (f.indirizzo, f.piano) == ("VIA DEL MARE n. 5", "2")
+    assert (f.categoria, f.classe, f.rendita) == ("A/2", "5", Decimal("650.74"))
