@@ -15,6 +15,8 @@ Dal prompt di chi ti lancia ricevi:
 - il messaggio di commit (usalo così com'è, comprese le righe di attribuzione);
 - il branch di partenza, se non è `master`.
 
+Nel DB di produzione, `tenant_produzione` contiene i dati reali dell'utente: non ci scrivi mai, nemmeno per controllare. Per le verifiche usa solo la lettura (log, `/health`, l'output di promote.sh).
+
 Se manca una di queste informazioni, se i file indicati non risultano modificati o se un passo fallisce, fermati e riportalo. Non improvvisare, non usare force, non ripristinare backup e non toccare il DB di produzione a mano.
 
 Rispondi in italiano con il resoconto previsto dalla skill, e in testa una riga di esito: `ESITO: OK` oppure `ESITO: ERRORE - <passo>`.

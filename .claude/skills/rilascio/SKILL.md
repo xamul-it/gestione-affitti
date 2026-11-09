@@ -8,6 +8,8 @@ model: haiku
 
 "Produzione" è `~/apps/gestione-affitti-stable` (DB `gestione_affitti_prod`, porta 8001). La usa solo l'utente, come collaudo e per uso personale: non serve chiedere conferma per commit, push e promozione. La preservazione dei dati invece non si discute mai.
 
+In quel DB, **`tenant_produzione` contiene i dati reali dell'utente**. Deve restare pulito e ricevere tutte le funzionalità, moduli compresi. Gli altri tenant (`tenant_principale`, `tenant_qa_test`) sono di prova. Non scrivere mai a mano in `tenant_produzione`, nemmeno per "verificare" qualcosa.
+
 ## Prima di iniziare
 
 La modifica deve aver passato `scripts/verifica.sh` in questa sessione con `ESITO: VERDE`, di solito tramite l'agente `verifica-test`. Se non è così, o se l'esito era ROSSO, fermati e dillo, senza rilasciare. Non esistono fallimenti noti tollerati: la suite completa deve essere verde.
@@ -37,8 +39,10 @@ La modifica deve aver passato `scripts/verifica.sh` in questa sessione con `ESIT
 
 ## Cose note, non sono errori
 
-- `ATTENZIONE: <modulo> abilitato su tenant_produzione ma mai installato`: in quel tenant i moduli affitti_brevi, affitti_lungo, esempio_componenti e gestione_pec sono abilitati ma senza tabelle. Per lo stesso motivo nei log del backend compaiono errori degli scheduler come `ab_soggiorni non esiste`.
+- `==> Installazione moduli abilitati ma mai installati` seguito da righe `<modulo> -> <tenant>`: `sync_modules.py` sta installando su quel tenant un modulo abilitato ma senza tabelle. È voluto. Le tabelle nuove compaiono come `nuova tabella` nel confronto.
+- `ATTENZIONE: modulo <x> in stato 'broken', saltato`: il modulo è segnato come rotto nel registro. Riportalo nel resoconto.
 - `WARNING: database ... versione di confronto non corrispondente` di psql: riguarda la collation del DB, non il rilascio.
+- Qualunque errore nei log del backend su `tenant_produzione` dopo il riavvio va riportato. Da quando i moduli sono installati su tutti i tenant, non ce ne sono più di noti.
 
 ## Resoconto finale (in italiano, breve)
 
