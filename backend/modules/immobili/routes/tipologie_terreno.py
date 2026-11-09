@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from ..models import TipologiaTerreno
 from ..schemas.tipologia_terreno import (
     TipologiaTerrenoResponse,
@@ -21,7 +23,7 @@ def get_tipologie_terreno(
     skip: int = 0,
     limit: int = 100,
     attive_solo: bool = Query(False, description="Filter only active tipologie"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.view")),
 ):
     query = db.query(TipologiaTerreno)
     if attive_solo:
@@ -30,7 +32,7 @@ def get_tipologie_terreno(
 
 
 @router.get("/{tipologia_id}", response_model=TipologiaTerrenoResponse)
-def get_tipologia_terreno(tipologia_id: int, db: Session = Depends(get_db)):
+def get_tipologia_terreno(tipologia_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.view"))):
     tipologia = db.query(TipologiaTerreno).filter(TipologiaTerreno.id == tipologia_id).first()
     if not tipologia:
         raise HTTPException(status_code=404, detail="Tipologia terreno non trovata")
@@ -40,7 +42,7 @@ def get_tipologia_terreno(tipologia_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=TipologiaTerrenoResponse, status_code=201)
 def create_tipologia_terreno(
     tipologia: TipologiaTerrenoCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("platform.admin")),
 ):
     existing = db.query(TipologiaTerreno).filter(
         TipologiaTerreno.codice == tipologia.codice.upper()
@@ -61,7 +63,7 @@ def create_tipologia_terreno(
 def update_tipologia_terreno(
     tipologia_id: int,
     tipologia: TipologiaTerrenoUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("platform.admin")),
 ):
     db_tipologia = db.query(TipologiaTerreno).filter(TipologiaTerreno.id == tipologia_id).first()
     if not db_tipologia:
@@ -87,7 +89,7 @@ def update_tipologia_terreno(
 
 
 @router.delete("/{tipologia_id}", status_code=204)
-def delete_tipologia_terreno(tipologia_id: int, db: Session = Depends(get_db)):
+def delete_tipologia_terreno(tipologia_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("platform.admin"))):
     db_tipologia = db.query(TipologiaTerreno).filter(TipologiaTerreno.id == tipologia_id).first()
     if not db_tipologia:
         raise HTTPException(status_code=404, detail="Tipologia terreno non trovata")

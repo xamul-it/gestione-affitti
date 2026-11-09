@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from ..models import Terreno, TipologiaTerreno
 from ..schemas.terreno import (
     TerrenoResponse,
@@ -27,7 +29,7 @@ def get_terreni(
     tipologia_codice: Optional[str] = Query(None, description="Filter by tipologia codice (AGR, EDI, etc.)"),
     comune: Optional[str] = Query(None, description="Filter by comune"),
     provincia: Optional[str] = Query(None, description="Filter by provincia"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.view")),
 ):
     """
     Retrieve all terreni with optional filters.
@@ -70,7 +72,7 @@ def get_terreni(
 
 
 @router.get("/{terreno_id}", response_model=TerrenoResponse)
-def get_terreno(terreno_id: int, db: Session = Depends(get_db)):
+def get_terreno(terreno_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.view"))):
     """
     Get a specific terreno by ID.
 
@@ -93,7 +95,7 @@ def get_terreno(terreno_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/codice/{codice}", response_model=TerrenoResponse)
-def get_terreno_by_codice(codice: str, db: Session = Depends(get_db)):
+def get_terreno_by_codice(codice: str, db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.view"))):
     """
     Get a specific terreno by codice.
 
@@ -118,7 +120,7 @@ def get_terreno_by_codice(codice: str, db: Session = Depends(get_db)):
 @router.post("/", response_model=TerrenoResponse, status_code=201)
 def create_terreno(
     terreno: TerrenoCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.create")),
 ):
     """
     Create a new terreno.
@@ -172,7 +174,7 @@ def create_terreno(
 def update_terreno(
     terreno_id: int,
     terreno: TerrenoUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.edit")),
 ):
     """
     Update an existing terreno.
@@ -232,7 +234,7 @@ def update_terreno(
 
 
 @router.delete("/{terreno_id}", status_code=204)
-def delete_terreno(terreno_id: int, db: Session = Depends(get_db)):
+def delete_terreno(terreno_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.delete"))):
     """
     Delete (soft delete) a terreno.
 
@@ -254,7 +256,7 @@ def delete_terreno(terreno_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{terreno_id}/restore", response_model=TerrenoResponse)
-def restore_terreno(terreno_id: int, db: Session = Depends(get_db)):
+def restore_terreno(terreno_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.edit"))):
     """
     Restore a soft-deleted terreno.
 

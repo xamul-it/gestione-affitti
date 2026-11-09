@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.core.database import get_db
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from ..models import AssegnazioneConduttore, UnitaImmobiliare, Conduttore
 from ..schemas import (
     AssegnazioneConduttoreCreate,
@@ -17,7 +19,7 @@ def get_assegnazioni(
     unita_immobiliare_id: Optional[int] = Query(None),
     conduttore_id: Optional[int] = Query(None),
     solo_correnti: bool = Query(False, description="Solo assegnazioni senza data_fine (in corso)"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("conduttore.view")),
 ):
     """Recupera tutte le assegnazioni con filtri opzionali"""
     query = db.query(AssegnazioneConduttore)
@@ -33,7 +35,7 @@ def get_assegnazioni(
 
 
 @router.get("/unita-immobiliare/{unita_immobiliare_id}", response_model=List[AssegnazioneConduttoreResponse])
-def get_assegnazioni_by_unita(unita_immobiliare_id: int, db: Session = Depends(get_db)):
+def get_assegnazioni_by_unita(unita_immobiliare_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("conduttore.view"))):
     """Recupera tutte le assegnazioni (storiche e correnti) di un'unità immobiliare"""
     unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.id == unita_immobiliare_id).first()
     if not unita:
@@ -45,7 +47,7 @@ def get_assegnazioni_by_unita(unita_immobiliare_id: int, db: Session = Depends(g
 
 
 @router.get("/{assegnazione_id}", response_model=AssegnazioneConduttoreResponse)
-def get_assegnazione(assegnazione_id: int, db: Session = Depends(get_db)):
+def get_assegnazione(assegnazione_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("conduttore.view"))):
     """Recupera una assegnazione specifica"""
     assegnazione = db.query(AssegnazioneConduttore).filter(AssegnazioneConduttore.id == assegnazione_id).first()
     if not assegnazione:
@@ -54,7 +56,7 @@ def get_assegnazione(assegnazione_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=AssegnazioneConduttoreResponse, status_code=status.HTTP_201_CREATED)
-def create_assegnazione(assegnazione: AssegnazioneConduttoreCreate, db: Session = Depends(get_db)):
+def create_assegnazione(assegnazione: AssegnazioneConduttoreCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("conduttore.create"))):
     """Assegna un conduttore a un'unità immobiliare per un periodo"""
     unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.id == assegnazione.unita_immobiliare_id).first()
     if not unita:
@@ -75,7 +77,7 @@ def create_assegnazione(assegnazione: AssegnazioneConduttoreCreate, db: Session 
 def update_assegnazione(
     assegnazione_id: int,
     assegnazione: AssegnazioneConduttoreUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("conduttore.edit")),
 ):
     """Aggiorna una assegnazione (es. valorizzare data_fine per chiuderla)"""
     db_assegnazione = db.query(AssegnazioneConduttore).filter(AssegnazioneConduttore.id == assegnazione_id).first()
@@ -91,7 +93,7 @@ def update_assegnazione(
 
 
 @router.delete("/{assegnazione_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_assegnazione(assegnazione_id: int, db: Session = Depends(get_db)):
+def delete_assegnazione(assegnazione_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("conduttore.delete"))):
     """Elimina una assegnazione"""
     db_assegnazione = db.query(AssegnazioneConduttore).filter(AssegnazioneConduttore.id == assegnazione_id).first()
     if not db_assegnazione:

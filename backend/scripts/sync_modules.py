@@ -251,6 +251,23 @@ def main() -> int:
                 log(f"  ERRORE sync tipologie: {exc}")
                 ok = False
 
+    log("==> Permessi dei moduli")
+    # Additive only: creates missing manifest permissions and grants them to
+    # the admin roles; never removes a permission or a grant.
+    if not args.dry_run:
+        from app.core.auth.seed_platform_permissions import sync_module_permissions
+        for name in order:
+            with Session(engine) as db:
+                try:
+                    db.execute(text("SET search_path TO public"))
+                    res = sync_module_permissions(db, manifests[name])
+                    if res["permissions_created"] or res["roles_updated"]:
+                        log(f"  {name}: creati {res['permissions_created']}, ruoli aggiornati {res['roles_updated']}")
+                except Exception as exc:
+                    db.rollback()
+                    log(f"  ERRORE permessi {name}: {exc}")
+                    ok = False
+
     log("==> Seed pubblici")
     seeds = [
         (n, (manifests[n].get("endpoints") or {}).get("register"))

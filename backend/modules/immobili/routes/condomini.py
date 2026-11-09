@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from ..models import Condominio
 from ..schemas.condomini import CondominioCreate, CondominioUpdate, CondominioResponse
 
@@ -13,7 +15,7 @@ def get_condomini(
     skip: int = 0,
     limit: int = 100,
     attivi_solo: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.view"))
 ):
     """Ottieni lista di tutti i condomini"""
     query = db.query(Condominio)
@@ -24,7 +26,7 @@ def get_condomini(
 
 
 @router.get("/{condominio_id}", response_model=CondominioResponse)
-def get_condominio(condominio_id: int, db: Session = Depends(get_db)):
+def get_condominio(condominio_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.view"))):
     """Ottieni dettagli di un condominio specifico"""
     condominio = db.query(Condominio).filter(Condominio.id == condominio_id).first()
     if not condominio:
@@ -36,7 +38,7 @@ def get_condominio(condominio_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=CondominioResponse, status_code=status.HTTP_201_CREATED)
-def create_condominio(condominio: CondominioCreate, db: Session = Depends(get_db)):
+def create_condominio(condominio: CondominioCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.create"))):
     """Crea un nuovo condominio"""
     # Verifica unicità codice
     db_condominio = db.query(Condominio).filter(Condominio.codice == condominio.codice).first()
@@ -54,7 +56,7 @@ def create_condominio(condominio: CondominioCreate, db: Session = Depends(get_db
 
 
 @router.put("/{condominio_id}", response_model=CondominioResponse)
-def update_condominio(condominio_id: int, condominio: CondominioUpdate, db: Session = Depends(get_db)):
+def update_condominio(condominio_id: int, condominio: CondominioUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.edit"))):
     """Aggiorna un condominio esistente"""
     db_condominio = db.query(Condominio).filter(Condominio.id == condominio_id).first()
     if not db_condominio:
@@ -74,7 +76,7 @@ def update_condominio(condominio_id: int, condominio: CondominioUpdate, db: Sess
 
 
 @router.delete("/{condominio_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_condominio(condominio_id: int, db: Session = Depends(get_db)):
+def delete_condominio(condominio_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.delete"))):
     """Elimina un condominio"""
     db_condominio = db.query(Condominio).filter(Condominio.id == condominio_id).first()
     if not db_condominio:

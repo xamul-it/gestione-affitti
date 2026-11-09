@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from ..models import TabellaMillesimale
 from ..schemas.tabelle_millesimali import TabellaMillesimaleCreate, TabellaMillesimaleUpdate, TabellaMillesimaleResponse
 
@@ -14,7 +16,7 @@ def get_tabelle(
     limit: int = 100,
     condominio_id: int = None,
     attive_solo: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.view"))
 ):
     """Ottieni lista delle tabelle millesimali"""
     query = db.query(TabellaMillesimale)
@@ -27,7 +29,7 @@ def get_tabelle(
 
 
 @router.get("/condominio/{condominio_id}", response_model=List[TabellaMillesimaleResponse])
-def get_tabelle_by_condominio(condominio_id: int, db: Session = Depends(get_db)):
+def get_tabelle_by_condominio(condominio_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.view"))):
     """Ottieni tutte le tabelle millesimali di un condominio"""
     tabelle = db.query(TabellaMillesimale).filter(
         TabellaMillesimale.condominio_id == condominio_id
@@ -36,7 +38,7 @@ def get_tabelle_by_condominio(condominio_id: int, db: Session = Depends(get_db))
 
 
 @router.get("/{tabella_id}", response_model=TabellaMillesimaleResponse)
-def get_tabella(tabella_id: int, db: Session = Depends(get_db)):
+def get_tabella(tabella_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.view"))):
     """Ottieni dettagli di una tabella millesimale specifica"""
     tabella = db.query(TabellaMillesimale).filter(TabellaMillesimale.id == tabella_id).first()
     if not tabella:
@@ -48,7 +50,7 @@ def get_tabella(tabella_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=TabellaMillesimaleResponse, status_code=status.HTTP_201_CREATED)
-def create_tabella(tabella: TabellaMillesimaleCreate, db: Session = Depends(get_db)):
+def create_tabella(tabella: TabellaMillesimaleCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.create"))):
     """Crea una nuova tabella millesimale"""
     # Verifica unicità codice per il condominio
     db_tabella = db.query(TabellaMillesimale).filter(
@@ -69,7 +71,7 @@ def create_tabella(tabella: TabellaMillesimaleCreate, db: Session = Depends(get_
 
 
 @router.put("/{tabella_id}", response_model=TabellaMillesimaleResponse)
-def update_tabella(tabella_id: int, tabella: TabellaMillesimaleUpdate, db: Session = Depends(get_db)):
+def update_tabella(tabella_id: int, tabella: TabellaMillesimaleUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.edit"))):
     """Aggiorna una tabella millesimale esistente"""
     db_tabella = db.query(TabellaMillesimale).filter(TabellaMillesimale.id == tabella_id).first()
     if not db_tabella:
@@ -88,7 +90,7 @@ def update_tabella(tabella_id: int, tabella: TabellaMillesimaleUpdate, db: Sessi
 
 
 @router.delete("/{tabella_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_tabella(tabella_id: int, db: Session = Depends(get_db)):
+def delete_tabella(tabella_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.delete"))):
     """Elimina una tabella millesimale"""
     db_tabella = db.query(TabellaMillesimale).filter(TabellaMillesimale.id == tabella_id).first()
     if not db_tabella:

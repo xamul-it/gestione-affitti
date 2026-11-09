@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from ..models import CategoriaCatastale
 from ..schemas.categoria_catastale import (
     CategoriaCatastale as CategoriaCatastaleSchema,
@@ -23,7 +25,7 @@ def get_categorie_catastali(
     skip: int = 0,
     limit: int = 100,
     attive_solo: bool = Query(False, description="Filter only active categories"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("immobile.view")),
 ):
     """
     Retrieve all categorie catastali.
@@ -47,7 +49,7 @@ def get_categorie_catastali(
 
 
 @router.get("/{categoria_id}", response_model=CategoriaCatastaleSchema)
-def get_categoria_catastale(categoria_id: int, db: Session = Depends(get_db)):
+def get_categoria_catastale(categoria_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("immobile.view"))):
     """
     Get a specific categoria catastale by ID.
 
@@ -70,7 +72,7 @@ def get_categoria_catastale(categoria_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=CategoriaCatastaleSchema, status_code=201)
 def create_categoria_catastale(
     categoria: CategoriaCatastaleCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("platform.admin")),
 ):
     """
     Create a new categoria catastale.
@@ -106,7 +108,7 @@ def create_categoria_catastale(
 def update_categoria_catastale(
     categoria_id: int,
     categoria: CategoriaCatastaleUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("platform.admin")),
 ):
     """
     Update an existing categoria catastale.
@@ -149,7 +151,7 @@ def update_categoria_catastale(
 
 
 @router.delete("/{categoria_id}", status_code=204)
-def delete_categoria_catastale(categoria_id: int, db: Session = Depends(get_db)):
+def delete_categoria_catastale(categoria_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("platform.admin"))):
     """
     Delete (soft delete) a categoria catastale.
 

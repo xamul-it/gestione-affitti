@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from app.core.platform_services import EntityService
 from ..models import Proprietario
 from ..schemas import (
@@ -14,21 +16,21 @@ router = APIRouter(prefix="/proprietari", tags=["proprietari"])
 
 
 @router.get("/", response_model=List[ProprietarioResponse])
-def get_proprietari(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_proprietari(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.view"))):
     """Recupera tutti i proprietari con paginazione"""
     service = EntityService(db, Proprietario)
     return service.get_all(skip=skip, limit=limit)
 
 
 @router.get("/{proprietario_id}", response_model=ProprietarioResponse)
-def get_proprietario(proprietario_id: int, db: Session = Depends(get_db)):
+def get_proprietario(proprietario_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.view"))):
     """Recupera un proprietario specifico"""
     service = EntityService(db, Proprietario)
     return service.get_or_404(proprietario_id)
 
 
 @router.post("/", response_model=ProprietarioResponse, status_code=status.HTTP_201_CREATED)
-def create_proprietario(proprietario: ProprietarioCreate, db: Session = Depends(get_db)):
+def create_proprietario(proprietario: ProprietarioCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.create"))):
     """Registra un soggetto come proprietario (titolare di un diritto reale su un immobile)"""
     service = EntityService(db, Proprietario)
 
@@ -46,7 +48,7 @@ def create_proprietario(proprietario: ProprietarioCreate, db: Session = Depends(
 def update_proprietario(
     proprietario_id: int,
     proprietario: ProprietarioUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.edit"))
 ):
     """Aggiorna le note di un proprietario"""
     service = EntityService(db, Proprietario)
@@ -55,7 +57,7 @@ def update_proprietario(
 
 
 @router.delete("/{proprietario_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_proprietario(proprietario_id: int, db: Session = Depends(get_db)):
+def delete_proprietario(proprietario_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.delete"))):
     """Elimina un proprietario (rimuove anche i diritti di proprietà collegati per CASCADE)"""
     service = EntityService(db, Proprietario)
     db_proprietario = service.get_or_404(proprietario_id)

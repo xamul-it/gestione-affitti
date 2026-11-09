@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from ..models import MillesimiUnita
 from ..schemas.millesimi_unita import MillesimiUnitaCreate, MillesimiUnitaUpdate, MillesimiUnitaResponse
 
@@ -14,7 +16,7 @@ def get_millesimi(
     limit: int = 100,
     unita_immobiliare_id: int = None,
     tabella_id: int = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.view"))
 ):
     """Ottieni lista dei millesimi immobile"""
     query = db.query(MillesimiUnita)
@@ -27,7 +29,7 @@ def get_millesimi(
 
 
 @router.get("/unita-immobiliare/{unita_immobiliare_id}", response_model=List[MillesimiUnitaResponse])
-def get_millesimi_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db)):
+def get_millesimi_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.view"))):
     """Ottieni tutti i millesimi di un'unità immobiliare (tutte le tabelle)"""
     millesimi = db.query(MillesimiUnita).filter(
         MillesimiUnita.unita_immobiliare_id == unita_immobiliare_id
@@ -36,7 +38,7 @@ def get_millesimi_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = 
 
 
 @router.get("/tabella/{tabella_id}", response_model=List[MillesimiUnitaResponse])
-def get_millesimi_by_tabella(tabella_id: int, db: Session = Depends(get_db)):
+def get_millesimi_by_tabella(tabella_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.view"))):
     """Ottieni tutti gli immobili associati a una tabella millesimale"""
     millesimi = db.query(MillesimiUnita).filter(
         MillesimiUnita.tabella_millesimale_id == tabella_id
@@ -45,7 +47,7 @@ def get_millesimi_by_tabella(tabella_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{millesimi_id}", response_model=MillesimiUnitaResponse)
-def get_millesimo(millesimi_id: int, db: Session = Depends(get_db)):
+def get_millesimo(millesimi_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.view"))):
     """Ottieni dettagli di un record millesimi specifico"""
     millesimo = db.query(MillesimiUnita).filter(MillesimiUnita.id == millesimi_id).first()
     if not millesimo:
@@ -57,7 +59,7 @@ def get_millesimo(millesimi_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=MillesimiUnitaResponse, status_code=status.HTTP_201_CREATED)
-def create_millesimo(millesimo: MillesimiUnitaCreate, db: Session = Depends(get_db)):
+def create_millesimo(millesimo: MillesimiUnitaCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.create"))):
     """Crea un nuovo record millesimi per un'unità immobiliare"""
     # Verifica che non esista già per questa combinazione
     db_millesimo = db.query(MillesimiUnita).filter(
@@ -78,7 +80,7 @@ def create_millesimo(millesimo: MillesimiUnitaCreate, db: Session = Depends(get_
 
 
 @router.put("/{millesimi_id}", response_model=MillesimiUnitaResponse)
-def update_millesimo(millesimi_id: int, millesimo: MillesimiUnitaUpdate, db: Session = Depends(get_db)):
+def update_millesimo(millesimi_id: int, millesimo: MillesimiUnitaUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.edit"))):
     """Aggiorna un record millesimi esistente"""
     db_millesimo = db.query(MillesimiUnita).filter(MillesimiUnita.id == millesimi_id).first()
     if not db_millesimo:
@@ -97,7 +99,7 @@ def update_millesimo(millesimi_id: int, millesimo: MillesimiUnitaUpdate, db: Ses
 
 
 @router.delete("/{millesimi_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_millesimo(millesimi_id: int, db: Session = Depends(get_db)):
+def delete_millesimo(millesimi_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("condominio.delete"))):
     """Elimina un record millesimi"""
     db_millesimo = db.query(MillesimiUnita).filter(MillesimiUnita.id == millesimi_id).first()
     if not db_millesimo:

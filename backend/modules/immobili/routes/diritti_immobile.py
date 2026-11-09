@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.core.database import get_db
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from ..models import DirittoImmobile, UnitaImmobiliare, Proprietario
 from ..schemas import (
     DirittoImmobileCreate,
@@ -16,7 +18,7 @@ router = APIRouter(prefix="/diritti-immobile", tags=["diritti-immobile"])
 def get_diritti(
     unita_immobiliare_id: Optional[int] = Query(None),
     proprietario_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.view"))
 ):
     """Recupera tutti i diritti con filtri opzionali"""
     query = db.query(DirittoImmobile)
@@ -30,7 +32,7 @@ def get_diritti(
 
 
 @router.get("/unita-immobiliare/{unita_immobiliare_id}", response_model=List[DirittoImmobileResponse])
-def get_diritti_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db)):
+def get_diritti_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.view"))):
     """Recupera tutti i diritti di un'unità immobiliare specifica"""
     # Verifica che l'unità immobiliare esista
     unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.id == unita_immobiliare_id).first()
@@ -46,7 +48,7 @@ def get_diritti_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = De
 
 
 @router.get("/proprietario/{proprietario_id}", response_model=List[DirittoImmobileResponse])
-def get_diritti_by_proprietario(proprietario_id: int, db: Session = Depends(get_db)):
+def get_diritti_by_proprietario(proprietario_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.view"))):
     """Recupera tutti i diritti di un proprietario specifico"""
     # Verifica che il proprietario esista
     proprietario = db.query(Proprietario).filter(Proprietario.id == proprietario_id).first()
@@ -62,7 +64,7 @@ def get_diritti_by_proprietario(proprietario_id: int, db: Session = Depends(get_
 
 
 @router.get("/{diritto_id}", response_model=DirittoImmobileResponse)
-def get_diritto(diritto_id: int, db: Session = Depends(get_db)):
+def get_diritto(diritto_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.view"))):
     """Recupera un diritto specifico"""
     diritto = db.query(DirittoImmobile).filter(DirittoImmobile.id == diritto_id).first()
     if not diritto:
@@ -74,7 +76,7 @@ def get_diritto(diritto_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=DirittoImmobileResponse, status_code=status.HTTP_201_CREATED)
-def create_diritto(diritto: DirittoImmobileCreate, db: Session = Depends(get_db)):
+def create_diritto(diritto: DirittoImmobileCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.create"))):
     """Crea un nuovo diritto su un'unità immobiliare"""
     # Verifica che l'unità immobiliare esista
     unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.id == diritto.unita_immobiliare_id).first()
@@ -103,7 +105,7 @@ def create_diritto(diritto: DirittoImmobileCreate, db: Session = Depends(get_db)
 def update_diritto(
     diritto_id: int,
     diritto: DirittoImmobileUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.edit"))
 ):
     """Aggiorna un diritto"""
     db_diritto = db.query(DirittoImmobile).filter(DirittoImmobile.id == diritto_id).first()
@@ -122,7 +124,7 @@ def update_diritto(
 
 
 @router.delete("/{diritto_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_diritto(diritto_id: int, db: Session = Depends(get_db)):
+def delete_diritto(diritto_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("proprietario.delete"))):
     """Elimina un diritto"""
     db_diritto = db.query(DirittoImmobile).filter(DirittoImmobile.id == diritto_id).first()
     if not db_diritto:
