@@ -31,10 +31,10 @@ from .notifica import (
     SegnaTutteLetteResponse,
 )
 from .documenti import (
-    DocumentoBase,
-    DocumentoCreate,
+    DocumentoOut,
     DocumentoUpdate,
     DocumentoResponse,
+    TipoDocumentoOut,
 )
 
 __all__ = [
@@ -56,8 +56,8 @@ __all__ = [
     "NotificaResponse",
     "NotificaBadgeResponse",
     "SegnaTutteLetteResponse",
-    "DocumentoBase",
-    "DocumentoCreate",
+    "DocumentoOut",
+    "TipoDocumentoOut",
     "DocumentoUpdate",
     "DocumentoResponse",
 ]

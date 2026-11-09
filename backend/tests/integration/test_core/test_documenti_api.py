@@ -28,8 +28,17 @@ from app.core.routes.documenti import (
     delete_documento,
     download_documento,
     get_documenti,
-    upload_documento,
+    upload_documento as _upload_route,
 )
+
+
+async def upload_documento(**kw):
+    """The route called directly: fill the typed-upload parameters (added
+    with the document types) that FastAPI would default from the form."""
+    params = dict(files=None, tipo_codice=None, data_riferimento=None, sottotipo=None,
+                  data_scadenza=None, dati=None, current_user=None)
+    params.update(kw)
+    return await _upload_route(**params)
 
 pytestmark = pytest.mark.integration
 

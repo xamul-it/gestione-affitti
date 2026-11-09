@@ -177,8 +177,9 @@ manifest = {
          "entity_types": SOGGETTO, "regime": "SOSTITUTIVO", "scadenza": MANUALE, "richiede_scadenza": True},
         {"codice": "CONTRATTO", "nome": "Contratto", "descrizione": "Contratto generico", "categoria": "altro",
          "entity_types": SOGGETTO, "regime": "CUMULATIVO", "scadenza": None},
+        # entity_types None: generic fallback for every entity (legacy uploads).
         {"codice": "DOCUMENTO_GENERICO", "nome": "Documento Generico", "descrizione": "Altro tipo di documento", "categoria": "altro",
-         "entity_types": SOGGETTO, "regime": "CUMULATIVO", "scadenza": None},
+         "entity_types": None, "regime": "CUMULATIVO", "scadenza": None},
     ],
 
     # Menu items for this module - flat structure (no parent-child)
