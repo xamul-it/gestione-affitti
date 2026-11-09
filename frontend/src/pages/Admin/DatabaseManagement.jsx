@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { Download, Puzzle, Trash2, Upload, AlertTriangle, Plus } from 'lucide-react';
+import { Button, Badge, Card, FormField } from '../../components/UI';
+import { ConfirmDialog, EmptyState, ErrorMessage, LoadingSpinner } from '../../core/components/common';
+import { FormModal } from '../../core/components';
+import { useToast } from '../../core/hooks';
 import './DatabaseManagement.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -20,6 +25,13 @@ export default function DatabaseManagement() {
   const [configValue, setConfigValue] = useState('');
   const [configSaving, setConfigSaving] = useState(false);
   const { loadMenu } = useNavigation();
+  const toast = useToast();
+
+  // Dialoghi di conferma (sostituiscono window.confirm)
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteDropSchema, setDeleteDropSchema] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Form states
   const [newTenant, setNewTenant] = useState({
@@ -53,7 +65,7 @@ export default function DatabaseManagement() {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) {
-        alert('Sessione scaduta. Effettua di nuovo il login.');
+        toast.error('Sessione scaduta. Effettua di nuovo il login.');
         return;
       }
       const normalizedTenant = {
@@ -62,14 +74,14 @@ export default function DatabaseManagement() {
         descrizione: newTenant.descrizione.trim() || null
       };
       if (!normalizedTenant.schema_name || !normalizedTenant.nome_display) {
-        alert('Compila i campi obbligatori.');
+        toast.warning('Compila i campi obbligatori.');
         return;
       }
       await axios.post(`${API_BASE_URL}/tenants/`, normalizedTenant, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      alert('Database creato con successo!');
+      toast.success('Database creato con successo');
       setShowCreateForm(false);
       setNewTenant({ schema_name: '', nome_display: '', descrizione: '' });
       loadTenants();
@@ -77,10 +89,10 @@ export default function DatabaseManagement() {
       const status = err.response?.status;
       const detail = err.response?.data?.detail;
       if (status === 401) {
-        alert('Sessione scaduta. Effettua di nuovo il login.');
+        toast.error('Sessione scaduta. Effettua di nuovo il login.');
         return;
       }
-      alert(`Errore: ${detail || 'Creazione fallita'}`);
+      toast.error(`Errore: ${detail || 'Creazione fallita'}`);
     }
   };
 
@@ -105,23 +117,24 @@ export default function DatabaseManagement() {
       link.click();
       link.remove();
 
-      alert('Backup scaricato con successo!');
+      toast.success('Backup scaricato con successo');
     } catch (err) {
-      alert(`Errore backup: ${err.response?.data?.detail || 'Backup fallito'}`);
+      toast.error(`Errore backup: ${err.response?.data?.detail || 'Backup fallito'}`);
     }
   };
 
   const handleRestore = async (e) => {
     e.preventDefault();
     if (!restoreFile) {
-      alert('Seleziona un file di backup');
+      toast.warning('Seleziona un file di backup');
       return;
     }
 
-    if (!window.confirm('ATTENZIONE: Il ripristino sovrascriverà tutti i dati esistenti. Continuare?')) {
-      return;
-    }
+    setRestoreConfirmOpen(true);
+  };
 
+  const executeRestore = async () => {
+    setRestoreConfirmOpen(false);
     try {
       const token = localStorage.getItem('access_token');
       const formData = new FormData();
@@ -138,36 +151,38 @@ export default function DatabaseManagement() {
         }
       );
 
-      alert('Ripristino completato con successo!');
+      toast.success('Ripristino completato con successo');
       setShowRestoreForm(null);
       setRestoreFile(null);
+      setRestoreConfirmOpen(false);
     } catch (err) {
-      alert(`Errore ripristino: ${err.response?.data?.detail || 'Ripristino fallito'}`);
+      toast.error(`Errore ripristino: ${err.response?.data?.detail || 'Ripristino fallito'}`);
     }
   };
 
-  const handleDelete = async (tenantId, schemaName) => {
-    if (!window.confirm(`ATTENZIONE: Eliminare il database "${schemaName}"?\n\nQuesta operazione è IRREVERSIBILE!`)) {
-      return;
-    }
+  const handleDelete = (tenantId, schemaName) => {
+    setDeleteDropSchema(false);
+    setDeleteTarget({ id: tenantId, schemaName });
+  };
 
-    const dropSchema = window.confirm(
-      'Vuoi anche eliminare permanentemente lo schema e tutti i dati?\n\n' +
-      'SI = Elimina tutto (irreversibile)\n' +
-      'NO = Elimina solo il record (lo schema rimane nel database)'
-    );
-
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
+    const dropSchema = deleteDropSchema;
     try {
+      setDeleting(true);
       const token = localStorage.getItem('access_token');
-      await axios.delete(`${API_BASE_URL}/tenants/${tenantId}`, {
+      await axios.delete(`${API_BASE_URL}/tenants/${deleteTarget.id}`, {
         params: { drop_schema: dropSchema },
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      alert('Database eliminato con successo!');
+      toast.success('Database eliminato con successo');
       loadTenants();
     } catch (err) {
-      alert(`Errore eliminazione: ${err.response?.data?.detail || 'Eliminazione fallita'}`);
+      toast.error(`Errore eliminazione: ${err.response?.data?.detail || 'Eliminazione fallita'}`);
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -205,7 +220,7 @@ export default function DatabaseManagement() {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) {
-        alert('Sessione scaduta. Effettua di nuovo il login.');
+        toast.error('Sessione scaduta. Effettua di nuovo il login.');
         return;
       }
       if (enabled) {
@@ -216,7 +231,7 @@ export default function DatabaseManagement() {
         );
         const failed = response.data?.tables_failed || [];
         if (failed.length > 0) {
-          alert(
+          toast.warning(
             `Disabilitazione completata, ma non tutte le tabelle sono state rimosse.\n` +
             `Tabelle rimaste: ${failed.map((item) => item.table).join(', ')}`
           );
@@ -232,7 +247,7 @@ export default function DatabaseManagement() {
       await loadTenantModules(tenantId);
       await loadMenu();
     } catch (err) {
-      alert(`Errore moduli: ${err.response?.data?.detail || 'Operazione fallita'}`);
+      toast.error(`Errore moduli: ${err.response?.data?.detail || 'Operazione fallita'}`);
     }
   };
 
@@ -247,7 +262,7 @@ export default function DatabaseManagement() {
     try {
       parsedConfig = configValue ? JSON.parse(configValue) : {};
     } catch (err) {
-      alert('Config non valida: inserisci JSON valido.');
+      toast.warning('Config non valida: inserisci JSON valido.');
       return;
     }
 
@@ -255,7 +270,7 @@ export default function DatabaseManagement() {
       setConfigSaving(true);
       const token = localStorage.getItem('access_token');
       if (!token) {
-        alert('Sessione scaduta. Effettua di nuovo il login.');
+        toast.error('Sessione scaduta. Effettua di nuovo il login.');
         return;
       }
       await axios.put(
@@ -267,36 +282,47 @@ export default function DatabaseManagement() {
       setConfigEditor(null);
       setConfigValue('');
     } catch (err) {
-      alert(`Errore configurazione: ${err.response?.data?.detail || 'Salvataggio fallito'}`);
+      toast.error(`Errore configurazione: ${err.response?.data?.detail || 'Salvataggio fallito'}`);
     } finally {
       setConfigSaving(false);
     }
   };
 
-  if (loading) return <div className="loading">Caricamento database...</div>;
+  if (loading) return <LoadingSpinner message="Caricamento database..." />;
+
+  const closeRestoreModal = () => {
+    setShowRestoreForm(null);
+    setRestoreFile(null);
+  };
+
+  const closeConfigEditor = () => {
+    setConfigEditor(null);
+    setConfigValue('');
+  };
 
   return (
     <div className="database-management">
       <div className="page-header">
         <h1>Gestione Database</h1>
-        <button
-          className="btn btn-primary"
+        <Button
+          type="button"
+          variant={showCreateForm ? 'secondary' : 'primary'}
           onClick={() => setShowCreateForm(!showCreateForm)}
         >
-          {showCreateForm ? 'Annulla' : '+ Nuovo Database'}
-        </button>
+          {showCreateForm ? 'Annulla' : (<><Plus size={18} strokeWidth={1.7} aria-hidden="true" /> Nuovo Database</>)}
+        </Button>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      <ErrorMessage message={error} onRetry={loadTenants} onDismiss={() => setError(null)} />
 
       {/* Create Form */}
       {showCreateForm && (
-        <div className="card create-form">
+        <Card className="create-form">
           <h2>Crea Nuovo Database</h2>
           <form onSubmit={handleCreateTenant}>
-            <div className="form-group">
-              <label>Schema Name (tecnico)*</label>
+            <FormField label="Schema Name (tecnico) *" htmlFor="db-schema-name">
               <input
+                id="db-schema-name"
                 type="text"
                 placeholder="tenant_nome"
                 value={newTenant.schema_name}
@@ -306,42 +332,48 @@ export default function DatabaseManagement() {
                 required
               />
               <small>Formato: tenant_nome (solo minuscole, numeri, _ e -)</small>
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label>Nome Visualizzato*</label>
+            <FormField label="Nome Visualizzato *" htmlFor="db-nome-display">
               <input
+                id="db-nome-display"
                 type="text"
                 placeholder="Database Produzione"
                 value={newTenant.nome_display}
                 onChange={(e) => setNewTenant({ ...newTenant, nome_display: e.target.value })}
                 required
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label>Descrizione</label>
+            <FormField label="Descrizione" htmlFor="db-descrizione">
               <textarea
+                id="db-descrizione"
                 placeholder="Descrizione del database..."
                 value={newTenant.descrizione}
                 onChange={(e) => setNewTenant({ ...newTenant, descrizione: e.target.value })}
                 rows={3}
               />
-            </div>
+            </FormField>
 
             <div className="form-actions">
-              <button type="submit" className="btn btn-primary">Crea Database</button>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowCreateForm(false)}>
+              <Button type="submit" variant="primary">Crea Database</Button>
+              <Button type="button" variant="secondary" onClick={() => setShowCreateForm(false)}>
                 Annulla
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
       {/* Tenants Table */}
-      <div className="card">
+      <Card>
         <h2>Database Esistenti ({tenants.length})</h2>
+        {tenants.length === 0 ? (
+          <EmptyState
+            title="Nessun database trovato"
+            message='Non ci sono database registrati. Clicca su "Nuovo Database" per iniziare.'
+          />
+        ) : (
         <div className="table-responsive">
           <table className="table">
             <thead>
@@ -362,40 +394,48 @@ export default function DatabaseManagement() {
                   <td><strong>{tenant.nome_display}</strong></td>
                   <td>{tenant.descrizione}</td>
                   <td>
-                    <span className={`badge ${tenant.active ? 'badge-success' : 'badge-secondary'}`}>
+                    <Badge variant={tenant.active ? 'success' : 'neutral'}>
                       {tenant.active ? 'Attivo' : 'Disattivato'}
-                    </span>
+                    </Badge>
                   </td>
                   <td>
                     <div className="action-buttons">
-                      <button
-                        className="btn btn-sm btn-info"
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
                         onClick={() => handleBackup(tenant.id, tenant.schema_name)}
                         title="Scarica backup"
                       >
-                        📥 Backup
-                      </button>
-                      <button
-                        className="btn btn-sm btn-warning"
+                        <Download size={16} strokeWidth={1.7} aria-hidden="true" /> Backup
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
                         onClick={() => setShowRestoreForm(tenant.id)}
                         title="Ripristina da backup"
                       >
-                        📤 Ripristina
-                      </button>
-                      <button
-                        className="btn btn-sm btn-danger"
-                        onClick={() => handleDelete(tenant.id, tenant.schema_name)}
-                        title="Elimina database"
-                      >
-                        🗑️ Elimina
-                      </button>
-                      <button
-                        className="btn btn-sm btn-secondary"
+                        <Upload size={16} strokeWidth={1.7} aria-hidden="true" /> Ripristina
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
                         onClick={() => openModulesModal(tenant)}
                         title="Gestisci funzionalità"
                       >
-                        🧩 Funzionalità
-                      </button>
+                        <Puzzle size={16} strokeWidth={1.7} aria-hidden="true" /> Funzionalità
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleDelete(tenant.id, tenant.schema_name)}
+                        title="Elimina database"
+                      >
+                        <Trash2 size={16} strokeWidth={1.7} aria-hidden="true" /> Elimina
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -403,153 +443,182 @@ export default function DatabaseManagement() {
             </tbody>
           </table>
         </div>
-      </div>
+        )}
+      </Card>
 
       {/* Restore Modal */}
       {showRestoreForm && (
-        <div className="modal-overlay" onClick={() => setShowRestoreForm(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Ripristina Database</h2>
-            <p className="warning-text">
-              ⚠️ ATTENZIONE: Questa operazione sovrascriverà tutti i dati esistenti!
-            </p>
-            <form onSubmit={handleRestore}>
-              <div className="form-group">
-                <label>File di Backup (.sql)*</label>
-                <input
-                  type="file"
-                  accept=".sql"
-                  onChange={(e) => setRestoreFile(e.target.files[0])}
-                  required
-                />
-                {restoreFile && (
-                  <small>File selezionato: {restoreFile.name}</small>
-                )}
-              </div>
+        <FormModal title="Ripristina Database" size="small" onClose={closeRestoreModal}>
+          <p className="warning-text" role="alert">
+            <AlertTriangle size={18} strokeWidth={1.7} aria-hidden="true" />
+            <span>ATTENZIONE: questa operazione sovrascriverà tutti i dati esistenti!</span>
+          </p>
+          <form onSubmit={handleRestore}>
+            <FormField label="File di Backup (.sql) *" htmlFor="db-restore-file">
+              <input
+                id="db-restore-file"
+                type="file"
+                accept=".sql"
+                onChange={(e) => setRestoreFile(e.target.files[0])}
+                required
+              />
+              {restoreFile && (
+                <small>File selezionato: {restoreFile.name}</small>
+              )}
+            </FormField>
 
-              <div className="form-actions">
-                <button type="submit" className="btn btn-warning">
-                  Ripristina
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowRestoreForm(null);
-                    setRestoreFile(null);
-                  }}
-                >
-                  Annulla
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <div className="form-actions">
+              <Button type="submit" variant="danger">Ripristina</Button>
+              <Button type="button" variant="secondary" onClick={closeRestoreModal}>
+                Annulla
+              </Button>
+            </div>
+          </form>
+        </FormModal>
       )}
 
       {/* Modules Modal */}
       {showModulesForTenant && (
-        <div className="modal-overlay" onClick={() => setShowModulesForTenant(null)}>
-          <div className="modal-content modal-wide" onClick={(e) => e.stopPropagation()}>
-            <h2>Funzionalità Database - {showModulesForTenant.nome_display}</h2>
-            {modulesError && <div className="alert alert-error">{modulesError}</div>}
-            {modulesLoading ? (
-              <div className="loading">Caricamento moduli...</div>
-            ) : (
-              <div className="modules-table">
-                {tenantModules.map(module => (
-                  <div key={module.module_id} className="module-row">
-                    <div className="module-main">
-                      <div className="module-title">
-                        <strong>{module.name}</strong>
-                        <span className={`badge ${module.enabled ? 'badge-success' : 'badge-secondary'}`}>
-                          {module.enabled ? 'Attivo' : 'Disattivo'}
-                        </span>
-                      </div>
-                      <div className="module-meta">
-                        <code>{module.module_id}</code>
-                      </div>
+        <FormModal
+          title={`Funzionalità Database - ${showModulesForTenant.nome_display}`}
+          size="large"
+          onClose={() => setShowModulesForTenant(null)}
+        >
+          <ErrorMessage message={modulesError} onDismiss={() => setModulesError(null)} />
+          {modulesLoading ? (
+            <LoadingSpinner message="Caricamento moduli..." />
+          ) : (
+            <div className="modules-table">
+              {tenantModules.map(module => (
+                <div key={module.module_id} className="module-row">
+                  <div className="module-main">
+                    <div className="module-title">
+                      <strong>{module.name}</strong>
+                      <Badge variant={module.enabled ? 'success' : 'neutral'}>
+                        {module.enabled ? 'Attivo' : 'Disattivo'}
+                      </Badge>
                     </div>
-                    <div className="module-actions">
-                      {!module.enabled && (
-                        <label className="module-testdata-flag">
-                          <input
-                            type="checkbox"
-                            checked={!!moduleSeedTestFlags[module.module_id]}
-                            onChange={(e) => setModuleSeedTestFlags(prev => ({
-                              ...prev,
-                              [module.module_id]: e.target.checked,
-                            }))}
-                          />
-                          Dati di test
-                        </label>
-                      )}
-                      <button
-                        className={`btn btn-sm ${module.enabled ? 'btn-warning' : 'btn-primary'}`}
-                        onClick={() => toggleTenantModule(
-                          showModulesForTenant.id,
-                          module.module_id,
-                          module.enabled,
-                          moduleSeedTestFlags[module.module_id]
-                        )}
-                      >
-                        {module.enabled ? 'Disattiva' : 'Attiva'}
-                      </button>
-                      <button
-                        className="btn btn-sm btn-info"
-                        onClick={() => openConfigEditor(showModulesForTenant.id, module)}
-                      >
-                        Config
-                      </button>
+                    <div className="module-meta">
+                      <code>{module.module_id}</code>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {configEditor && (
-              <div className="config-editor">
-                <h3>Config modulo: {configEditor.moduleId}</h3>
-                <textarea
-                  value={configValue}
-                  onChange={(e) => setConfigValue(e.target.value)}
-                  rows={8}
-                />
-                <div className="form-actions">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={saveModuleConfig}
-                    disabled={configSaving}
-                  >
-                    {configSaving ? 'Salvataggio...' : 'Salva Config'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      setConfigEditor(null);
-                      setConfigValue('');
-                    }}
-                  >
-                    Chiudi
-                  </button>
+                  <div className="module-actions">
+                    {!module.enabled && (
+                      <label className="module-testdata-flag">
+                        <input
+                          type="checkbox"
+                          checked={!!moduleSeedTestFlags[module.module_id]}
+                          onChange={(e) => setModuleSeedTestFlags(prev => ({
+                            ...prev,
+                            [module.module_id]: e.target.checked,
+                          }))}
+                        />
+                        Dati di test
+                      </label>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={module.enabled ? 'secondary' : 'primary'}
+                      onClick={() => toggleTenantModule(
+                        showModulesForTenant.id,
+                        module.module_id,
+                        module.enabled,
+                        moduleSeedTestFlags[module.module_id]
+                      )}
+                    >
+                      {module.enabled ? 'Disattiva' : 'Attiva'}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => openConfigEditor(showModulesForTenant.id, module)}
+                    >
+                      Config
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            <div className="form-actions">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setShowModulesForTenant(null)}
-              >
-                Chiudi
-              </button>
+              ))}
             </div>
+          )}
+
+          {configEditor && (
+            <div className="config-editor">
+              <h3>Config modulo: {configEditor.moduleId}</h3>
+              <textarea
+                value={configValue}
+                onChange={(e) => setConfigValue(e.target.value)}
+                rows={8}
+                aria-label={`Configurazione JSON del modulo ${configEditor.moduleId}`}
+              />
+              <div className="form-actions">
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={saveModuleConfig}
+                  loading={configSaving}
+                >
+                  {configSaving ? 'Salvataggio...' : 'Salva Config'}
+                </Button>
+                <Button type="button" variant="secondary" onClick={closeConfigEditor}>
+                  Chiudi
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="form-actions">
+            <Button type="button" variant="secondary" onClick={() => setShowModulesForTenant(null)}>
+              Chiudi
+            </Button>
           </div>
-        </div>
+        </FormModal>
       )}
+
+      {/* Conferma eliminazione */}
+      {deleteTarget && (
+        <FormModal
+          title="Elimina database"
+          size="small"
+          onClose={() => !deleting && setDeleteTarget(null)}
+        >
+          <p className="warning-text" role="alert">
+            <AlertTriangle size={18} strokeWidth={1.7} aria-hidden="true" />
+            <span>
+              Eliminare il database <strong>{deleteTarget.schemaName}</strong>? Questa operazione è IRREVERSIBILE.
+            </span>
+          </p>
+          <label className="module-testdata-flag delete-drop-flag">
+            <input
+              type="checkbox"
+              checked={deleteDropSchema}
+              onChange={(e) => setDeleteDropSchema(e.target.checked)}
+              disabled={deleting}
+            />
+            Elimina anche lo schema e tutti i dati (irreversibile). Se non selezionato, viene eliminato solo il record e lo schema rimane nel database.
+          </label>
+          <div className="form-actions">
+            <Button type="button" variant="danger" onClick={executeDelete} loading={deleting}>
+              {deleting ? 'Eliminazione...' : 'Elimina'}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Annulla
+            </Button>
+          </div>
+        </FormModal>
+      )}
+
+      {/* Conferma ripristino */}
+      <ConfirmDialog
+        isOpen={restoreConfirmOpen}
+        title="Conferma ripristino"
+        message="ATTENZIONE: il ripristino sovrascriverà tutti i dati esistenti. Continuare?"
+        confirmLabel="Ripristina"
+        variant="danger"
+        onConfirm={executeRestore}
+        onCancel={() => setRestoreConfirmOpen(false)}
+      />
     </div>
   );
 }

@@ -1,367 +1,193 @@
+/* Gestione Database — stili scoped sotto .database-management, basati sui token (styles/tokens.css) */
 .database-management {
-  padding: 20px;
+  padding: var(--space-5);
   max-width: 1400px;
   margin: 0 auto;
+  font-family: var(--font-family-base);
 }
 
-.page-header {
+.database-management .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
-.page-header h1 {
+.database-management .page-header h1 {
   margin: 0;
-  font-size: 28px;
-  color: #333;
+  font-size: var(--font-size-h1);
+  color: var(--color-ink);
 }
 
-/* Cards */
-.card {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.database-management .ds-card {
+  margin-bottom: var(--space-4);
 }
 
-.card h2 {
-  margin-top: 0;
-  font-size: 20px;
-  color: #333;
-  margin-bottom: 15px;
+.database-management .ds-card h2 {
+  margin: 0 0 var(--space-3) 0;
+  font-size: var(--font-size-h3);
+  color: var(--color-ink);
 }
 
-/* Create Form */
-.create-form {
-  background: #f8f9fa;
-  border: 2px solid #007bff;
+.database-management .core-error-message {
+  margin-bottom: var(--space-4);
 }
 
-.form-group {
-  margin-bottom: 15px;
+.database-management .ds-field small {
+  color: var(--gray-600);
+  font-size: var(--font-size-small);
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 600;
-  color: #555;
-}
-
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.1);
-}
-
-.form-group small {
-  display: block;
-  margin-top: 4px;
-  color: #666;
-  font-size: 12px;
-}
-
-.form-actions {
+.database-management .form-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
 }
 
-/* Table */
+/* Tabella */
+/* Non scoped: usata anche da AffittuarioDetail/ContrattoDetail, che non la definiscono */
 .table-responsive {
   overflow-x: auto;
 }
 
-.table {
+.database-management .table {
   width: 100%;
+  margin-top: 0;
+  box-shadow: none;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: var(--font-size-small);
 }
 
-.table thead {
-  background: #f8f9fa;
-}
-
-.table th,
-.table td {
-  padding: 12px;
+.database-management .table th,
+.database-management .table td {
+  padding: var(--space-2) var(--space-3);
   text-align: left;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--gray-300);
 }
 
-.table th {
+.database-management .table th {
+  background: var(--gray-100);
+  color: var(--gray-700);
   font-weight: 600;
-  color: #495057;
 }
 
-.table tbody tr:hover {
-  background-color: #f8f9fa;
+.database-management .table tbody tr:hover {
+  background-color: var(--gray-100);
 }
 
-.table code {
-  background: #e9ecef;
+.database-management code {
+  background: var(--gray-200);
   padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 12px;
-}
-
-/* Badges */
-.badge {
-  display: inline-block;
-  padding: 4px 8px;
   border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--font-size-small);
 }
 
-.badge-success {
-  background: #28a745;
-  color: white;
-}
-
-.badge-secondary {
-  background: #6c757d;
-  color: white;
-}
-
-/* Buttons */
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-
-.btn-primary {
-  background: #007bff;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #0056b3;
-}
-
-.btn-secondary {
-  background: #6c757d;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: #545b62;
-}
-
-.btn-info {
-  background: #17a2b8;
-  color: white;
-}
-
-.btn-info:hover {
-  background: #117a8b;
-}
-
-.btn-warning {
-  background: #ffc107;
-  color: #000;
-}
-
-.btn-warning:hover {
-  background: #e0a800;
-}
-
-.btn-danger {
-  background: #dc3545;
-  color: white;
-}
-
-.btn-danger:hover {
-  background: #c82333;
-}
-
-.btn-sm {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-/* Action Buttons */
-.action-buttons {
+.database-management .action-buttons {
   display: flex;
-  gap: 5px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-/* Alerts */
-.alert {
-  padding: 12px 16px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
-
-.alert-error {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-/* Loading */
-.loading {
-  text-align: center;
-  padding: 40px;
-  font-size: 18px;
-  color: #666;
-}
-
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
+/* Modali (FormModal) */
+.warning-text {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  align-items: flex-start;
+  gap: var(--space-2);
+  background: #fff3cd;
+  border: 1px solid var(--color-warning);
+  color: #856404;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-small);
 }
 
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  padding: 30px;
-  max-width: 500px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
+.warning-text svg {
+  flex-shrink: 0;
 }
 
-.modal-content.modal-wide {
-  max-width: 820px;
+.delete-drop-flag {
+  align-items: flex-start;
 }
 
 .modules-table {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .module-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px;
-  border: 1px solid #e6e9ef;
-  border-radius: 6px;
-  background: #fafbfc;
-  gap: 16px;
+  padding: var(--space-3);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  background: var(--gray-100);
+  gap: var(--space-4);
 }
 
 .module-main {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .module-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.module-meta code {
-  font-size: 12px;
+  gap: var(--space-2);
 }
 
 .module-actions {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 
 .module-testdata-flag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #444;
+  gap: var(--space-2);
+  font-size: var(--font-size-small);
+  color: var(--gray-700);
 }
 
 .module-testdata-flag input {
   margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--color-brand);
 }
 
 .config-editor {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #e0e0e0;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--gray-300);
+}
+
+.config-editor h3 {
+  margin: 0 0 var(--space-2) 0;
+  font-size: var(--font-size-h4);
+  color: var(--color-ink);
 }
 
 .config-editor textarea {
   width: 100%;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 10px;
   font-family: "Courier New", monospace;
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 
-.modal-content h2 {
-  margin-top: 0;
-  margin-bottom: 15px;
-}
-
-.warning-text {
-  background: #fff3cd;
-  border: 1px solid #ffc107;
-  color: #856404;
-  padding: 10px;
-  border-radius: 4px;
-  margin-bottom: 15px;
-}
-
-/* Responsive */
 @media (max-width: 768px) {
-  .page-header {
+  .database-management {
+    padding: var(--space-4);
+  }
+
+  .database-management .page-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
-  }
-
-  .table {
-    font-size: 12px;
-  }
-
-  .table th,
-  .table td {
-    padding: 8px;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-  }
-
-  .btn-sm {
-    width: 100%;
   }
 
   .module-row {
@@ -371,5 +197,6 @@
 
   .module-actions {
     width: 100%;
+    flex-wrap: wrap;
   }
 }
