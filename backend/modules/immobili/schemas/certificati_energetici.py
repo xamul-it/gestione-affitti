@@ -32,8 +32,15 @@ class CertificatoEnergeticoUpdate(BaseModel):
     note: Optional[str] = None
 
 
-class CertificatoEnergeticoResponse(CertificatoEnergeticoBase):
+class CertificatoEnergeticoResponse(BaseModel):
+    """An APE document in the old certificate shape (see routes/certificati_energetici.py)."""
     id: int
-
-    class Config:
-        from_attributes = True
+    unita_immobiliare_id: int
+    tecnico_id: Optional[int] = None
+    classe_energetica: Optional[str] = None
+    indice_prestazione_energetica: Optional[float] = None
+    data_emissione: Optional[date] = None
+    data_scadenza: Optional[date] = None
+    numero_protocollo: Optional[str] = None
+    file_path: Optional[str] = None
+    note: Optional[str] = None

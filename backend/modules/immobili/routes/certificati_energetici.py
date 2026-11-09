@@ -1,169 +1,109 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import List
+"""
+Energy certificates, read from the core APE documents.
+
+Since the 2026-11-09 document types spec the APE is a core document (type
+APE, regime SOSTITUTIVO, scadenza 10 years): the old table
+immo_certificati_energetici is migrated by immobili.post_sync and kept
+read-only. These endpoints keep the old response shape for existing
+consumers; writes go through /documenti (tipo APE).
+"""
 from datetime import date
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session, joinedload, selectinload
+
 from app.core.database import get_db
-from ..models import CertificatoEnergetico, UnitaImmobiliare
-# Tecnico is owned by affitti_lungo, which immobili does NOT declare as a
-# dependency (__manifest__.py only lists anagrafica_italiana) — a tenant can
-# have immobili installed without affitti_lungo, which is exactly why
-# CertificatoEnergetico.tecnico_id has no DB-level FK to it (see
-# models/certificati_energetici.py). Import defensively so a deployment/tenant
-# without affitti_lungo doesn't lose ALL of immobili's routers to this one
-# optional cross-check.
-try:
-    from affitti_lungo.models import Tecnico
-except ImportError:
-    Tecnico = None
-from ..schemas.certificati_energetici import (
-    CertificatoEnergeticoCreate,
-    CertificatoEnergeticoUpdate,
-    CertificatoEnergeticoResponse,
-)
+from app.core.platform.models import Documento, EntityType, TipoDocumento
+from app.core.platform_services.documento_service import DocumentoService
+from ..schemas.certificati_energetici import CertificatoEnergeticoResponse
 
 router = APIRouter(prefix="/certificati-energetici", tags=["Certificati Energetici"])
 
+_GONE = "I certificati energetici sono documenti: usa /documenti con tipo APE"
+
+
+def _query(db: Session):
+    return (
+        db.query(Documento)
+        .join(TipoDocumento, TipoDocumento.id == Documento.tipo_documento_id)
+        .options(selectinload(Documento.files), joinedload(Documento.tipo))
+        .filter(
+            TipoDocumento.codice == "APE",
+            Documento.entity_type == EntityType.IMMOBILE,
+            Documento.stato == "CORRENTE",
+        )
+    )
+
+
+def _out(documento: Documento) -> CertificatoEnergeticoResponse:
+    dati = documento.dati or {}
+    return CertificatoEnergeticoResponse(
+        id=documento.id,
+        unita_immobiliare_id=documento.entity_id,
+        tecnico_id=dati.get("tecnico_id"),
+        classe_energetica=dati.get("classe"),
+        indice_prestazione_energetica=dati.get("ep_gl_nren"),
+        data_emissione=documento.data_riferimento,
+        data_scadenza=DocumentoService(None, None, None).scadenza_effettiva(documento),
+        numero_protocollo=dati.get("codice_identificativo"),
+        file_path=documento.file_path,
+        note=documento.note,
+    )
+
 
 @router.get("/", response_model=List[CertificatoEnergeticoResponse])
-def get_certificati(
-    skip: int = 0,
-    limit: int = 100,
-    validi_solo: bool = False,
-    db: Session = Depends(get_db)
-):
-    """Ottieni lista di tutti i certificati energetici"""
-    query = db.query(CertificatoEnergetico)
+def get_certificati(skip: int = 0, limit: int = 100, validi_solo: bool = False, db: Session = Depends(get_db)):
+    """APE in vigore di tutte le unità."""
+    result = [_out(d) for d in _query(db).order_by(Documento.data_riferimento.desc()).all()]
     if validi_solo:
         oggi = date.today()
-        query = query.filter(CertificatoEnergetico.data_scadenza >= oggi)
-    certificati = query.offset(skip).limit(limit).all()
-    return certificati
+        result = [c for c in result if c.data_scadenza and c.data_scadenza >= oggi]
+    return result[skip: skip + min(limit, 500)]
 
 
 @router.get("/{certificato_id}", response_model=CertificatoEnergeticoResponse)
 def get_certificato(certificato_id: int, db: Session = Depends(get_db)):
-    """Ottieni dettagli di un certificato energetico specifico"""
-    certificato = db.query(CertificatoEnergetico).filter(
-        CertificatoEnergetico.id == certificato_id
-    ).first()
-    if not certificato:
+    """Un APE (id del documento)."""
+    documento = _query(db).filter(Documento.id == certificato_id).first()
+    if documento is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Certificato energetico con ID {certificato_id} non trovato"
+            detail=f"Certificato energetico con ID {certificato_id} non trovato",
         )
-    return certificato
+    return _out(documento)
 
 
 @router.get("/unita-immobiliare/{unita_immobiliare_id}", response_model=List[CertificatoEnergeticoResponse])
 def get_certificati_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db)):
-    """Ottieni tutti i certificati energetici di un'unità immobiliare"""
-    certificati = db.query(CertificatoEnergetico).filter(
-        CertificatoEnergetico.unita_immobiliare_id == unita_immobiliare_id
-    ).order_by(CertificatoEnergetico.data_emissione.desc()).all()
-    return certificati
+    """APE in vigore dell'unità (lo storico è in /documenti/{id}/storico)."""
+    return [_out(d) for d in _query(db).filter(Documento.entity_id == unita_immobiliare_id).all()]
 
 
 @router.get("/unita-immobiliare/{unita_immobiliare_id}/valido", response_model=CertificatoEnergeticoResponse)
 def get_certificato_valido_by_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db)):
-    """Ottieni il certificato energetico valido più recente di un'unità immobiliare"""
+    """APE in vigore e non scaduto (né decaduto) dell'unità."""
     oggi = date.today()
-    certificato = db.query(CertificatoEnergetico).filter(
-        CertificatoEnergetico.unita_immobiliare_id == unita_immobiliare_id,
-        CertificatoEnergetico.data_scadenza >= oggi
-    ).order_by(CertificatoEnergetico.data_emissione.desc()).first()
-
-    if not certificato:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Nessun certificato energetico valido trovato per l'unità immobiliare {unita_immobiliare_id}"
-        )
-    return certificato
+    for documento in _query(db).filter(Documento.entity_id == unita_immobiliare_id).all():
+        out = _out(documento)
+        if out.data_scadenza and out.data_scadenza >= oggi:
+            return out
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Nessun certificato energetico valido trovato per l'unità immobiliare {unita_immobiliare_id}",
+    )
 
 
-@router.post("/", response_model=CertificatoEnergeticoResponse, status_code=status.HTTP_201_CREATED)
-def create_certificato(certificato: CertificatoEnergeticoCreate, db: Session = Depends(get_db)):
-    """Crea un nuovo certificato energetico"""
-    # Verifica che l'unità immobiliare esista
-    unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.id == certificato.unita_immobiliare_id).first()
-    if not unita:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Unità immobiliare con ID {certificato.unita_immobiliare_id} non trovato"
-        )
-
-    # Verifica che il tecnico esista, solo se affitti_lungo (che possiede Tecnico)
-    # è installato per questo deployment/tenant.
-    if Tecnico is not None:
-        tecnico = db.query(Tecnico).filter(Tecnico.id == certificato.tecnico_id).first()
-        if not tecnico:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Tecnico con ID {certificato.tecnico_id} non trovato"
-            )
-
-    # Verifica che data_emissione < data_scadenza
-    if certificato.data_emissione >= certificato.data_scadenza:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="La data di scadenza deve essere successiva alla data di emissione"
-        )
-
-    new_certificato = CertificatoEnergetico(**certificato.model_dump())
-    db.add(new_certificato)
-    db.commit()
-    db.refresh(new_certificato)
-    return new_certificato
+@router.post("/", status_code=status.HTTP_410_GONE)
+def create_certificato():
+    raise HTTPException(status_code=status.HTTP_410_GONE, detail=_GONE)
 
 
-@router.put("/{certificato_id}", response_model=CertificatoEnergeticoResponse)
-def update_certificato(
-    certificato_id: int,
-    certificato: CertificatoEnergeticoUpdate,
-    db: Session = Depends(get_db)
-):
-    """Aggiorna un certificato energetico esistente"""
-    db_certificato = db.query(CertificatoEnergetico).filter(
-        CertificatoEnergetico.id == certificato_id
-    ).first()
-    if not db_certificato:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Certificato energetico con ID {certificato_id} non trovato"
-        )
-
-    # Aggiorna solo i campi forniti
-    update_data = certificato.model_dump(exclude_unset=True)
-
-    # Verifica vincoli se vengono aggiornate le date
-    if "data_emissione" in update_data or "data_scadenza" in update_data:
-        emissione = update_data.get("data_emissione", db_certificato.data_emissione)
-        scadenza = update_data.get("data_scadenza", db_certificato.data_scadenza)
-        if emissione >= scadenza:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="La data di scadenza deve essere successiva alla data di emissione"
-            )
-
-    for field, value in update_data.items():
-        setattr(db_certificato, field, value)
-
-    db.commit()
-    db.refresh(db_certificato)
-    return db_certificato
+@router.put("/{certificato_id}", status_code=status.HTTP_410_GONE)
+def update_certificato(certificato_id: int):
+    raise HTTPException(status_code=status.HTTP_410_GONE, detail=_GONE)
 
 
-@router.delete("/{certificato_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_certificato(certificato_id: int, db: Session = Depends(get_db)):
-    """Elimina un certificato energetico"""
-    db_certificato = db.query(CertificatoEnergetico).filter(
-        CertificatoEnergetico.id == certificato_id
-    ).first()
-    if not db_certificato:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Certificato energetico con ID {certificato_id} non trovato"
-        )
-
-    db.delete(db_certificato)
-    db.commit()
-    return None
+@router.delete("/{certificato_id}", status_code=status.HTTP_410_GONE)
+def delete_certificato(certificato_id: int):
+    raise HTTPException(status_code=status.HTTP_410_GONE, detail=_GONE)
