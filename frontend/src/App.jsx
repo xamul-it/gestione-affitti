@@ -75,6 +75,7 @@ import StyleGuide from './pages/Admin/StyleGuide';
 // Auth
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
+import { ToastContainer } from './core/components/common';
 
 // Tenant
 import { TenantProvider } from './contexts/TenantContext';
@@ -152,6 +153,9 @@ function App() {
         <a href="#main-content" className="skip-link">
           Vai al contenuto principale
         </a>
+
+        {/* Contenitore globale delle notifiche toast (useToast) */}
+        <ToastContainer />
 
         <AuthProvider>
           <TenantProvider>
