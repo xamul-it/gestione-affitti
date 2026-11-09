@@ -304,8 +304,8 @@ app.add_middleware(
 )
 
 # Add tenant middleware for multi-tenant context
-# Extracts tenant_schema from JWT and sets it in thread-local storage
-# SQLAlchemy event listener in database.py applies search_path automatically
+# Extracts tenant_schema from JWT into request.state; get_db() sets the
+# session's search_path and database.py re-applies it on every transaction
 from app.core.middleware.tenant_middleware import TenantMiddleware
 app.add_middleware(TenantMiddleware)
 
