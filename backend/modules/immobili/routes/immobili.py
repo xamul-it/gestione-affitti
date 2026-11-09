@@ -16,7 +16,12 @@ router = APIRouter(prefix="/unita-immobiliari", tags=["Unità Immobiliari"])
 
 
 @router.get("/", response_model=List[UnitaImmobiliareResponse])
-def get_unita_immobiliari(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_unita_immobiliari(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("immobile.view")),
+):
     """Ottieni lista di tutte le unità immobiliari"""
     unita_immobiliari = db.query(UnitaImmobiliare)\
         .options(joinedload(UnitaImmobiliare.categoria_catastale))\
@@ -25,7 +30,11 @@ def get_unita_immobiliari(skip: int = 0, limit: int = 100, db: Session = Depends
 
 
 @router.get("/{unita_immobiliare_id}", response_model=UnitaImmobiliareResponse)
-def get_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db)):
+def get_unita_immobiliare(
+    unita_immobiliare_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("immobile.view")),
+):
     """Ottieni dettagli di un'unità immobiliare specifica"""
     unita_immobiliare = db.query(UnitaImmobiliare)\
         .options(joinedload(UnitaImmobiliare.categoria_catastale))\
@@ -39,7 +48,11 @@ def get_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_d
 
 
 @router.post("/", response_model=UnitaImmobiliareResponse, status_code=status.HTTP_201_CREATED)
-def create_unita_immobiliare(unita_immobiliare: UnitaImmobiliareCreate, db: Session = Depends(get_db)):
+def create_unita_immobiliare(
+    unita_immobiliare: UnitaImmobiliareCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("immobile.create")),
+):
     """Crea una nuova unità immobiliare"""
     db_unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.codice == unita_immobiliare.codice).first()
     if db_unita:
@@ -56,7 +69,12 @@ def create_unita_immobiliare(unita_immobiliare: UnitaImmobiliareCreate, db: Sess
 
 
 @router.put("/{unita_immobiliare_id}", response_model=UnitaImmobiliareResponse)
-def update_unita_immobiliare(unita_immobiliare_id: int, unita_immobiliare: UnitaImmobiliareUpdate, db: Session = Depends(get_db)):
+def update_unita_immobiliare(
+    unita_immobiliare_id: int,
+    unita_immobiliare: UnitaImmobiliareUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("immobile.edit")),
+):
     """Aggiorna un'unità immobiliare esistente"""
     db_unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.id == unita_immobiliare_id).first()
     if not db_unita:
@@ -68,7 +86,7 @@ def update_unita_immobiliare(unita_immobiliare_id: int, unita_immobiliare: Unita
     update_data = unita_immobiliare.model_dump(exclude_unset=True)
     registra_variazioni(
         db, db_unita, update_data,
-        origine="MANUALE", documento_id=None, data_riferimento=date.today(), utente_id=None,
+        origine="MANUALE", documento_id=None, data_riferimento=date.today(), utente_id=current_user.id,
     )
     for field, value in update_data.items():
         setattr(db_unita, field, value)
@@ -94,7 +112,11 @@ def get_variazioni_catastali(
 
 
 @router.delete("/{unita_immobiliare_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_unita_immobiliare(unita_immobiliare_id: int, db: Session = Depends(get_db)):
+def delete_unita_immobiliare(
+    unita_immobiliare_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("immobile.delete")),
+):
     """Elimina un'unità immobiliare"""
     db_unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.id == unita_immobiliare_id).first()
     if not db_unita:
