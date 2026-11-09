@@ -222,8 +222,8 @@ function Dashboard() {
   return (
     <div className="dashboard-page">
       <div className="dashboard-header">
-        <h1>
-          <i className="fas fa-tachometer-alt"></i>
+        <h1 aria-label="Dashboard">
+          <i className="fas fa-tachometer-alt" aria-hidden="true"></i>
         </h1>
         <div className="dashboard-actions">
           <button className="btn-add-widget" onClick={openWidgetManager} title="Aggiungi Widget">

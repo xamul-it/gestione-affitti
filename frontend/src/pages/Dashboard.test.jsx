@@ -5,6 +5,17 @@ import Dashboard from './Dashboard'
 import { server } from '../test/mocks/server'
 import { http, HttpResponse } from 'msw'
 
+// Widgets are loaded at runtime from the module registry, which is empty
+// in tests: render a stub showing which component the grid asked for.
+vi.mock('../core/widgets', () => ({
+  LazyWidgetLoader: ({ componentName }) => (
+    <div data-testid={`widget-${componentName}`}>{componentName}</div>
+  ),
+}))
+
+const MY_DASHBOARD = 'http://localhost:8000/api/v1/platform/dashboard/my-dashboard'
+const AVAILABLE_WIDGETS = 'http://localhost:8000/api/v1/platform/dashboard/available-widgets'
+
 describe('Dashboard Component', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -25,7 +36,7 @@ describe('Dashboard Component', () => {
       localStorage.setItem('access_token', 'test-token')
 
       server.use(
-        http.get('http://localhost:8000/api/v1/platform/dashboard/my-dashboard', () => {
+        http.get(MY_DASHBOARD, () => {
           return HttpResponse.json(
             { detail: 'Dashboard not found' },
             { status: 404 }
@@ -47,7 +58,7 @@ describe('Dashboard Component', () => {
 
       // First call fails
       server.use(
-        http.get('http://localhost:8000/api/v1/platform/dashboard/my-dashboard', () => {
+        http.get(MY_DASHBOARD, () => {
           return HttpResponse.json(
             { detail: 'Error' },
             { status: 500 }
@@ -68,7 +79,7 @@ describe('Dashboard Component', () => {
       await user.click(retryButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/contratti attivi/i)).toBeInTheDocument()
+        expect(screen.getByTestId('widget-ContrattiAttiviWidget')).toBeInTheDocument()
       })
     })
   })
@@ -78,7 +89,7 @@ describe('Dashboard Component', () => {
       localStorage.setItem('access_token', 'test-token')
 
       server.use(
-        http.get('http://localhost:8000/api/v1/platform/dashboard/my-dashboard', () => {
+        http.get(MY_DASHBOARD, () => {
           return HttpResponse.json({
             layout: [],
             widgets: []
@@ -117,52 +128,43 @@ describe('Dashboard Component', () => {
       })
     })
 
-    it('should render all widgets from API', async () => {
+    it('should render a widget component for each layout item', async () => {
       localStorage.setItem('access_token', 'test-token')
 
       render(<Dashboard />)
 
       await waitFor(() => {
-        expect(screen.getByText('Contratti Attivi')).toBeInTheDocument()
-        expect(screen.getByText('Incassi Mensili')).toBeInTheDocument()
-        expect(screen.getByText('Scadenze')).toBeInTheDocument()
+        expect(screen.getByTestId('widget-ContrattiAttiviWidget')).toBeInTheDocument()
+        expect(screen.getByTestId('widget-IncassiWidget')).toBeInTheDocument()
+        expect(screen.getByTestId('widget-ScadenzeWidget')).toBeInTheDocument()
       })
     })
 
-    it('should display widget component names', async () => {
+    it('should show title, description and category in the widget manager', async () => {
+      const user = userEvent.setup()
       localStorage.setItem('access_token', 'test-token')
+
+      server.use(
+        http.get(AVAILABLE_WIDGETS, () => {
+          return HttpResponse.json([
+            {
+              id: 'widget-1',
+              title: 'Contratti Attivi',
+              description: 'Numero di contratti attualmente attivi',
+              category: 'affitti',
+              module_id: 'affitti_lungo',
+            },
+          ])
+        })
+      )
 
       render(<Dashboard />)
 
-      await waitFor(() => {
-        expect(screen.getByText('ContrattiAttiviWidget')).toBeInTheDocument()
-        expect(screen.getByText('IncassiWidget')).toBeInTheDocument()
-        expect(screen.getByText('ScadenzeWidget')).toBeInTheDocument()
-      })
-    })
+      await user.click(await screen.findByRole('button', { name: /widget/i, description: undefined }))
 
-    it('should display widget descriptions', async () => {
-      localStorage.setItem('access_token', 'test-token')
-
-      render(<Dashboard />)
-
-      await waitFor(() => {
-        expect(screen.getByText(/numero di contratti attualmente attivi/i)).toBeInTheDocument()
-        expect(screen.getByText(/totale incassi del mese corrente/i)).toBeInTheDocument()
-        expect(screen.getByText(/contratti e certificati in scadenza/i)).toBeInTheDocument()
-      })
-    })
-
-    it('should display widget categories', async () => {
-      localStorage.setItem('access_token', 'test-token')
-
-      render(<Dashboard />)
-
-      await waitFor(() => {
-        expect(screen.getByText('affitti')).toBeInTheDocument()
-        expect(screen.getByText('financial')).toBeInTheDocument()
-        expect(screen.getByText('alerts')).toBeInTheDocument()
-      })
+      expect(await screen.findByText('Contratti Attivi')).toBeInTheDocument()
+      expect(screen.getByText(/numero di contratti attualmente attivi/i)).toBeInTheDocument()
+      expect(screen.getByText('affitti')).toBeInTheDocument()
     })
   })
 
@@ -173,8 +175,7 @@ describe('Dashboard Component', () => {
       render(<Dashboard />)
 
       await waitFor(() => {
-        const widgets = screen.getAllByRole('heading', { level: 3 })
-        expect(widgets.length).toBeGreaterThan(0)
+        expect(screen.getByTestId('widget-ScadenzeWidget')).toBeInTheDocument()
       })
 
       // Check that widgets have grid styling
@@ -210,14 +211,14 @@ describe('Dashboard Component', () => {
       let requestCount = 0
 
       server.use(
-        http.get('http://localhost:8000/api/v1/platform/dashboard/my-dashboard', () => {
+        http.get(MY_DASHBOARD, () => {
           requestCount++
           return HttpResponse.json({
             layout: [{ i: 'widget-1', x: 0, y: 0, w: 12, h: 2 }],
             widgets: [{
               id: 'widget-1',
-              title: `Widget Request ${requestCount}`,
-              component: 'TestWidget',
+              title: 'Test',
+              component: `TestWidget${requestCount}`,
               category: 'test'
             }]
           })
@@ -227,14 +228,14 @@ describe('Dashboard Component', () => {
       render(<Dashboard />)
 
       await waitFor(() => {
-        expect(screen.getByText('Widget Request 1')).toBeInTheDocument()
+        expect(screen.getByTestId('widget-TestWidget1')).toBeInTheDocument()
       })
 
       const refreshButton = screen.getByRole('button', { name: /aggiorna/i })
       await user.click(refreshButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Widget Request 2')).toBeInTheDocument()
+        expect(screen.getByTestId('widget-TestWidget2')).toBeInTheDocument()
       })
 
       expect(requestCount).toBe(2)
@@ -249,7 +250,7 @@ describe('Dashboard Component', () => {
       let requestHeaders = null
 
       server.use(
-        http.get('http://localhost:8000/api/v1/platform/dashboard/my-dashboard', ({ request }) => {
+        http.get(MY_DASHBOARD, ({ request }) => {
           requestHeaders = Object.fromEntries(request.headers.entries())
           return HttpResponse.json({ layout: [], widgets: [] })
         })
@@ -269,7 +270,7 @@ describe('Dashboard Component', () => {
       localStorage.setItem('access_token', 'test-token')
 
       server.use(
-        http.get('http://localhost:8000/api/v1/platform/dashboard/my-dashboard', () => {
+        http.get(MY_DASHBOARD, () => {
           return HttpResponse.json({
             layout: [
               { i: 'widget-1', x: 0, y: 0, w: 6, h: 2 },
@@ -296,8 +297,8 @@ describe('Dashboard Component', () => {
       render(<Dashboard />)
 
       await waitFor(() => {
-        expect(screen.getByText('Visible Widget')).toBeInTheDocument()
-        expect(screen.queryByText('Hidden Widget')).not.toBeInTheDocument()
+        expect(screen.getByTestId('widget-VisibleWidget')).toBeInTheDocument()
+        expect(screen.queryByTestId('widget-HiddenWidget')).not.toBeInTheDocument()
       })
     })
   })
@@ -311,9 +312,6 @@ describe('Dashboard Component', () => {
       await waitFor(() => {
         const h1 = screen.getByRole('heading', { level: 1, name: /dashboard/i })
         expect(h1).toBeInTheDocument()
-
-        const h3s = screen.getAllByRole('heading', { level: 3 })
-        expect(h3s.length).toBe(3)
       })
     })
 
