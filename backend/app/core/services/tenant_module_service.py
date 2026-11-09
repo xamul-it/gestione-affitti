@@ -74,8 +74,6 @@ class TenantModuleService:
             "ab_tasse_soggiorno_scaglioni",
             "ab_tasse_soggiorni",
             "ab_soggiorni",
-            "ab_attivita_schedulate",
-            "ab_attivita_schedulate_log",
         ]
     }
 
