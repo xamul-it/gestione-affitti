@@ -46,6 +46,24 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
+# I documenti caricati (backend/storage) non sono nel dump del DB: archivio
+# prima di aggiornare il codice. Il 2026-11-09 un commit che toglieva
+# storage/ dall'indice git ha fatto cancellare al merge i file tracciati.
+STORAGE_DIR="$STABLE_DIR/backend/storage"
+STORAGE_STAMP="$(date +%Y%m%d_%H%M%S)"
+STORAGE_ARCHIVE="$BACKUP_DIR/storage_${STORAGE_STAMP}.tgz"
+STORAGE_LIST_BEFORE="$BACKUP_DIR/storage_${STORAGE_STAMP}.before.txt"
+(umask 077; mkdir -p "$BACKUP_DIR")
+if [ -d "$STORAGE_DIR" ]; then
+    echo "==> Archivio documenti (backend/storage)"
+    (umask 077; tar -C "$STABLE_DIR/backend" -czf "$STORAGE_ARCHIVE" storage)
+    (umask 077; find "$STORAGE_DIR" -type f | sort > "$STORAGE_LIST_BEFORE")
+    echo "    $STORAGE_ARCHIVE ($(wc -l < "$STORAGE_LIST_BEFORE") file)"
+    ls -t "$BACKUP_DIR"/storage_*.tgz 2>/dev/null | tail -n +15 | while read -r old; do
+        rm -f "$old" "${old%.tgz}.before.txt"
+    done
+fi
+
 git fetch "$DEV_REPO" "$TARGET_REF":refs/tmp/promote-source
 if ! git merge-base --is-ancestor stable refs/tmp/promote-source; then
     echo "ERRORE: stable non e' un antenato di '$TARGET_REF' (storie divergenti)." >&2
@@ -55,6 +73,17 @@ if ! git merge-base --is-ancestor stable refs/tmp/promote-source; then
 fi
 git merge --ff-only refs/tmp/promote-source
 git update-ref -d refs/tmp/promote-source
+
+if [ -f "$STORAGE_LIST_BEFORE" ]; then
+    missing="$(comm -23 "$STORAGE_LIST_BEFORE" <(find "$STORAGE_DIR" -type f 2>/dev/null | sort))"
+    if [ -n "$missing" ]; then
+        echo "ERRORE: l'aggiornamento del codice ha tolto documenti da backend/storage:" >&2
+        echo "$missing" | sed 's/^/    /' >&2
+        echo "    DB non toccato, backend non fermato. Ripristino documenti:" >&2
+        echo "    tar -C $STABLE_DIR/backend -xzf $STORAGE_ARCHIVE" >&2
+        exit 1
+    fi
+fi
 
 echo "==> Aggiorno dipendenze backend"
 cd "$STABLE_DIR/backend"
