@@ -260,22 +260,51 @@ def main() -> int:
     seeds = [(n, e) for n, e in seeds if e]
     for name, entry in seeds:
         log(f"  {name}: {entry}")
-    if args.dry_run or not seeds:
-        return 0 if ok else 1
+    if not args.dry_run and seeds:
+        load_all_models(order)
+        for name, entry in seeds:
+            with Session(engine) as db:
+                try:
+                    db.execute(text("SET search_path TO public"))
+                    call_seed(name, entry, db)
+                    db.commit()
+                except Exception as exc:  # un seed rotto non deve bloccare gli altri
+                    db.rollback()
+                    log(f"  ERRORE seed {name}: {exc}")
+                    ok = False
 
-    load_all_models(order)
-    for name, entry in seeds:
-        with Session(engine) as db:
-            try:
-                db.execute(text("SET search_path TO public"))
-                call_seed(name, entry, db)
-                db.commit()
-            except Exception as exc:  # un seed rotto non deve bloccare gli altri
-                db.rollback()
-                log(f"  ERRORE seed {name}: {exc}")
-                ok = False
+    # Per-tenant data alignment after migrations and document types (e.g.
+    # immobili: old energy certificates -> APE documents, history, scadenze).
+    # Idempotent; only on tenants where the module is installed.
+    log("==> Allineamento dati per tenant (post_sync)")
+    installed = {(s, n) for s, n in to_install}
+    hooks = []
+    for name in order:
+        entry = (manifests[name].get("endpoints") or {}).get("post_sync")
+        code = (manifests[name].get("module_short_code") or "").lower()
+        if not entry:
+            continue
+        for schema in tenants:
+            if (schema, f"alembic_version_{code}") in version_tables or (schema, name) in installed:
+                hooks.append((name, entry, schema))
+    for name, entry, schema in hooks:
+        log(f"  {name} -> {schema}")
+    if not args.dry_run and hooks:
+        load_all_models(order)
+        for name, entry, schema in hooks:
+            module_path, _, func_name = entry.partition(":")
+            target = importlib.import_module(f"{name}.{module_path}" if module_path else name)
+            with Session(engine) as db:
+                try:
+                    db.execute(text(f"SET search_path TO {schema}, public"))
+                    report = getattr(target, func_name)(db, schema)
+                    db.commit()
+                    log(f"    {report}")
+                except Exception as exc:
+                    db.rollback()
+                    log(f"  ERRORE post_sync {name} su {schema}: {exc}")
+                    ok = False
     return 0 if ok else 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

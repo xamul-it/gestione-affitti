@@ -285,6 +285,28 @@ def install(
     return result
 
 
+def post_sync(db: Session, tenant_schema: str) -> dict:
+    """
+    Data alignment run per tenant by scripts/sync_modules.py after the module
+    migrations and the document types sync (manifest endpoints.post_sync).
+    Idempotent: migrates the old energy certificates to APE documents, then
+    leaves one document in force per SOSTITUTIVO group and creates the
+    missing scadenze, for this module's document types.
+    """
+    from app.core.platform_services.documento_service import DocumentoService
+    from .__manifest__ import manifest as _manifest
+    from .services.migrazione_ape import migra_ape
+
+    report = {"ape": migra_ape(db, tenant_schema), "storico": {}, "scadenze": {}}
+    service = DocumentoService(db, tenant_schema, None)
+    for tipo in _manifest.get("document_types", []):
+        if tipo.get("regime") == "SOSTITUTIVO":
+            report["storico"][tipo["codice"]] = service.allinea_storico(tipo["codice"])
+        if tipo.get("scadenza"):
+            report["scadenze"][tipo["codice"]] = service.allinea_scadenze(tipo["codice"])
+    return report
+
+
 def register_module(app):
     """
     Legacy callback: Called by the module loader to register this module.

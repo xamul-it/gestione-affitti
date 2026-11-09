@@ -18,6 +18,7 @@ manifest = {
     "endpoints": {
         "register": ":register",  # Funzione in __init__.py per registrazione modulo (crea tabelle public + seed)
         "install": ":install",    # Funzione in __init__.py per installazione su tenant (crea tabelle tenant)
+        "post_sync": ":post_sync",  # Allineamento dati per tenant dopo migrazioni e tipologie (sync_modules.py)
     },
 
     # Campi opzionali

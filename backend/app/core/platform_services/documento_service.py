@@ -310,3 +310,45 @@ class DocumentoService:
                 file_storage.delete_file(path, tenant_schema=self.tenant_schema)
             except Exception:
                 logger.warning("File non rimosso: %s", path)
+
+    # ------------------------------------------------------------ alignment
+
+    def _tipo_by_codice(self, codice: str) -> Optional[TipoDocumento]:
+        return self.db.query(TipoDocumento).filter(TipoDocumento.codice == codice).first()
+
+    def allinea_storico(self, tipo_codice: str) -> int:
+        """For a SOSTITUTIVO type, leave one CORRENTE document per group (the most recent).
+        Fixes documents created before the history rules existed. Returns how many were superseded."""
+        tipo = self._tipo_by_codice(tipo_codice)
+        if tipo is None or tipo.regime != "SOSTITUTIVO":
+            return 0
+        correnti = self.db.query(Documento).filter(
+            Documento.tipo_documento_id == tipo.id, Documento.stato == CORRENTE
+        ).order_by(Documento.data_riferimento.desc().nullslast(), Documento.id.desc()).all()
+        vincitori = {}
+        changed = 0
+        for d in correnti:
+            key = (d.entity_type, d.entity_id, d.sottotipo)
+            if key not in vincitori:
+                vincitori[key] = d
+                continue
+            d.stato = SOSTITUITO
+            d.sostituito_da_id = vincitori[key].id
+            self._chiudi_scadenza(d, StatoScadenza.COMPLETATA, f"Sostituito da documento {vincitori[key].id}")
+            changed += 1
+        self.db.flush()
+        return changed
+
+    def allinea_scadenze(self, tipo_codice: str) -> int:
+        """Create the missing open scadenza of every CORRENTE document of the type. Returns how many."""
+        tipo = self._tipo_by_codice(tipo_codice)
+        if tipo is None or not tipo.scadenza:
+            return 0
+        created = 0
+        for d in self.db.query(Documento).filter(
+            Documento.tipo_documento_id == tipo.id, Documento.stato == CORRENTE, Documento.scadenza_id.is_(None)
+        ).all():
+            self._sync_scadenza(d, tipo)
+            created += int(d.scadenza_id is not None)
+        self.db.flush()
+        return created
