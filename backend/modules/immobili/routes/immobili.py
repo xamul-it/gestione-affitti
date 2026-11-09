@@ -2,8 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 from app.core.database import get_db
-from ..models import UnitaImmobiliare
-from ..schemas.immobili import UnitaImmobiliareCreate, UnitaImmobiliareUpdate, UnitaImmobiliareResponse
+from datetime import date
+
+from ..models import UnitaImmobiliare, VariazioneCatastale
+from ..schemas.immobili import (
+    UnitaImmobiliareCreate, UnitaImmobiliareUpdate, UnitaImmobiliareResponse, VariazioneCatastaleResponse,
+)
+from ..services.variazioni_catastali import registra_variazioni
 
 router = APIRouter(prefix="/unita-immobiliari", tags=["Unità Immobiliari"])
 
@@ -59,12 +64,27 @@ def update_unita_immobiliare(unita_immobiliare_id: int, unita_immobiliare: Unita
         )
 
     update_data = unita_immobiliare.model_dump(exclude_unset=True)
+    registra_variazioni(
+        db, db_unita, update_data,
+        origine="MANUALE", documento_id=None, data_riferimento=date.today(), utente_id=None,
+    )
     for field, value in update_data.items():
         setattr(db_unita, field, value)
 
     db.commit()
     db.refresh(db_unita)
     return db_unita
+
+
+@router.get("/{unita_immobiliare_id}/variazioni-catastali", response_model=List[VariazioneCatastaleResponse])
+def get_variazioni_catastali(unita_immobiliare_id: int, db: Session = Depends(get_db)):
+    """Storico delle variazioni dei dati catastali dell'unità, dalla più recente."""
+    return (
+        db.query(VariazioneCatastale)
+        .filter(VariazioneCatastale.unita_immobiliare_id == unita_immobiliare_id)
+        .order_by(VariazioneCatastale.created_at.desc(), VariazioneCatastale.id.desc())
+        .all()
+    )
 
 
 @router.delete("/{unita_immobiliare_id}", status_code=status.HTTP_204_NO_CONTENT)

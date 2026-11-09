@@ -33,8 +33,10 @@ from .tipologia_terreno_override import TipologiaTerrenoOverride
 
 # Land parcels - tenant data
 from .terreno import Terreno
+from .variazioni_catastali import VariazioneCatastale
 
 __all__ = [
+    "VariazioneCatastale",
     # Cadastral data
     "CategoriaCatastale",
     "ComuneItalia",

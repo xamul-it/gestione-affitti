@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 from anagrafica_italiana.models import ComuneItalia, SoggettoAnagrafico, TipoSoggetto
 from app.core.file_storage import file_storage
 from app.core.platform.models import Documento, EntityType, TipoDocumento, TipoDocumentoEnum
+from app.core.platform_services.documento_service import DocumentoService, FileInput
 
 from ..models import (
     CategoriaCatastale,
@@ -44,6 +45,7 @@ from ..schemas.visura_import import (
 from .codice_generator_service import CodiceGeneratorService
 from .visura.models import FabbricatoParsed, IntestatoParsed, VisuraParsed
 from .visura.text import strip_zeros
+from .variazioni_catastali import registra_variazioni
 
 logger = logging.getLogger(__name__)
 
@@ -236,6 +238,23 @@ def _diritti_esistenti(db: Session, unita_id: int) -> List[Tuple[DirittoImmobile
     )
 
 
+def _data_visura_corrente(db: Session, unit_id: int):
+    """data_riferimento of the visura currently in force for the unit, if any."""
+    return (
+        db.query(Documento.data_riferimento)
+        .join(TipoDocumento, TipoDocumento.id == Documento.tipo_documento_id)
+        .filter(
+            Documento.entity_type == EntityType.IMMOBILE,
+            Documento.entity_id == unit_id,
+            TipoDocumento.codice == "VISURA_CATASTALE",
+            Documento.stato == "CORRENTE",
+        )
+        .order_by(Documento.data_riferimento.desc().nullslast())
+        .limit(1)
+        .scalar()
+    )
+
+
 def build_proposal(db: Session, visura: VisuraParsed) -> VisuraProposta:
     soggetti, soggetti_by_key = _build_soggetti(db, visura)
     existing_units = _existing_units(db)
@@ -280,6 +299,15 @@ def build_proposal(db: Session, visura: VisuraParsed) -> VisuraProposta:
             attuale_block = extract_note_block(existing.note)
             if _block_body(attuale_block) != _block_body(block):
                 modifiche.append(CampoModifica(campo="note_catastali", attuale=attuale_block, nuovo=block))
+            piu_recente = _data_visura_corrente(db, existing.id)
+            if piu_recente is not None and piu_recente > visura.data and modifiche:
+                # Importing an older visura (e.g. for history) must not revert newer data by default.
+                for m in modifiche:
+                    m.selezionato = False
+                avvisi.append(
+                    f"Esiste una visura più recente ({piu_recente.strftime('%d/%m/%Y')}): "
+                    "le modifiche sono deselezionate"
+                )
 
         diritti: List[DirittoProposta] = []
         esistenti = _diritti_esistenti(db, existing.id) if existing is not None else []
@@ -473,11 +501,42 @@ def _proprietario_for(db: Session, soggetto_id: int, cache: Dict[int, Proprietar
     return cache[soggetto_id]
 
 
-def _has_visura(db: Session, unit_id: int, numero: str) -> bool:
+def _visura_esistente(db: Session, unit_id: int, numero: str) -> Optional[Documento]:
     docs = db.query(Documento).filter(
         Documento.entity_type == EntityType.IMMOBILE, Documento.entity_id == unit_id
     ).all()
-    return any((d.metadata_parsato or {}).get("numero_visura") == numero for d in docs)
+    return next((d for d in docs if (d.metadata_parsato or {}).get("numero_visura") == numero), None)
+
+
+def _has_visura(db: Session, unit_id: int, numero: str) -> bool:
+    return _visura_esistente(db, unit_id, numero) is not None
+
+
+def _visura_documento(db, service, unit_id, proposta, pdf_bytes, filename, saved_files, result) -> Documento:
+    """The visura document of this unit: the existing one for this visura number, or a new one
+    (history rules applied by DocumentoService: an older visura goes straight to history)."""
+    esistente = _visura_esistente(db, unit_id, proposta.numero_visura)
+    if esistente is not None:
+        return esistente
+    documento = service.crea(
+        entity_type=EntityType.IMMOBILE,
+        entity_id=unit_id,
+        tipo_codice="VISURA_CATASTALE",
+        files=[FileInput(content=pdf_bytes, filename=filename, mime_type="application/pdf")],
+        data_riferimento=proposta.data_visura,
+        descrizione=(
+            f"Visura catastale {proposta.formato.value.lower()} n. {proposta.numero_visura} "
+            f"del {proposta.data_visura.strftime('%d/%m/%Y')}"
+        ),
+        metadata_parsato={
+            "numero_visura": proposta.numero_visura,
+            "data_visura": proposta.data_visura.isoformat(),
+            "formato": proposta.formato.value,
+        },
+    )
+    saved_files.extend(f.file_path for f in documento.files)
+    result.documenti_allegati += 1
+    return documento
 
 
 def apply_proposal(
@@ -486,6 +545,7 @@ def apply_proposal(
     pdf_bytes: bytes,
     filename: str,
     tenant_schema: str,
+    user_id: Optional[int] = None,
 ) -> ImportResult:
     existing_units = _validate(db, proposta)
     result = ImportResult()
@@ -514,7 +574,7 @@ def apply_proposal(
 
         generator = CodiceGeneratorService(db)
         proprietari: Dict[int, Proprietario] = {}
-        tipo_visura = db.query(TipoDocumento).filter(TipoDocumento.codice == "VISURA_CATASTALE").first()
+        service = DocumentoService(db, tenant_schema, user_id)
 
         for u in proposta.unita:
             if not u.selezionato:
@@ -543,16 +603,18 @@ def apply_proposal(
                 result.unita_create.append(unit.id)
             else:
                 unit = existing_units[u.key]
-                changed = False
-                for m in u.modifiche:
-                    if not m.selezionato:
-                        continue
-                    if m.campo in UPDATABLE_FIELDS:
-                        setattr(unit, m.campo, m.nuovo)
-                        changed = True
-                    elif m.campo == "note_catastali":
-                        unit.note = replace_note_block(unit.note, u.note_catastali)
-                        changed = True
+                documento = _visura_documento(db, service, unit.id, proposta, pdf_bytes, filename, saved_files, result)
+                nuovi = {m.campo: m.nuovo for m in u.modifiche if m.selezionato and m.campo in UPDATABLE_FIELDS}
+                registra_variazioni(
+                    db, unit, nuovi, origine="VISURA", documento_id=documento.id if documento else None,
+                    data_riferimento=proposta.data_visura, utente_id=user_id,
+                )
+                changed = bool(nuovi)
+                for campo, valore in nuovi.items():
+                    setattr(unit, campo, valore)
+                if any(m.selezionato and m.campo == "note_catastali" for m in u.modifiche):
+                    unit.note = replace_note_block(unit.note, u.note_catastali)
+                    changed = True
                 if changed:
                     result.unita_aggiornate.append(unit.id)
             esistenti = {(sid, d.tipo_diritto) for d, sid in _diritti_esistenti(db, unit.id)}
@@ -578,33 +640,8 @@ def apply_proposal(
             if diritti_aggiunti and u.azione != "crea" and unit.id not in result.unita_aggiornate:
                 result.unita_aggiornate.append(unit.id)
 
-            if _has_visura(db, unit.id, proposta.numero_visura):
-                continue
-            path = file_storage.save_file(
-                io.BytesIO(pdf_bytes), EntityType.IMMOBILE.value, unit.id, filename, tenant_schema=tenant_schema
-            )
-            saved_files.append(path)
-            db.add(Documento(
-                entity_type=EntityType.IMMOBILE,
-                entity_id=unit.id,
-                tipo_documento=TipoDocumentoEnum.VISURA_CATASTALE,
-                tipo_documento_id=tipo_visura.id if tipo_visura else None,
-                nome_file=filename,
-                file_path=path,
-                mime_type="application/pdf",
-                dimensione=len(pdf_bytes),
-                descrizione=(
-                    f"Visura catastale {proposta.formato.value.lower()} n. {proposta.numero_visura} "
-                    f"del {proposta.data_visura.strftime('%d/%m/%Y')}"
-                ),
-                metadata_parsato={
-                    "numero_visura": proposta.numero_visura,
-                    "data_visura": proposta.data_visura.isoformat(),
-                    "formato": proposta.formato.value,
-                },
-            ))
-            db.flush()
-            result.documenti_allegati += 1
+            if u.azione == "crea":
+                _visura_documento(db, service, unit.id, proposta, pdf_bytes, filename, saved_files, result)
 
         db.commit()
     except Exception:

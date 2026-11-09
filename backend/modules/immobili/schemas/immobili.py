@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Optional, List
-from datetime import datetime
+from datetime import date, datetime
 
 from .categoria_catastale import CategoriaCatastale
 
@@ -124,3 +124,18 @@ ImmobileBase = UnitaImmobiliareBase
 ImmobileCreate = UnitaImmobiliareCreate
 ImmobileUpdate = UnitaImmobiliareUpdate
 ImmobileResponse = UnitaImmobiliareResponse
+
+
+class VariazioneCatastaleResponse(BaseModel):
+    id: int
+    unita_immobiliare_id: int
+    documento_id: Optional[int] = None
+    origine: str
+    campo: str
+    valore_precedente: Optional[str] = None
+    valore_nuovo: Optional[str] = None
+    data_riferimento: date
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

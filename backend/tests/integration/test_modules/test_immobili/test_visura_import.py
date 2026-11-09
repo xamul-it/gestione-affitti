@@ -547,3 +547,59 @@ def test_visure_per_immobile_in_sequence_share_soggetto(pg_session, storage):
     assert len(r2.unita_create) == 1
     assert r2.soggetti_creati == 1
     assert r2.diritti_creati == 2
+
+
+# --- Catastal changes log + history (spec 2026-11-09) ----------------------
+
+def _seed_unit_019(pg_session, rendita=1000.0):
+    unit = UnitaImmobiliare(
+        codice="TEST-VIS-019", tipo="Villa", indirizzo="VIA EMILIA PONENTE n. 354", piano="S1-T - 1",
+        citta="Bologna", foglio="99", particella="666", subalterno="19",
+        rendita_catastale=rendita, superficie_mq=294,
+    )
+    pg_session.add(unit)
+    pg_session.flush()
+    return unit
+
+
+def test_apply_logs_variazioni(pg_session, storage, sintetica, pdf_sintetica):
+    from immobili.models import VariazioneCatastale
+    unit = _seed_unit_019(pg_session)
+    _apply(pg_session, build_proposal(pg_session, sintetica), pdf_sintetica)
+    doc = pg_session.query(Documento).filter_by(entity_type=EntityType.IMMOBILE, entity_id=unit.id).one()
+    rows = pg_session.query(VariazioneCatastale).filter_by(unita_immobiliare_id=unit.id, campo="rendita_catastale").all()
+    assert len(rows) == 1
+    v = rows[0]
+    assert (v.valore_precedente, v.valore_nuovo) == ("1000.0", "1316.97")
+    assert v.origine == "VISURA" and v.documento_id == doc.id
+    assert v.data_riferimento == sintetica.data
+    assert doc.data_riferimento == sintetica.data and doc.stato == "CORRENTE"
+
+
+def test_apply_visura_older_than_current_goes_storico(
+    pg_session, storage, sintetica, analitica, pdf_sintetica, pdf_analitica
+):
+    from datetime import date
+    _apply(pg_session, build_proposal(pg_session, sintetica), pdf_sintetica)
+    proposta = build_proposal(pg_session, analitica)
+    proposta.data_visura = date(2020, 1, 1)
+    _apply(pg_session, proposta, pdf_analitica)
+    u = _find_unit(pg_session, "666", "19")
+    docs = {d.metadata_parsato["numero_visura"]: d for d in
+            pg_session.query(Documento).filter_by(entity_type=EntityType.IMMOBILE, entity_id=u.id)}
+    assert docs["T234664/2025"].stato == "CORRENTE"
+    assert [d.stato for n, d in docs.items() if n != "T234664/2025"] == ["SOSTITUITO"]
+
+
+def test_older_visura_changes_deselected(pg_session, storage, sintetica, pdf_sintetica):
+    import dataclasses
+    from datetime import date
+    unit = _seed_unit_019(pg_session)
+    _apply(pg_session, build_proposal(pg_session, sintetica), pdf_sintetica)
+    unit.rendita_catastale = 900.0
+    pg_session.flush()
+    older = dataclasses.replace(sintetica, data=date(2019, 1, 1), numero="T000001/2019")
+    u = _unita(build_proposal(pg_session, older), "99", "666", "19")
+    rendita = next(m for m in u.modifiche if m.campo == "rendita_catastale")
+    assert rendita.selezionato is False
+    assert any("più recente" in a for a in u.avvisi)
