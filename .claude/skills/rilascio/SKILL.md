@@ -10,7 +10,7 @@ model: haiku
 
 ## Prima di iniziare
 
-I test della modifica devono essere già passati in questa sessione: quelli toccati dalla modifica, backend ed eventualmente frontend. Se non è così, fermati e dillo, senza rilasciare. Nella suite completa ci sono fallimenti già presenti su master: riportali come preesistenti, non bloccano il rilascio.
+La modifica deve aver passato `scripts/verifica.sh` in questa sessione con `ESITO: VERDE`, di solito tramite l'agente `verifica-test`. Se non è così, o se l'esito era ROSSO, fermati e dillo, senza rilasciare. Non esistono fallimenti noti tollerati: la suite completa deve essere verde.
 
 ## Passi
 
