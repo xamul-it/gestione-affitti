@@ -241,3 +241,22 @@ def test_immobile_attuale_unit(immobile_attuale):
     for i in u.intestati:
         assert i.tipo_diritto == TipoDiritto.COMPROPRIETARIO
         assert i.quota_percentuale == Decimal("50.00")
+
+
+# --- Analitica per soggetto with bulleted identificativi ("• Foglio ...") -----
+
+@pytest.fixture(scope="module")
+def analitica_bullet():
+    """Milano analitica per soggetto: the identificativi line starts with "• ",
+    followed by "Particelle corrispondenti al catasto terreni" (no subalterno)."""
+    return parse_visura(_load("analitica_milano_bullet.pdf"))
+
+
+def test_analitica_bullet_keeps_subalterni(analitica_bullet):
+    assert analitica_bullet.warnings == []
+    idents = [(f.foglio, f.particella, f.subalterno) for f in analitica_bullet.fabbricati]
+    assert len(idents) == 4
+    assert all(sub for _, _, sub in idents), idents
+    assert len(set(idents)) == 4
+    assert ("483", "65", "54") in idents
+    assert ("393", "457", "716") in idents

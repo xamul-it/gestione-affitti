@@ -58,7 +58,9 @@ def _left(line: str) -> str:
     stripped = line.lstrip()
     if not stripped or len(line) - len(stripped) > _LEFT_MARGIN:
         return ""
-    return re.split(r"\s{3,}", stripped, maxsplit=1)[0].strip()
+    left = re.split(r"\s{3,}", stripped, maxsplit=1)[0].strip()
+    # Some visure bullet the identificativi line: "• Foglio 483 Particella 65 ..."
+    return re.sub(r"^[•·\-*]\s+", "", left)
 
 
 def _clean_diritto(text: str) -> str:
@@ -191,6 +193,15 @@ def parse_analitica(text: str, per_immobile: bool = False) -> VisuraParsed:
         if line == "Indirizzo":
             mode = "indirizzo"
             continue
+        # The catasto terreni counterpart repeats Comune/Foglio/Particella
+        # without subalterno: never take identificativi from it.
+        if line.startswith("Particelle corrispondenti al catasto terreni"):
+            mode = "terreni_corr"
+            continue
+        if mode == "terreni_corr":
+            if _COMUNE.match(line) or _IDENT.match(line):
+                continue
+            mode = "unit"
         m = _COMUNE.match(line)
         if m and "comune" not in current:
             current["comune"], current["codice"], current["provincia"] = m.group(1), m.group(2), m.group(3)
