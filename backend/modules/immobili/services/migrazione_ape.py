@@ -35,12 +35,13 @@ def migra_ape(db: Session, tenant_schema: str) -> dict:
     rows = db.execute(text("""
         SELECT id, unita_immobiliare_id, tecnico_id, classe_energetica::text AS classe,
                indice_prestazione_energetica, data_emissione, data_scadenza, numero_protocollo,
-               file_path, note
+               file_path, note, migrato_documento_id
         FROM immo_certificati_energetici ORDER BY id
     """)).all()
     for r in rows:
         report["letti"] += 1
-        if r.id in migrati:
+        # Migrated once = never again, even if the user deleted the APE document since.
+        if r.migrato_documento_id is not None or r.id in migrati:
             report["saltati"] += 1
             continue
         documento = Documento(
@@ -71,6 +72,9 @@ def migra_ape(db: Session, tenant_schema: str) -> dict:
         else:
             report["senza_file"] += 1
         db.add(documento)
+        db.flush()
+        db.execute(text("UPDATE immo_certificati_energetici SET migrato_documento_id = :d WHERE id = :c"),
+                   {"d": documento.id, "c": r.id})
         report["creati"] += 1
     db.flush()
     if report["creati"]:

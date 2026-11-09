@@ -233,6 +233,9 @@ class DocumentoService:
         if not files:
             raise ValueError("Nessun file caricato")
         data_riferimento = data_riferimento or date.today()
+        if dati is not None:
+            # Empty optional dates from forms mean "not set".
+            dati = {k: v for k, v in dati.items() if not (k == "decaduto_il" and not v)}
         scadenza = self._scadenza_calcolata(tipo, data_riferimento, data_scadenza)
 
         saved: List[str] = []
@@ -281,7 +284,9 @@ class DocumentoService:
                     logger.warning("File non rimosso dopo errore: %s", path)
             raise
 
-    def elimina(self, documento_id: int) -> None:
+    def elimina(self, documento_id: int) -> List[str]:
+        """Delete the document (history and scadenza rules applied). Returns the file paths
+        to remove with elimina_file() AFTER the caller commits: a rollback must not lose files."""
         documento = self.db.get(Documento, documento_id)
         if documento is None:
             raise ValueError(f"Documento {documento_id} non trovato")
@@ -305,7 +310,10 @@ class DocumentoService:
                 self._sync_scadenza(nuovo, tipo)
                 self.db.flush()
 
-        for path in set(paths):
+        return sorted(set(paths))
+
+    def elimina_file(self, paths: List[str]) -> None:
+        for path in paths:
             try:
                 file_storage.delete_file(path, tenant_schema=self.tenant_schema)
             except Exception:

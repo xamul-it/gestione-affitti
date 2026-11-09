@@ -46,7 +46,7 @@ def to_out(documento: Documento, service: Optional[DocumentoService] = None) -> 
         id=documento.id,
         entity_type=documento.entity_type,
         entity_id=documento.entity_id,
-        tipo_documento=documento.tipo_documento.value if documento.tipo_documento is not None else None,
+        tipo_documento=getattr(documento.tipo_documento, "value", documento.tipo_documento),
         tipo_documento_id=documento.tipo_documento_id,
         tipo_codice=tipo.codice if tipo else None,
         tipo_nome=tipo.nome if tipo else None,
@@ -102,11 +102,16 @@ def get_documenti(
     if entity_id:
         query = query.filter(Documento.entity_id == entity_id)
     if tipo_codice or modulo:
-        query = query.join(TipoDocumentoModel, TipoDocumentoModel.id == Documento.tipo_documento_id)
+        query = query.outerjoin(TipoDocumentoModel, TipoDocumentoModel.id == Documento.tipo_documento_id)
         if tipo_codice:
             query = query.filter(TipoDocumentoModel.codice == tipo_codice)
         if modulo:
-            query = query.filter(TipoDocumentoModel.modulo == modulo)
+            # Legacy documents without a type (or with an unowned type) still belong to the entity.
+            query = query.filter(or_(
+                TipoDocumentoModel.modulo == modulo,
+                TipoDocumentoModel.modulo.is_(None),
+                Documento.tipo_documento_id.is_(None),
+            ))
     if not includi_sostituiti:
         query = query.filter(Documento.stato == "CORRENTE")
     if scadenza_entro_giorni is not None:
@@ -375,11 +380,12 @@ def delete_documento(
     """Elimina un documento (file + record). Per le tipologie sostitutive torna in vigore il precedente."""
     service = DocumentoService(db, _tenant(tenant_schema), _user_id(current_user))
     try:
-        service.elimina(documento_id)
+        paths = service.elimina(documento_id)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Documento con ID {documento_id} non trovato"
         )
     db.commit()
+    service.elimina_file(paths)  # only once the rows are really gone
     return None

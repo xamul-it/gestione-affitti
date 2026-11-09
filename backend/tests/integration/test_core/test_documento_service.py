@@ -156,3 +156,17 @@ def test_failed_create_removes_saved_files(service, tmp_path, monkeypatch):
     with pytest.raises(RuntimeError):
         _crea(service, "ALTRO_IMMOBILE")
     assert not [p for p in tmp_path.rglob("*") if p.is_file()]
+
+
+def test_elimina_keeps_files_until_commit(service, tmp_path):
+    doc = _crea(service, "ALTRO_IMMOBILE")
+    paths = service.elimina(doc.id)
+    assert paths and all((tmp_path / p).exists() for p in paths)
+    service.elimina_file(paths)
+    assert not any((tmp_path / p).exists() for p in paths)
+
+
+def test_empty_decaduto_is_ignored(service):
+    ape = _crea(service, "APE", data_riferimento=date(2024, 3, 15), dati={"decaduto_il": ""})
+    assert "decaduto_il" not in ape.dati
+    assert service.scadenza_effettiva(ape) == date(2034, 3, 15)

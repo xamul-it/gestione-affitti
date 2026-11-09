@@ -25,9 +25,12 @@ class EntityLabelRegistry:
         found: Dict[int, str] = {}
         resolver = self._resolvers.get(entity_type)
         if resolver and ids:
+            savepoint = db.begin_nested()  # a failing resolver must not abort the request transaction
             try:
                 found = resolver(db, ids) or {}
+                savepoint.commit()
             except Exception:
+                savepoint.rollback()
                 found = {}
         return {i: found.get(i) or f"{entity_type} #{i}" for i in ids}
 

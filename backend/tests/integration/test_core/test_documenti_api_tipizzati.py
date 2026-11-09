@@ -186,3 +186,24 @@ async def test_list_includes_entity_label(db_session):
     labels = {d.entity_id: d.entity_label for d in res}
     assert labels[u.id] == "TEST-LBL-1 · VIA VERDI 2, Milano"
     assert labels[999999991] == "IMMOBILE #999999991"
+
+
+@pytest.mark.asyncio
+async def test_modulo_filter_keeps_untyped_legacy_documents(db_session):
+    from app.core.platform.models import Documento
+    legacy = Documento(entity_type=EntityType.IMMOBILE, entity_id=UNIT, tipo_documento="FOTO",
+                       tipo_documento_id=None, stato="CORRENTE", nome_file="f.jpg")
+    db_session.add(legacy)
+    db_session.flush()
+    res = get_documenti(entity_type=EntityType.IMMOBILE, entity_id=None, tipo_codice=None, modulo="immobili",
+                        includi_sostituiti=False, scadenza_entro_giorni=None, skip=0, limit=500, db=db_session)
+    assert legacy.id in {d.id for d in res}
+
+
+def test_failing_label_resolver_does_not_abort_transaction(db_session):
+    from sqlalchemy import text as sql
+    from app.core.platform_services.entity_label_registry import EntityLabelRegistry
+    reg = EntityLabelRegistry()
+    reg.register("X", lambda db, ids: db.execute(sql("SELECT * FROM tabella_inesistente")).all())
+    assert reg.labels(db_session, "X", [1]) == {1: "X #1"}
+    assert db_session.execute(sql("SELECT 1")).scalar() == 1

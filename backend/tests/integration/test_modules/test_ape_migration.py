@@ -128,3 +128,13 @@ def test_migra_ape_rejects_paths_outside_tenant(db_session, units, tmp_path, bad
     assert report["senza_file"] == 1
     doc = _ape_docs(db_session, units[0].id)[0]
     assert doc.files == [] and doc.file_path is None
+
+
+def test_migra_ape_does_not_resurrect_deleted(db_session, units):
+    _cert(db_session, units[0].id, "B", date(2020, 1, 10), date(2030, 1, 10))
+    migra_ape(db_session, TENANT)
+    doc = _ape_docs(db_session, units[0].id)[0]
+    DocumentoService(db_session, TENANT, None).elimina(doc.id)
+    again = migra_ape(db_session, TENANT)
+    assert again["creati"] == 0
+    assert _ape_docs(db_session, units[0].id) == []

@@ -47,6 +47,8 @@ class CertificatoEnergetico(Base):
 
     file_path = Column(String(500), nullable=True)  # Path al PDF del certificato
     note = Column(String(500), nullable=True)
+    # Set when migrated to a core APE document (immobili.services.migrazione_ape).
+    migrato_documento_id = Column(Integer, nullable=True)
 
     # Relationships
     unita_immobiliare = relationship("UnitaImmobiliare", back_populates="certificati_energetici")
