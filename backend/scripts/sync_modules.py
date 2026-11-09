@@ -235,6 +235,7 @@ def main() -> int:
     declared = sum(len(m.get("document_types") or []) for m in manifests.values())
     log(f"  {declared} tipologie dichiarate da {len(manifests)} moduli (completo: {complete})")
     if not args.dry_run:
+        load_all_models(order)
         with Session(engine) as db:
             try:
                 db.execute(text("SET search_path TO public"))

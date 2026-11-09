@@ -6,6 +6,9 @@ It manages personal and company data according to Italian regulations
 (codice fiscale, partita IVA, etc.).
 """
 
+SOGGETTO = ["SOGGETTO_ANAGRAFICO"]
+MANUALE = {"manuale": True}
+
 manifest = {
     "name": "Anagrafica",
     "technical_name": "anagrafica_italiana",
@@ -118,78 +121,64 @@ manifest = {
         },
     ],
 
-    # Document types with parsing support
+    # Document types of this module. Synced into public.core_tipi_documento by
+    # app.core.platform_services.document_type_sync (codes already in the DB
+    # must not change: documents reference them).
     "document_types": [
         {
-            "codice": "CARTA_IDENTITA",
-            "nome": "Carta d'Identità",
-            "categoria": "identita",
-            "richiede_scadenza": True,
-            "parsing_service": "mrz",
-            "parsing_config": {
-                "mrz_format": "td1",
-                "rotate_mode": "auto",
-                "extract_photo": True,
-            }
+            "codice": "CARTA_IDENTITA", "nome": "Carta d'Identità", "descrizione": "Documento di identità italiano",
+            "categoria": "identita", "entity_types": SOGGETTO, "regime": "SOSTITUTIVO",
+            "scadenza": MANUALE, "richiede_scadenza": True,
+            "parsing_service": "mrz", "parsing_config": {"mrz_format": "td1", "rotate_mode": "auto", "extract_photo": True},
+            "parsing_callback_url": "{api_base_url}/document-parsing/callback/{job_uuid}",
         },
         {
-            "codice": "PASSAPORTO",
-            "nome": "Passaporto",
-            "categoria": "identita",
-            "richiede_scadenza": True,
-            "parsing_service": "mrz",
-            "parsing_config": {
-                "mrz_format": "td3",
-                "rotate_mode": "auto",
-                "extract_photo": True,
-            }
+            "codice": "PASSAPORTO", "nome": "Passaporto", "descrizione": "Documento di identità per viaggi internazionali",
+            "categoria": "identita", "entity_types": SOGGETTO, "regime": "SOSTITUTIVO",
+            "scadenza": MANUALE, "richiede_scadenza": True,
+            "parsing_service": "mrz", "parsing_config": {"mrz_format": "td3", "rotate_mode": "auto", "extract_photo": True},
+            "parsing_callback_url": "{api_base_url}/document-parsing/callback/{job_uuid}",
         },
         {
-            "codice": "PATENTE_GUIDA",
-            "nome": "Patente di Guida",
-            "categoria": "identita",
-            "richiede_scadenza": True,
-            "parsing_service": "mrz",
-            "parsing_config": {
-                "mrz_format": "td1",
-                "rotate_mode": "auto",
-            }
+            "codice": "PATENTE", "nome": "Patente di Guida", "descrizione": "Patente di guida",
+            "categoria": "identita", "entity_types": SOGGETTO, "regime": "SOSTITUTIVO",
+            "scadenza": MANUALE, "richiede_scadenza": True,
+            "parsing_service": "mrz", "parsing_config": {"mrz_format": "td1", "rotate_mode": "auto"},
+            "parsing_callback_url": "{api_base_url}/document-parsing/callback/{job_uuid}",
         },
         {
-            "codice": "PERMESSO_SOGGIORNO",
-            "nome": "Permesso di Soggiorno",
-            "categoria": "identita",
-            "richiede_scadenza": True,
-            "parsing_service": "mrz",
-            "parsing_config": {
-                "mrz_format": "td1",
-                "rotate_mode": "auto",
-            }
+            "codice": "PERMESSO_SOGGIORNO", "nome": "Permesso di Soggiorno", "descrizione": "Permesso di soggiorno",
+            "categoria": "identita", "entity_types": SOGGETTO, "regime": "SOSTITUTIVO",
+            "scadenza": MANUALE, "richiede_scadenza": True,
+            "parsing_service": "mrz", "parsing_config": {"mrz_format": "td1", "rotate_mode": "auto"},
+            "parsing_callback_url": "{api_base_url}/document-parsing/callback/{job_uuid}",
         },
-        {
-            "codice": "CODICE_FISCALE",
-            "nome": "Tessera Codice Fiscale",
-            "categoria": "identita",
-            "richiede_scadenza": False,
-        },
-        {
-            "codice": "VISURA_CAMERALE",
-            "nome": "Visura Camerale",
-            "categoria": "aziendale",
-            "richiede_scadenza": False,
-        },
-        {
-            "codice": "ATTO_COSTITUTIVO",
-            "nome": "Atto Costitutivo",
-            "categoria": "aziendale",
-            "richiede_scadenza": False,
-        },
-        {
-            "codice": "STATUTO",
-            "nome": "Statuto Societario",
-            "categoria": "aziendale",
-            "richiede_scadenza": False,
-        },
+        {"codice": "CODICE_FISCALE", "nome": "Codice Fiscale", "descrizione": "Tessera codice fiscale", "categoria": "fiscale",
+         "entity_types": SOGGETTO, "regime": "SOSTITUTIVO", "scadenza": None},
+        {"codice": "PARTITA_IVA", "nome": "Partita IVA", "descrizione": "Certificato Partita IVA", "categoria": "fiscale",
+         "entity_types": SOGGETTO, "regime": "SOSTITUTIVO", "scadenza": None},
+        {"codice": "VISURA_CAMERALE", "nome": "Visura Camerale", "descrizione": "Visura Camera di Commercio", "categoria": "aziendale",
+         "entity_types": SOGGETTO, "regime": "SOSTITUTIVO", "scadenza": MANUALE, "richiede_scadenza": True},
+        {"codice": "CERTIFICATO_CCIAA", "nome": "Certificato CCIAA", "descrizione": "Certificato Camera di Commercio / REA", "categoria": "aziendale",
+         "entity_types": SOGGETTO, "regime": "SOSTITUTIVO", "scadenza": MANUALE, "richiede_scadenza": True},
+        {"codice": "ATTO_COSTITUTIVO", "nome": "Atto Costitutivo", "descrizione": "Atto costitutivo dell'azienda", "categoria": "aziendale",
+         "entity_types": SOGGETTO, "regime": "CUMULATIVO", "scadenza": None},
+        {"codice": "STATUTO", "nome": "Statuto", "descrizione": "Statuto dell'azienda", "categoria": "aziendale",
+         "entity_types": SOGGETTO, "regime": "SOSTITUTIVO", "scadenza": None},
+        {"codice": "DURC", "nome": "DURC", "descrizione": "Documento Unico di Regolarità Contributiva", "categoria": "aziendale",
+         "entity_types": SOGGETTO, "regime": "SOSTITUTIVO", "scadenza": MANUALE, "richiede_scadenza": True},
+        {"codice": "CERTIFICATO_REGISTRO_IMPRESE", "nome": "Certificato Registro Imprese", "descrizione": "Certificato di iscrizione al Registro Imprese", "categoria": "aziendale",
+         "entity_types": SOGGETTO, "regime": "SOSTITUTIVO", "scadenza": MANUALE, "richiede_scadenza": True},
+        {"codice": "BILANCIO", "nome": "Bilancio", "descrizione": "Bilancio d'esercizio", "categoria": "aziendale",
+         "entity_types": SOGGETTO, "regime": "CUMULATIVO", "scadenza": None},
+        {"codice": "CERTIFICATO_PROFESSIONALE", "nome": "Certificato Professionale", "descrizione": "Attestato o certificato professionale", "categoria": "professionale",
+         "entity_types": SOGGETTO, "regime": "CUMULATIVO", "scadenza": MANUALE, "richiede_scadenza": True},
+        {"codice": "ISCRIZIONE_ALBO", "nome": "Iscrizione Albo Professionale", "descrizione": "Certificato iscrizione albo professionale", "categoria": "professionale",
+         "entity_types": SOGGETTO, "regime": "SOSTITUTIVO", "scadenza": MANUALE, "richiede_scadenza": True},
+        {"codice": "CONTRATTO", "nome": "Contratto", "descrizione": "Contratto generico", "categoria": "altro",
+         "entity_types": SOGGETTO, "regime": "CUMULATIVO", "scadenza": None},
+        {"codice": "DOCUMENTO_GENERICO", "nome": "Documento Generico", "descrizione": "Altro tipo di documento", "categoria": "altro",
+         "entity_types": SOGGETTO, "regime": "CUMULATIVO", "scadenza": None},
     ],
 
     # Menu items for this module - flat structure (no parent-child)

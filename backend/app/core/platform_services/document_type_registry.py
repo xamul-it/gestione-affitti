@@ -58,6 +58,7 @@ class DocumentTypeDefinition:
     scadenza: Optional[Dict] = None
     promemoria_giorni: Optional[List[int]] = None
     form: Optional[str] = None
+    parsing_callback_url: Optional[str] = None
 
     @property
     def full_key(self) -> str:
@@ -167,6 +168,7 @@ class DocumentTypeRegistry:
                     scadenza=type_def.get("scadenza"),
                     promemoria_giorni=type_def.get("promemoria_giorni"),
                     form=type_def.get("form"),
+                    parsing_callback_url=type_def.get("parsing_callback_url"),
                 )
 
                 # Registra con chiave completa

@@ -13,7 +13,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto, TipoDocumento
-from anagrafica_italiana.seeds.seed_tipi_documento import seed_tipi_documento
+from app.core.platform_services.document_type_sync import sync_document_types
+from immobili.__manifest__ import manifest as immobili_manifest
 
 from immobili.models import DirittoImmobile, Proprietario, UnitaImmobiliare
 from immobili.models.diritti_immobile import TipoDiritto
@@ -105,6 +106,10 @@ def test_diritto_uso_persisted(pg_session):
     reloaded = pg_session.query(DirittoImmobile).filter_by(id=d.id).one()
     assert reloaded.tipo_diritto == TipoDiritto.USO
     # rollback in fixture teardown discards everything
+
+
+def seed_tipi_documento(db):
+    sync_document_types(db, {"immobili": immobili_manifest})
 
 
 def test_tipo_documento_visura_catastale_seeded(pg_session):

@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Fields owned by the manifest: overwritten on every sync.
 _MANIFEST_FIELDS = (
     "nome", "descrizione", "categoria", "modulo", "entity_types", "regime", "sottotipi",
-    "scadenza", "promemoria_giorni", "form", "parsing_service", "parsing_config", "richiede_scadenza",
+    "scadenza", "promemoria_giorni", "form", "parsing_service", "parsing_config", "parsing_callback_url", "richiede_scadenza",
 )
 
 
@@ -60,6 +60,7 @@ def _definitions(manifests: Dict[str, dict]) -> Tuple[Dict[str, DocumentTypeDefi
                     scadenza=entry.get("scadenza"),
                     promemoria_giorni=entry.get("promemoria_giorni"),
                     form=entry.get("form"),
+                    parsing_callback_url=entry.get("parsing_callback_url"),
                 )
             except (KeyError, ValueError) as exc:
                 errori.append(f"{module_name}.{codice}: {exc}")
@@ -88,6 +89,7 @@ def _values(d: DocumentTypeDefinition) -> dict:
         "form": d.form,
         "parsing_service": d.parsing_service,
         "parsing_config": d.parsing_config or None,
+        "parsing_callback_url": d.parsing_callback_url,
         "richiede_scadenza": bool(d.richiede_scadenza),
     }
 

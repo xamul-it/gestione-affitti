@@ -4,6 +4,8 @@ Manifest for Immobili (Real Estate Properties) Module
 Conforme agli standard di architettura moduli v1.0
 """
 
+IMMOBILE = ["IMMOBILE"]
+
 manifest = {
     # Campi obbligatori
     "name": "Immobili",
@@ -28,6 +30,49 @@ manifest = {
 
     # Dipendenze
     "dependencies": ["anagrafica_italiana"],
+
+    # Document types of this module (spec 2026-11-09 tipologie documentali).
+    # Synced into public.core_tipi_documento by document_type_sync.
+    # SOSTITUTIVO: a newer document supersedes the previous one (kept as
+    # history); CUMULATIVO: documents accumulate.
+    "document_types": [
+        {"codice": "VISURA_CATASTALE", "nome": "Visura catastale",
+         "descrizione": "Visura catastale Agenzia delle Entrate",
+         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "SOSTITUTIVO",
+         "form": "immobili.visura"},
+        {"codice": "PLANIMETRIA_CATASTALE", "nome": "Planimetria catastale",
+         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "SOSTITUTIVO"},
+        {"codice": "VARIAZIONE_CATASTALE", "nome": "Variazione catastale",
+         "descrizione": "DOCFA, voltura, frazionamento, fusione e relative ricevute",
+         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "CUMULATIVO",
+         "sottotipi": ["DOCFA", "VOLTURA", "FRAZIONAMENTO", "FUSIONE"]},
+        {"codice": "APE", "nome": "Attestato di prestazione energetica",
+         "descrizione": "Valido 10 anni dalla data di emissione",
+         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "SOSTITUTIVO",
+         "scadenza": {"mesi": 120, "da": "data_riferimento"}, "promemoria_giorni": [90, 30],
+         "form": "immobili.ape"},
+        {"codice": "ATTO_PROVENIENZA", "nome": "Atto di provenienza",
+         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "CUMULATIVO",
+         "sottotipi": ["COMPRAVENDITA", "SUCCESSIONE", "DONAZIONE"]},
+        {"codice": "CONFORMITA_IMPIANTO", "nome": "Dichiarazione di conformità impianto",
+         "descrizione": "DM 37/2008",
+         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "SOSTITUTIVO",
+         "sottotipi": ["ELETTRICO", "GAS", "TERMICO", "IDRICO"]},
+        {"codice": "LIBRETTO_IMPIANTO", "nome": "Libretto impianto termico / controllo",
+         "descrizione": "Indicare come scadenza la data del prossimo controllo",
+         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "CUMULATIVO",
+         "scadenza": {"manuale": True}, "promemoria_giorni": [90, 30]},
+        {"codice": "AGIBILITA", "nome": "Agibilità / abitabilità",
+         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "SOSTITUTIVO"},
+        {"codice": "TITOLO_EDILIZIO", "nome": "Titolo edilizio",
+         "descrizione": "Permesso di costruire, SCIA, CILA, condono",
+         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "CUMULATIVO"},
+        {"codice": "POLIZZA_FABBRICATO", "nome": "Polizza assicurativa fabbricato",
+         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "SOSTITUTIVO",
+         "scadenza": {"manuale": True}, "promemoria_giorni": [90, 30]},
+        {"codice": "ALTRO_IMMOBILE", "nome": "Altro documento",
+         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "CUMULATIVO"},
+    ],
     "optional_depends": [],
 
     # Models forniti dal modulo (con prefisso immo_)
