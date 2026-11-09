@@ -86,6 +86,15 @@ class Documento(Base):
     note = Column(String(500), nullable=True)
     data_scadenza = Column(Date, nullable=True, index=True)
 
+    # History (spec 2026-11-09): the date the document refers to, and for
+    # SOSTITUTIVO types which document is in force.
+    data_riferimento = Column(Date, nullable=True)
+    stato = Column(String(20), nullable=False, default="CORRENTE", server_default="CORRENTE", index=True)
+    sostituito_da_id = Column(Integer, ForeignKey("core_documenti.id", ondelete="SET NULL"), nullable=True)
+    sottotipo = Column(String(50), nullable=True)
+    dati = Column(JSON, nullable=True, comment="Form data confirmed by the user")
+    scadenza_id = Column(Integer, ForeignKey("core_scadenze.id", ondelete="SET NULL"), nullable=True)
+
     # NEW: Parsed data storage (v2)
     metadata_parsato = Column(
         JSON,

@@ -39,6 +39,15 @@ class TipoDocumento(Base):
     parsing_service = Column(String(50), nullable=True)
     parsing_config = Column(JSON, nullable=True)
     parsing_callback_url = Column(String(255), nullable=True)
+
+    # Owned by the module manifests (document_type_sync), not editable here.
+    modulo = Column(String(100), nullable=True, index=True)
+    entity_types = Column(JSON, nullable=True)  # e.g. ["IMMOBILE"]
+    regime = Column(String(20), nullable=False, default="CUMULATIVO", server_default="CUMULATIVO")
+    sottotipi = Column(JSON, nullable=True)
+    scadenza = Column(JSON, nullable=True)  # None | {"manuale": true} | {"mesi": n, "da": "data_riferimento"}
+    promemoria_giorni = Column(JSON, nullable=True)
+    form = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
