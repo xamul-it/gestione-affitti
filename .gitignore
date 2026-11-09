@@ -37,3 +37,7 @@ Thumbs.db
 
 # Stray local artifacts
 /tags
+
+# Documenti caricati a runtime (anche dati reali replicati da produzione):
+# mai in git.
+backend/storage/
