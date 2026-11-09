@@ -12,6 +12,8 @@
   --color-brand-dark: #A5130F;
   --color-danger: #C2410C;
   --color-danger-dark: #9A3412;
+  --color-danger-bg: #fde3d8;
+  --color-surface: #fff;
   --color-success: #28a745;
   --color-warning: #ffc107;
   --color-focus-ring: rgba(220, 17, 11, 0.35);

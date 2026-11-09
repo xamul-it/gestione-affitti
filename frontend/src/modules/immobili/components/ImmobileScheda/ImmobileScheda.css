@@ -50,7 +50,7 @@
 }
 
 .immobile-scheda .scheda-card {
-  background: #fff;
+  background: var(--color-surface);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   padding: var(--space-4) var(--space-5);
@@ -80,7 +80,7 @@
 }
 
 .immobile-scheda .scheda-error {
-  background: #fde3d8;
+  background: var(--color-danger-bg);
   color: var(--color-danger-dark);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
@@ -135,5 +135,37 @@
 
   .immobile-scheda .scheda-card {
     padding: var(--space-3);
+  }
+}
+
+@media (max-width: 640px) {
+  .immobile-scheda .scheda-table thead {
+    display: none;
+  }
+
+  .immobile-scheda .scheda-table tr {
+    display: block;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--gray-300);
+  }
+
+  .immobile-scheda .scheda-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    border-bottom: none;
+    padding: var(--space-1) var(--space-3);
+    text-align: right;
+  }
+
+  .immobile-scheda .scheda-table td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--gray-700);
+    text-align: left;
+  }
+
+  .immobile-scheda .scheda-table .scheda-arrow {
+    display: none;
   }
 }

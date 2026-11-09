@@ -26,9 +26,11 @@ function Dato({ label, children }) {
 }
 
 function Sezione({ id, title, children }) {
+  // Untitled cards wrap components that render their own labelled heading.
+  if (!title) return <div className="scheda-card">{children}</div>;
   return (
     <section className="scheda-card" aria-labelledby={id}>
-      {title && <h3 id={id} className="scheda-card__title">{title}</h3>}
+      <h3 id={id} className="scheda-card__title">{title}</h3>
       {children}
     </section>
   );

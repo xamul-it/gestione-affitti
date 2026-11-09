@@ -248,7 +248,7 @@ manifest = {
             "path": "/immobili/documenti?tipo=APE",
             "icon": "zap",
             "order_index": 40,
-            "required_permission": "certificato_energetico.view"
+            "required_permission": "documenti.read"
         },
         {
             "id": "immobili.categorie_catastali",

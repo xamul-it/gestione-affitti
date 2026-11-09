@@ -66,13 +66,13 @@ export default function VariazioniCatastali({ unitaId }) {
         <tbody>
           {righe.map((r) => (
             <tr key={r.id}>
-              <td>{formatDate(r.data_riferimento)}</td>
-              <td>{CAMPI[r.campo] || r.campo}</td>
-              <td className="scheda-old">{valore(r.campo, r.valore_precedente)}</td>
-              <td aria-hidden="true"><ArrowRight size={14} /></td>
-              <td className="scheda-new">{valore(r.campo, r.valore_nuovo)}</td>
-              <td>
-                <Badge variant={r.origine === 'VISURA' ? 'brand' : 'neutral'}>
+              <td data-label="Data">{formatDate(r.data_riferimento)}</td>
+              <td data-label="Dato">{CAMPI[r.campo] || r.campo}</td>
+              <td data-label="Prima" className="scheda-old">{valore(r.campo, r.valore_precedente)}</td>
+              <td aria-hidden="true" className="scheda-arrow"><ArrowRight size={14} /></td>
+              <td data-label="Dopo" className="scheda-new">{valore(r.campo, r.valore_nuovo)}</td>
+              <td data-label="Origine">
+                <Badge variant="neutral">
                   {r.origine === 'VISURA' ? 'Da visura' : 'Modifica manuale'}
                 </Badge>
               </td>

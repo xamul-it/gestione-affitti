@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useToast } from '../../hooks/useToast';
 import { ChevronDown, ChevronRight, Download, Eye, FileText, Plus, Trash2 } from 'lucide-react';
 import { documentiAPI } from '../../../services/documentiAPI';
 import { formatApiError } from '../../../utils/errorHandling';
@@ -90,6 +91,8 @@ export default function DocumentiPanel({ entityType, entityId, title = 'Document
   const [upload, setUpload] = useState(false);
   const [preview, setPreview] = useState(null);
   const [daEliminare, setDaEliminare] = useState(null);
+  const titleId = useId();
+  const toast = useToast();
 
   const carica = useCallback(async () => {
     if (!entityId) return;
@@ -132,6 +135,7 @@ export default function DocumentiPanel({ entityType, entityId, title = 'Document
     try {
       await documentiAPI.remove(daEliminare.id);
       setDaEliminare(null);
+      toast.success('Documento eliminato');
       carica();
     } catch (err) {
       setDaEliminare(null);
@@ -142,9 +146,9 @@ export default function DocumentiPanel({ entityType, entityId, title = 'Document
   if (!entityId) return null;
 
   return (
-    <section className="doc-panel" aria-labelledby="doc-panel-title">
+    <section className="doc-panel" aria-labelledby={titleId}>
       <header className="doc-panel__header">
-        <h3 id="doc-panel-title">{title}</h3>
+        <h3 id={titleId}>{title}</h3>
         <Button variant="secondary" size="sm" onClick={() => setUpload(true)}>
           <Plus size={16} aria-hidden="true" /> Carica documento
         </Button>
@@ -176,7 +180,7 @@ export default function DocumentiPanel({ entityType, entityId, title = 'Document
             entityType={entityType}
             entityId={entityId}
             tipi={tipi}
-            onSaved={() => { setUpload(false); carica(); }}
+            onSaved={() => { setUpload(false); toast.success('Documento caricato'); carica(); }}
             onCancel={() => setUpload(false)}
           />
         </FormModal>

@@ -58,12 +58,11 @@ export default function DocumentiImmobiliPage() {
   }, [tipo, sostituiti, scadenza]);
 
   const tipiByCodice = useMemo(() => Object.fromEntries(tipi.map((t) => [t.codice, t])), [tipi]);
-  const titolo = tipo && tipiByCodice[tipo] ? tipiByCodice[tipo].nome : 'Documenti degli immobili';
 
   return (
     <div className="documenti-immobili">
       <header className="documenti-immobili__header">
-        <h2>{titolo}</h2>
+        <h2>Documenti</h2>
         <p className="doc-muted">Visure, APE, planimetrie e gli altri documenti di tutte le unità immobiliari.</p>
       </header>
 
@@ -107,14 +106,14 @@ export default function DocumentiImmobiliPage() {
                 const badge = statoScadenza(d, tipiByCodice[d.tipo_codice]);
                 return (
                   <tr key={d.id} className={d.stato === 'SOSTITUITO' ? 'is-sostituito' : ''}>
-                    <td><Link to={`/unita-immobiliari/${d.entity_id}`}>{d.entity_label || `Immobile #${d.entity_id}`}</Link></td>
-                    <td>
+                    <td data-label="Immobile"><Link to={`/unita-immobiliari/${d.entity_id}`}>{d.entity_label || `Immobile #${d.entity_id}`}</Link></td>
+                    <td data-label="Tipologia">
                       {d.tipo_nome || 'Altro documento'}
                       {d.sottotipo ? ` · ${d.sottotipo.charAt(0)}${d.sottotipo.slice(1).toLowerCase()}` : ''}
                       {d.stato === 'SOSTITUITO' && <> <Badge variant="neutral">Sostituito</Badge></>}
                     </td>
-                    <td>{formatDate(d.data_riferimento)}</td>
-                    <td>
+                    <td data-label="Data">{formatDate(d.data_riferimento)}</td>
+                    <td data-label="Scadenza">
                       {d.data_scadenza_effettiva ? formatDate(d.data_scadenza_effettiva) : '—'}
                       {badge && d.stato !== 'SOSTITUITO' && <> <Badge variant={badge.variant}>{badge.label}</Badge></>}
                     </td>

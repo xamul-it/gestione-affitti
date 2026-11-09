@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from 'react';
+import { useEffect, useRef, Suspense, useMemo, useState } from 'react';
 import { FileText, X } from 'lucide-react';
 import { documentiAPI } from '../../../services/documentiAPI';
 import { formatApiError } from '../../../utils/errorHandling';
@@ -25,6 +25,9 @@ export default function DocumentoUpload({ entityType, entityId, tipi = [], initi
   const [dataScadenza, setDataScadenza] = useState('');
   const [descrizione, setDescrizione] = useState('');
   const [error, setError] = useState(null);
+  const errorRef = useRef(null);
+  // Bring the validation/API error into view in tall modals.
+  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   const [saving, setSaving] = useState(false);
 
   const tipo = tipi.find((t) => t.codice === tipoCodice) || null;
@@ -81,7 +84,7 @@ export default function DocumentoUpload({ entityType, entityId, tipi = [], initi
           onChange={(e) => { setTipoCodice(e.target.value); setSottotipo(''); setError(null); }}
           required
         >
-          <option value="">Scegli…</option>
+          <option value="" disabled>Scegli…</option>
           {gruppi.map(([categoria, lista]) => (
             <optgroup key={categoria} label={categoria.charAt(0).toUpperCase() + categoria.slice(1)}>
               {lista.map((t) => <option key={t.codice} value={t.codice}>{t.nome}</option>)}
@@ -133,7 +136,7 @@ export default function DocumentoUpload({ entityType, entityId, tipi = [], initi
               <FormField label="Sottotipo" htmlFor="doc-upload-sottotipo">
                 <select id="doc-upload-sottotipo" className="doc-input" value={sottotipo}
                   onChange={(e) => setSottotipo(e.target.value)} required>
-                  <option value="">Scegli…</option>
+                  <option value="" disabled>Scegli…</option>
                   {tipo.sottotipi.map((s) => (
                     <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</option>
                   ))}
@@ -159,7 +162,7 @@ export default function DocumentoUpload({ entityType, entityId, tipi = [], initi
             <input id="doc-upload-descrizione" type="text" className="doc-input" value={descrizione}
               maxLength={500} onChange={(e) => setDescrizione(e.target.value)} />
           </FormField>
-          {error && <div className="doc-error" role="alert">{error}</div>}
+          {error && <div className="doc-error" role="alert" ref={errorRef} tabIndex={-1}>{error}</div>}
           <div className="doc-actions">
             <Button type="button" variant="secondary" onClick={onCancel} disabled={saving}>Annulla</Button>
             <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Caricamento…' : 'Carica'}</Button>

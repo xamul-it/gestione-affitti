@@ -16,7 +16,7 @@
 }
 
 .doc-error {
-  background: #fde3d8;
+  background: var(--color-danger-bg);
   color: var(--color-danger-dark);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
@@ -32,7 +32,7 @@
   font-family: inherit;
   font-size: var(--font-size-body);
   color: var(--color-ink);
-  background: #fff;
+  background: var(--color-surface);
   box-sizing: border-box;
 }
 
@@ -117,7 +117,7 @@
   border: 1px solid var(--gray-300);
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .doc-row__main {
@@ -155,7 +155,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  min-height: 32px;
+  min-height: 44px;
   padding: 0;
   border: none;
   background: none;
@@ -231,7 +231,7 @@
 .doc-dropzone:hover,
 .doc-dropzone--over {
   border-color: var(--color-ink);
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .doc-dropzone:focus-visible {

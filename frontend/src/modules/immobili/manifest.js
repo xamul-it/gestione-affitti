@@ -134,7 +134,7 @@ export const manifest = {
           label: 'Certificati Energetici',
           path: '/immobili/documenti?tipo=APE',
           order: 1,
-          requiredPermission: 'certificato_energetico.view',
+          requiredPermission: 'documenti.read',
         },
         {
           id: 'immobili.categorie',

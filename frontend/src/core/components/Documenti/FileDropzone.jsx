@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { FileUp } from 'lucide-react';
 
 /**
@@ -13,8 +13,10 @@ export default function FileDropzone({
   title = 'Trascina qui i file',
   hint = 'oppure fai clic per sceglierli · più file insieme',
   inputLabel = 'File del documento',
-  id = 'doc-dropzone',
+  id: idProp,
 }) {
+  const autoId = useId();
+  const id = idProp || autoId;
   const inputRef = useRef(null);
   const [over, setOver] = useState(false);
 
@@ -48,6 +50,7 @@ export default function FileDropzone({
         multiple={multiple}
         accept={accept}
         aria-label={inputLabel}
+        aria-hidden="true"
         tabIndex={-1}
         className="doc-dropzone__input"
         onClick={(e) => e.stopPropagation()}

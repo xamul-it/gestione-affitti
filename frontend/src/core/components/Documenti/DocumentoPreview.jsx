@@ -38,7 +38,7 @@ export default function DocumentoPreview({ documento, onClose }) {
   return (
     <FormModal title={titolo} onClose={onClose} size="large">
       <div className="doc-preview">
-        {error && <p className="doc-muted">{error}</p>}
+        {error && <div className="doc-error" role="alert">{error}</div>}
         {!error && !url && <LoadingSpinner message="Caricamento anteprima…" />}
         {url && anteprimabile && tipo === 'application/pdf' && (
           <iframe title={titolo} src={url} className="doc-preview__frame" />

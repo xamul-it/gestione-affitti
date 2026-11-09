@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FileText, X } from 'lucide-react';
 import { documentiAPI } from '../../../../services/documentiAPI';
 import { tecniciAPI } from '../../../../services/api';
@@ -32,6 +32,9 @@ export default function ApeForm({ entityType, entityId, tipo, initialFiles = [],
   const [decaduto, setDecaduto] = useState('');
   const [tecnici, setTecnici] = useState([]);
   const [error, setError] = useState(null);
+  const errorRef = useRef(null);
+  // Bring the validation/API error into view in tall modals.
+  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -99,7 +102,7 @@ export default function ApeForm({ entityType, entityId, tipo, initialFiles = [],
       <div className="ape-form__grid">
         <FormField label="Classe energetica" htmlFor="ape-classe">
           <select id="ape-classe" className="doc-input" value={classe} onChange={(e) => setClasse(e.target.value)} required>
-            <option value="">Scegli…</option>
+            <option value="" disabled>Scegli…</option>
             {CLASSI.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </FormField>
@@ -128,7 +131,7 @@ export default function ApeForm({ entityType, entityId, tipo, initialFiles = [],
       </p>
       {scadenza && <p className="ape-form__scadenza">Scade il {formatDate(scadenza)}</p>}
 
-      {error && <div className="doc-error" role="alert">{error}</div>}
+      {error && <div className="doc-error" role="alert" ref={errorRef} tabIndex={-1}>{error}</div>}
       <div className="doc-actions">
         <Button type="button" variant="secondary" onClick={onCancel} disabled={saving}>Annulla</Button>
         <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button>
