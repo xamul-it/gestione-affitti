@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { unitaImmobiliariAPI, categorieCatastaliAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
-import DocumentiSection from '../../../../components/Documenti/DocumentiSection';
+import { Link } from 'react-router-dom';
 import DirittiImmobileSection from '../DirittiImmobile/DirittiImmobileSection';
 import AssegnazioneConduttoreSection from '../Conduttori/AssegnazioneConduttoreSection';
 import SpeseRicorrentiSection from '../SpeseRicorrenti/SpeseRicorrentiSection';
@@ -60,7 +60,7 @@ const CATEGORIA_TIPO_MAP = {
   'F/5': 'Lastrici solari',
 };
 
-function UnitaImmobiliareForm({ unitaImmobiliare, onClose }) {
+function UnitaImmobiliareForm({ unitaImmobiliare, onClose, showSchedaLink = true }) {
   const [formData, setFormData] = useState({
     codice: '',
     tipo: '',
@@ -393,7 +393,12 @@ function UnitaImmobiliareForm({ unitaImmobiliare, onClose }) {
         <DirittiImmobileSection immobileId={unitaImmobiliare?.id} />
         <AssegnazioneConduttoreSection unitaImmobiliareId={unitaImmobiliare?.id} />
         <SpeseRicorrentiSection unitaImmobiliareId={unitaImmobiliare?.id} />
-        <DocumentiSection entityType="IMMOBILE" entityId={unitaImmobiliare?.id} />
+        {showSchedaLink && unitaImmobiliare?.id && (
+          <p className="unita-form-documenti-link">
+            Documenti, storico e variazioni catastali sono nella{' '}
+            <Link to={`/unita-immobiliari/${unitaImmobiliare.id}`} onClick={onClose}>scheda dell&apos;immobile</Link>.
+          </p>
+        )}
       </div>
     </div>
   );

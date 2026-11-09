@@ -26,10 +26,10 @@ import {
   TabelleMillesimaliList,
   MillesimiImmobileList,
   CategorieCatastaliList,
-  TipologieTerrenoList
+  TipologieTerrenoList,
+  ImmobileScheda
 } from './modules/immobili';
 
-import ImmobileDetail from './pages/ImmobileDetail';
 import { TenantSelector } from './components/Tenant/TenantSelector';
 
 // Affitti Lungo module components
@@ -240,7 +240,7 @@ function App() {
                 <Route path="/immobili" element={<ProtectedRoute><ImmobiliDashboard /></ProtectedRoute>} />
                 <Route path="/immobili/home" element={<ProtectedRoute><ImmobiliHome /></ProtectedRoute>} />
                 <Route path="/unita-immobiliari" element={<ProtectedRoute><UnitaImmobiliariList /></ProtectedRoute>} />
-                <Route path="/unita-immobiliari/:id" element={<ProtectedRoute><ImmobileDetail /></ProtectedRoute>} />
+                <Route path="/unita-immobiliari/:id" element={<ProtectedRoute><ImmobileScheda /></ProtectedRoute>} />
                 <Route path="/terreni" element={<ProtectedRoute><TerreniList /></ProtectedRoute>} />
                 <Route path="/affittuari" element={<ProtectedRoute><AffittuariList /></ProtectedRoute>} />
                 <Route path="/affittuari/:id" element={<ProtectedRoute><AffittuarioDetail /></ProtectedRoute>} />

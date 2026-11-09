@@ -1,0 +1,139 @@
+/* ImmobileScheda + VariazioniCatastali — design tokens, scoped. */
+.immobile-scheda {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-4);
+  font-family: var(--font-family-base);
+  color: var(--color-ink);
+}
+
+.immobile-scheda .scheda-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  color: var(--color-brand);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-decoration: none;
+  align-self: flex-start;
+}
+
+.immobile-scheda .scheda-back:hover {
+  color: var(--color-brand-dark);
+  text-decoration: underline;
+}
+
+.immobile-scheda .scheda-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.immobile-scheda .scheda-header h2 {
+  margin: 0;
+  font-size: var(--font-size-h2);
+  font-weight: 600;
+}
+
+.immobile-scheda .scheda-header .ds-btn svg {
+  vertical-align: -3px;
+}
+
+.immobile-scheda .scheda-muted {
+  margin: var(--space-1) 0 0;
+  color: var(--gray-600);
+}
+
+.immobile-scheda .scheda-card {
+  background: #fff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4) var(--space-5);
+}
+
+.immobile-scheda .scheda-card__title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-h3);
+  font-weight: 600;
+}
+
+.immobile-scheda .scheda-dati {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3) var(--space-5);
+  margin: 0;
+}
+
+.immobile-scheda .scheda-dato dt {
+  color: var(--gray-600);
+  font-size: var(--font-size-small);
+}
+
+.immobile-scheda .scheda-dato dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.immobile-scheda .scheda-error {
+  background: #fde3d8;
+  color: var(--color-danger-dark);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.immobile-scheda .scheda-empty {
+  margin: 0;
+  color: var(--gray-600);
+}
+
+.immobile-scheda .scheda-table-wrap {
+  overflow-x: auto;
+}
+
+.immobile-scheda .scheda-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-small);
+}
+
+.immobile-scheda .scheda-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--gray-700);
+  border-bottom: 1px solid var(--gray-300);
+  padding: var(--space-2);
+}
+
+.immobile-scheda .scheda-table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--gray-200);
+  vertical-align: middle;
+}
+
+.immobile-scheda .scheda-old {
+  color: var(--gray-600);
+  text-decoration: line-through;
+}
+
+.immobile-scheda .scheda-new {
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .immobile-scheda {
+    padding: var(--space-2);
+  }
+
+  .immobile-scheda .scheda-header {
+    flex-direction: column;
+  }
+
+  .immobile-scheda .scheda-card {
+    padding: var(--space-3);
+  }
+}

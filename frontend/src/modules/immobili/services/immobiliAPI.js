@@ -46,6 +46,8 @@ export const unitaImmobiliariAPI = {
   create: (data) => api.post('/unita-immobiliari/', data),
   update: (id, data) => api.put(`/unita-immobiliari/${id}`, data),
   delete: (id) => api.delete(`/unita-immobiliari/${id}`),
+  // Catastal changes log (from visure and manual edits), newest first.
+  getVariazioniCatastali: (id) => api.get(`/unita-immobiliari/${id}/variazioni-catastali`),
 };
 
 // Proprietari API

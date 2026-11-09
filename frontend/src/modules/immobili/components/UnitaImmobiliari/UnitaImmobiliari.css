@@ -92,3 +92,17 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
 }
+
+.unita-form-documenti-link {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--gray-100);
+  color: var(--gray-700);
+  font-size: var(--font-size-small);
+}
+
+.unita-form-documenti-link a {
+  color: var(--color-brand);
+  font-weight: 600;
+}

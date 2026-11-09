@@ -53,6 +53,9 @@ export { default as SpeseRicorrentiSection } from './components/SpeseRicorrenti/
 export { default as CertificatiEnergeticiList } from './components/CertificatiEnergetici/CertificatiEnergeticiList';
 export { default as CertificatoEnergeticoForm } from './components/CertificatiEnergetici/CertificatoEnergeticoForm';
 
+// Scheda immobile
+export { default as ImmobileScheda } from './components/ImmobileScheda/ImmobileScheda';
+
 // DirittiImmobile
 export { default as DirittiImmobileSection } from './components/DirittiImmobile/DirittiImmobileSection';
 export { default as DirittoForm } from './components/DirittiImmobile/DirittoForm';
