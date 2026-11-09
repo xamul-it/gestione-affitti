@@ -2,13 +2,17 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../services/api';
 import { formatApiError } from '../utils/errorHandling';
+import { Lock, Palette, User } from 'lucide-react';
+import { Button, Card, FormField, Badge } from '../components/UI';
+import { ErrorMessage } from '../core/components/common';
+import { useToast } from '../core/hooks';
 import './Settings.css';
 
 export default function Settings() {
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
 
   // Profile form
@@ -30,7 +34,6 @@ export default function Settings() {
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
     setLoading(true);
 
     try {
@@ -39,8 +42,7 @@ export default function Settings() {
       // Update local user data
       updateUser({ ...user, ...profileData });
 
-      setSuccess('Profilo aggiornato con successo');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Profilo aggiornato con successo');
     } catch (err) {
       setError('Errore nell\'aggiornamento del profilo: ' + (err.response?.data?.detail || err.message));
     } finally {
@@ -51,7 +53,6 @@ export default function Settings() {
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
 
     // Validation
     if (passwordData.new_password !== passwordData.confirm_password) {
@@ -72,13 +73,12 @@ export default function Settings() {
         new_password: passwordData.new_password
       }, token);
 
-      setSuccess('Password modificata con successo');
+      toast.success('Password modificata con successo');
       setPasswordData({
         current_password: '',
         new_password: '',
         confirm_password: ''
       });
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError('Errore nel cambio password: ' + formatApiError(err));
     } finally {
@@ -86,74 +86,54 @@ export default function Settings() {
     }
   };
 
+  const tabs = [
+    { id: 'profile', label: 'Profilo', Icon: User },
+    { id: 'password', label: 'Sicurezza', Icon: Lock },
+    { id: 'preferences', label: 'Preferenze', Icon: Palette },
+  ];
+
   return (
     <div className="settings">
       <div className="settings-header">
-        <h1>
-          <span aria-hidden="true">⚙️</span>
-          Impostazioni
-        </h1>
+        <h1>Impostazioni</h1>
         <p>Gestisci il tuo profilo e le preferenze</p>
       </div>
 
-      {error && (
-        <div className="alert alert-error">
-          {error}
-          <button onClick={() => setError('')} aria-label="Chiudi messaggio">✖</button>
-        </div>
-      )}
-
-      {success && (
-        <div className="alert alert-success">
-          {success}
-          <button onClick={() => setSuccess('')} aria-label="Chiudi messaggio">✖</button>
-        </div>
-      )}
+      <ErrorMessage message={error} onDismiss={() => setError('')} />
 
       {/* Tabs */}
-      <div className="settings-tabs">
-        <button
-          className={`settings-tab ${activeTab === 'profile' ? 'active' : ''}`}
-          onClick={() => setActiveTab('profile')}
-        >
-          <span aria-hidden="true">👤</span>
-          Profilo
-        </button>
-        <button
-          className={`settings-tab ${activeTab === 'password' ? 'active' : ''}`}
-          onClick={() => setActiveTab('password')}
-        >
-          <span aria-hidden="true">🔒</span>
-          Sicurezza
-        </button>
-        <button
-          className={`settings-tab ${activeTab === 'preferences' ? 'active' : ''}`}
-          onClick={() => setActiveTab('preferences')}
-        >
-          <span aria-hidden="true">🎨</span>
-          Preferenze
-        </button>
+      <div className="settings-tabs" role="tablist" aria-label="Sezioni impostazioni">
+        {tabs.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === id}
+            className={`settings-tab ${activeTab === id ? 'active' : ''}`}
+            onClick={() => setActiveTab(id)}
+          >
+            <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Profile Tab */}
       {activeTab === 'profile' && (
-        <div className="settings-card">
+        <Card className="settings-card" role="tabpanel">
           <h2>Informazioni Profilo</h2>
           <form onSubmit={handleProfileUpdate}>
-            <div className="form-group">
-              <label htmlFor="username">Username</label>
+            <FormField label="Username" htmlFor="username">
               <input
                 id="username"
                 type="text"
                 value={user?.username || ''}
                 disabled
-                className="disabled-input"
               />
               <small>Username non modificabile</small>
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="email">Email *</label>
+            <FormField label="Email *" htmlFor="email">
               <input
                 id="email"
                 type="email"
@@ -161,129 +141,127 @@ export default function Settings() {
                 onChange={(e) => setProfileData({...profileData, email: e.target.value})}
                 required
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="full_name">Nome Completo</label>
+            <FormField label="Nome Completo" htmlFor="full_name">
               <input
                 id="full_name"
                 type="text"
                 value={profileData.full_name}
                 onChange={(e) => setProfileData({...profileData, full_name: e.target.value})}
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="phone">Telefono</label>
+            <FormField label="Telefono" htmlFor="phone">
               <input
                 id="phone"
                 type="text"
                 value={profileData.phone}
                 onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
               />
-            </div>
+            </FormField>
 
             <div className="form-actions">
-              <button type="submit" className="btn-primary" disabled={loading}>
+              <Button type="submit" variant="primary" loading={loading}>
                 {loading ? 'Salvataggio...' : 'Salva Modifiche'}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
       {/* Password Tab */}
       {activeTab === 'password' && (
-        <div className="settings-card">
+        <Card className="settings-card" role="tabpanel">
           <h2>Cambia Password</h2>
           <form onSubmit={handlePasswordChange}>
-            <div className="form-group">
-              <label htmlFor="current_password">Password Attuale *</label>
+            <FormField label="Password Attuale *" htmlFor="current_password">
               <input
                 id="current_password"
                 type="password"
+                autoComplete="current-password"
                 value={passwordData.current_password}
                 onChange={(e) => setPasswordData({...passwordData, current_password: e.target.value})}
                 required
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="new_password">Nuova Password *</label>
+            <FormField label="Nuova Password *" htmlFor="new_password">
               <input
                 id="new_password"
                 type="password"
+                autoComplete="new-password"
                 value={passwordData.new_password}
                 onChange={(e) => setPasswordData({...passwordData, new_password: e.target.value})}
                 required
                 minLength={8}
               />
               <small>Minimo 8 caratteri</small>
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="confirm_password">Conferma Nuova Password *</label>
+            <FormField label="Conferma Nuova Password *" htmlFor="confirm_password">
               <input
                 id="confirm_password"
                 type="password"
+                autoComplete="new-password"
                 value={passwordData.confirm_password}
                 onChange={(e) => setPasswordData({...passwordData, confirm_password: e.target.value})}
                 required
                 minLength={8}
               />
-            </div>
+            </FormField>
 
             <div className="form-actions">
-              <button type="submit" className="btn-primary" disabled={loading}>
+              <Button type="submit" variant="primary" loading={loading}>
                 {loading ? 'Aggiornamento...' : 'Cambia Password'}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
       {/* Preferences Tab */}
       {activeTab === 'preferences' && (
-        <div className="settings-card">
+        <Card className="settings-card" role="tabpanel">
           <h2>Preferenze</h2>
           <div className="preferences-grid">
             <div className="preference-item">
               <div className="preference-info">
-                <h3>🌙 Tema Scuro</h3>
+                <h3>Tema Scuro</h3>
                 <p>Attiva il tema scuro per ridurre l'affaticamento degli occhi</p>
               </div>
               <label className="switch">
-                <input type="checkbox" disabled />
+                <input type="checkbox" disabled aria-label="Tema scuro" />
                 <span className="slider"></span>
               </label>
-              <small className="coming-soon">Prossimamente</small>
+              <Badge variant="warning" className="coming-soon">Prossimamente</Badge>
             </div>
 
             <div className="preference-item">
               <div className="preference-info">
-                <h3>🌍 Lingua</h3>
+                <h3>Lingua</h3>
                 <p>Seleziona la lingua dell'interfaccia</p>
               </div>
-              <select disabled>
+              <select disabled aria-label="Lingua">
                 <option>Italiano</option>
                 <option>English</option>
               </select>
-              <small className="coming-soon">Prossimamente</small>
+              <Badge variant="warning" className="coming-soon">Prossimamente</Badge>
             </div>
 
             <div className="preference-item">
               <div className="preference-info">
-                <h3>🔔 Notifiche</h3>
+                <h3>Notifiche</h3>
                 <p>Ricevi notifiche per eventi importanti</p>
               </div>
               <label className="switch">
-                <input type="checkbox" disabled />
+                <input type="checkbox" disabled aria-label="Notifiche" />
                 <span className="slider"></span>
               </label>
-              <small className="coming-soon">Prossimamente</small>
+              <Badge variant="warning" className="coming-soon">Prossimamente</Badge>
             </div>
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );
