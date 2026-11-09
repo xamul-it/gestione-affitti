@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getSoggettiAnagrafici, getSoggettoRuoli } from '../../services/anagraficaAPI';
+import { getSoggettiAnagrafici } from '../../services/anagraficaAPI';
 import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
+import '../../../../components/UI/Button.css';
 import './StatsSoggettiWidget.css';
 
 /**
@@ -67,7 +68,7 @@ function StatsSoggettiWidget() {
   if (error) {
     return (
       <div className="stats-soggetti-widget">
-        <div className="widget-error">{error}</div>
+        <div className="widget-error" role="alert">{error}</div>
       </div>
     );
   }
@@ -78,7 +79,7 @@ function StatsSoggettiWidget() {
       <div className="widget-header">
         <h3 className="widget-title">
           <span className="widget-title-icon" aria-hidden="true">
-            {renderIcon('users', { size: 18, className: 'widget-title-icon-svg', fallbackClassName: 'nav-emoji-icon' })}
+            {renderIcon('users', { size: 18 })}
           </span>
           Anagrafiche
         </h3>
@@ -89,58 +90,47 @@ function StatsSoggettiWidget() {
 
       {/* Stats Grid */}
       <div className="stats-grid">
-        <Link to="/anagrafiche/lista" className="stat-card-link">
-          <div className="stat-card totale">
-            <div className="stat-value">{stats.totale}</div>
-            <div className="stat-label">Totale</div>
-          </div>
+        <Link to="/anagrafiche/lista" className="stat-card totale">
+          <span className="stat-value">{stats.totale}</span>
+          <span className="stat-label">Totale</span>
         </Link>
 
-        <Link to="/anagrafiche/persone-fisiche" className="stat-card-link">
-          <div className="stat-card persone-fisiche">
-            <div className="stat-icon" aria-hidden="true">
-              {renderIcon('user', { size: 22, className: 'stat-icon-svg', fallbackClassName: 'nav-emoji-icon' })}
-            </div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.persone_fisiche}</div>
-              <div className="stat-label">Persone Fisiche</div>
-            </div>
-          </div>
+        <Link to="/anagrafiche/persone-fisiche" className="stat-card stat-card--row">
+          <span className="stat-icon" aria-hidden="true">
+            {renderIcon('user', { size: 22 })}
+          </span>
+          <span className="stat-content">
+            <span className="stat-value">{stats.persone_fisiche}</span>
+            <span className="stat-label">Persone Fisiche</span>
+          </span>
         </Link>
 
-        <Link to="/anagrafiche/persone-giuridiche" className="stat-card-link">
-          <div className="stat-card persone-giuridiche">
-            <div className="stat-icon" aria-hidden="true">
-              {renderIcon('building', { size: 22, className: 'stat-icon-svg', fallbackClassName: 'nav-emoji-icon' })}
-            </div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.persone_giuridiche}</div>
-              <div className="stat-label">Persone Giuridiche</div>
-            </div>
-          </div>
+        <Link to="/anagrafiche/persone-giuridiche" className="stat-card stat-card--row">
+          <span className="stat-icon" aria-hidden="true">
+            {renderIcon('building', { size: 22 })}
+          </span>
+          <span className="stat-content">
+            <span className="stat-value">{stats.persone_giuridiche}</span>
+            <span className="stat-label">Persone Giuridiche</span>
+          </span>
         </Link>
 
-        <Link to="/anagrafiche/lista" className="stat-card-link">
-          <div className="stat-card attivi">
-            <div className="stat-value">{stats.attivi}</div>
-            <div className="stat-label">Attivi</div>
-            <div className="stat-badge active">●</div>
-          </div>
+        <Link to="/anagrafiche/lista" className="stat-card stat-card--attivi">
+          <span className="stat-value">{stats.attivi}</span>
+          <span className="stat-label">Attivi</span>
         </Link>
 
-        <Link to="/anagrafiche/lista" className="stat-card-link">
-          <div className="stat-card inattivi">
-            <div className="stat-value">{stats.inattivi}</div>
-            <div className="stat-label">Inattivi</div>
-            <div className="stat-badge inactive">●</div>
-          </div>
+        <Link to="/anagrafiche/lista" className="stat-card stat-card--inattivi">
+          <span className="stat-value">{stats.inattivi}</span>
+          <span className="stat-label">Inattivi</span>
         </Link>
       </div>
 
       {/* Quick Action */}
       <div className="widget-actions">
-        <Link to="/anagrafiche/nuovo" className="btn btn-primary btn-block">
-          + Nuova Anagrafica
+        <Link to="/anagrafiche/nuovo" className="ds-btn ds-btn--secondary ds-btn--md widget-action-btn">
+          {renderIcon('plus', { size: 16 })}
+          Nuova Anagrafica
         </Link>
       </div>
     </div>
