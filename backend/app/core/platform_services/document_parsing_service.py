@@ -697,7 +697,7 @@ class DocumentParsingService:
         """
         try:
             # Import here to avoid circular dependency
-            from modules.anagrafica_italiana.models import DocumentoFile, Documento
+            from app.core.platform.models import DocumentoFile, Documento
 
             # 1. Find DocumentoFile linked to this job
             doc_file = self.db.query(DocumentoFile).filter(

@@ -12,7 +12,7 @@ Domain-specific models have been moved to their respective modules:
 
 Import from the appropriate module instead:
     from anagrafica_italiana.models import SoggettoAnagrafico
-    from modules.immobili.models import UnitaImmobiliare, CategoriaCatastale
+    from immobili.models import UnitaImmobiliare, CategoriaCatastale
 """
 # Platform models - these remain in core as they are domain-agnostic
 from .ruoli import RuoloDisponibile, SoggettoRuolo
