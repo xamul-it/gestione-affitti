@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Navigate, BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import TopBar from './components/Layout/TopBar';
 import Sidebar from './components/Navigation/Sidebar';
 import Drawer from './components/Navigation/Drawer';
@@ -19,7 +19,7 @@ import ImmobiliHome from './pages/ImmobiliHome';
 import {
   UnitaImmobiliariList,
   TerreniList,
-  CertificatiEnergeticiList,
+  DocumentiImmobiliPage,
   ProprietariList,
   CondominList,
   ConduttoriList,
@@ -249,7 +249,8 @@ function App() {
                 <Route path="/spese" element={<ProtectedRoute><SpeseList /></ProtectedRoute>} />
                 <Route path="/incassi" element={<ProtectedRoute><IncassiList /></ProtectedRoute>} />
                 <Route path="/tecnici" element={<ProtectedRoute><TecniciList /></ProtectedRoute>} />
-                <Route path="/certificati-energetici" element={<ProtectedRoute><CertificatiEnergeticiList /></ProtectedRoute>} />
+                <Route path="/immobili/documenti" element={<ProtectedRoute><DocumentiImmobiliPage /></ProtectedRoute>} />
+                <Route path="/certificati-energetici" element={<Navigate to="/immobili/documenti?tipo=APE" replace />} />
                 <Route path="/proprietari" element={<ProtectedRoute><ProprietariList /></ProtectedRoute>} />
                 <Route path="/condomini" element={<ProtectedRoute><CondominList /></ProtectedRoute>} />
                 <Route path="/conduttori" element={<ProtectedRoute><ConduttoriList /></ProtectedRoute>} />

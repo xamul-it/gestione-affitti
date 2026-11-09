@@ -46,6 +46,7 @@ function Drawer() {
         path.startsWith('/proprietari') ||
         path.startsWith('/condomini') ||
         path.startsWith('/certificati-energetici') ||
+      path.startsWith('/immobili/documenti') ||
         path.startsWith('/tabelle-millesimali') ||
         path.startsWith('/millesimi-immobile') ||
         path.startsWith('/categorie-catastali') ||

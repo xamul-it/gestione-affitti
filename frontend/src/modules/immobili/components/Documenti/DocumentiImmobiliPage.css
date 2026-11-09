@@ -1,0 +1,107 @@
+/* DocumentiImmobiliPage — design tokens; shared .doc-* from core Documenti.css. */
+.documenti-immobili {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  font-family: var(--font-family-base);
+  color: var(--color-ink);
+}
+
+.documenti-immobili__header h2 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-h2);
+  font-weight: 600;
+}
+
+.documenti-immobili__filtri {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-4);
+}
+
+.documenti-immobili__filtri .ds-field {
+  margin-bottom: 0;
+  min-width: 220px;
+}
+
+.documenti-immobili__check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+
+.documenti-immobili__check input {
+  accent-color: var(--color-ink);
+  width: 16px;
+  height: 16px;
+}
+
+.documenti-immobili__table-wrap {
+  overflow-x: auto;
+  background: #fff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.documenti-immobili__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-small);
+}
+
+.documenti-immobili__table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--gray-700);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--gray-300);
+}
+
+.documenti-immobili__table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--gray-200);
+  vertical-align: middle;
+}
+
+.documenti-immobili__table a {
+  color: var(--color-brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.documenti-immobili__table a:hover {
+  text-decoration: underline;
+}
+
+.documenti-immobili__table tr.is-sostituito td {
+  color: var(--gray-600);
+}
+
+.documenti-immobili__azioni {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.documenti-immobili .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .documenti-immobili {
+    padding: var(--space-2);
+  }
+
+  .documenti-immobili__filtri .ds-field {
+    min-width: 100%;
+  }
+}

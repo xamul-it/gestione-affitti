@@ -53,10 +53,10 @@ export const manifest = {
       icon: 'user-check',
     },
     {
-      path: '/certificati-energetici',
-      component: 'CertificatiEnergeticiList',
-      label: 'Certificati Energetici',
-      icon: 'zap',
+      path: '/immobili/documenti',
+      component: 'DocumentiImmobiliPage',
+      label: 'Documenti',
+      icon: 'file-text',
     },
     {
       path: '/categorie-catastali',
@@ -115,6 +115,14 @@ export const manifest = {
       requiredPermission: 'conduttore.view',
     },
     {
+      id: 'immobili.documenti',
+      label: 'Documenti',
+      path: '/immobili/documenti',
+      icon: 'file-text',
+      order: 27,
+      requiredPermission: 'documenti.read',
+    },
+    {
       id: 'immobili.gestione',
       label: 'Gestione',
       path: '#',
@@ -124,7 +132,7 @@ export const manifest = {
         {
           id: 'immobili.certificati',
           label: 'Certificati Energetici',
-          path: '/certificati-energetici',
+          path: '/immobili/documenti?tipo=APE',
           order: 1,
           requiredPermission: 'certificato_energetico.view',
         },

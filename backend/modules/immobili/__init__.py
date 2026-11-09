@@ -120,9 +120,17 @@ MENU_ITEMS = [
         "required_permission": "condominio.view"
     },
     {
+        "id": "immobili.documenti",
+        "label": "Documenti",
+        "path": "/immobili/documenti",
+        "icon": "file-text",
+        "order_index": 27,
+        "required_permission": "documenti.read"
+    },
+    {
         "id": "immobili.certificati",
         "label": "Certificati Energetici",
-        "path": "/certificati-energetici",
+        "path": "/immobili/documenti?tipo=APE",
         "icon": "zap",
         "order_index": 40,
         "required_permission": "certificato_energetico.view"
@@ -305,6 +313,21 @@ def post_sync(db: Session, tenant_schema: str) -> dict:
         if tipo.get("scadenza"):
             report["scadenze"][tipo["codice"]] = service.allinea_scadenze(tipo["codice"])
     return report
+
+
+def _immobile_labels(db, ids):
+    from .models import UnitaImmobiliare
+    rows = db.query(UnitaImmobiliare.id, UnitaImmobiliare.codice, UnitaImmobiliare.indirizzo, UnitaImmobiliare.citta) \
+        .filter(UnitaImmobiliare.id.in_(ids)).all()
+    return {r.id: f"{r.codice} · {r.indirizzo}, {r.citta}" for r in rows}
+
+
+def _register_entity_labels():
+    from app.core.platform_services.entity_label_registry import entity_label_registry
+    entity_label_registry.register("IMMOBILE", _immobile_labels)
+
+
+_register_entity_labels()
 
 
 def register_module(app):

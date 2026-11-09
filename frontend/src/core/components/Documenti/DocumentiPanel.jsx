@@ -9,24 +9,13 @@ import { Badge, Button } from '../../../components/UI';
 import DocumentoUpload from './DocumentoUpload';
 import DocumentoPreview from './DocumentoPreview';
 import { formatDate, statoScadenza } from './documentiUtils';
+import { scaricaDocumento as scarica } from './scaricaDocumento';
 import './Documenti.css';
 
 const ALTRO = '__altro__';
 
 function groupKey(d) {
   return `${d.tipo_codice || ALTRO}|${d.sottotipo || ''}`;
-}
-
-async function scarica(documento) {
-  const res = await documentiAPI.download(documento.id);
-  const url = window.URL.createObjectURL(new Blob([res.data]));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = documento.nome_file || `documento-${documento.id}`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
 }
 
 function RigaDocumento({ documento, tipo, storico = [], onPreview, onDelete }) {

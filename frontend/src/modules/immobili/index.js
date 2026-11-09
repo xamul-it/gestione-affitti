@@ -50,8 +50,7 @@ export { default as AssegnazioneConduttoreSection } from './components/Conduttor
 export { default as SpeseRicorrentiSection } from './components/SpeseRicorrenti/SpeseRicorrentiSection';
 
 // CertificatiEnergetici
-export { default as CertificatiEnergeticiList } from './components/CertificatiEnergetici/CertificatiEnergeticiList';
-export { default as CertificatoEnergeticoForm } from './components/CertificatiEnergetici/CertificatoEnergeticoForm';
+export { default as DocumentiImmobiliPage } from './components/Documenti/DocumentiImmobiliPage';
 
 // Scheda immobile
 export { default as ImmobileScheda } from './components/ImmobileScheda/ImmobileScheda';

@@ -3,6 +3,19 @@ import { DataTable } from '../../../../core/components';
 import { useTableConfig } from '../../../../core/hooks';
 import './DominiList.css';
 
+// Fields owned by the module manifests (document_type_sync), shown in words.
+const MANIFEST_RENDERERS = {
+  modulo: (value) => value || '—',
+  regime: (value) => (value === 'SOSTITUTIVO' ? 'Sostituisce il precedente' : 'Si accumulano'),
+  scadenza: (value) => {
+    if (!value) return '—';
+    if (value.manuale) return 'Manuale';
+    if (value.mesi) return value.mesi % 12 === 0 ? `${value.mesi / 12} anni` : `${value.mesi} mesi`;
+    return '—';
+  },
+  form: (value) => (value ? 'Sì' : 'No'),
+};
+
 function TipiDocumentoList() {
   const moduleName = 'anagrafica_italiana';
   const entityName = 'TipoDocumento';
@@ -18,6 +31,10 @@ function TipiDocumentoList() {
         { field: 'codice', label: 'Codice', sortable: true, filterable: true },
         { field: 'nome', label: 'Nome', sortable: true, filterable: true },
         { field: 'categoria', label: 'Categoria', render: (value) => value || '-' },
+        { field: 'modulo', label: 'Modulo', render: MANIFEST_RENDERERS.modulo },
+        { field: 'regime', label: 'Nuovo documento', render: MANIFEST_RENDERERS.regime },
+        { field: 'scadenza', label: 'Scadenza', render: MANIFEST_RENDERERS.scadenza },
+        { field: 'form', label: 'Form dedicato', render: MANIFEST_RENDERERS.form },
         { field: 'parsing_service', label: 'Parsing Service', render: (value) => value || '-', visible: false },
         { field: 'parsing_callback_url', label: 'Callback URL', render: (value) => value || '-', visible: false },
         {
@@ -48,6 +65,9 @@ function TipiDocumentoList() {
     }
 
     return managedColumns.map((column) => {
+      if (MANIFEST_RENDERERS[column.field]) {
+        return { ...column, render: MANIFEST_RENDERERS[column.field] };
+      }
       if (column.field === 'richiede_scadenza') {
         return {
           ...column,

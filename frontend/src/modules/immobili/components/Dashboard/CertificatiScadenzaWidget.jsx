@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { certificatiEnergeticiAPI, unitaImmobiliariAPI } from '../../services/immobiliAPI';
+import { documentiAPI } from '../../../../services/documentiAPI';
 import { AlertCircle, CircleCheck, Clock } from 'lucide-react';
 import { Badge } from '../../../../components/UI';
 import '../../../../components/UI/Button.css';
@@ -31,33 +31,17 @@ function CertificatiScadenzaWidget() {
       setLoading(true);
       setError(null);
 
-      // Get token
-      const token = localStorage.getItem('access_token');
-
-      // Configure axios interceptor for authentication
-      const setupAuth = (apiCall) => {
-        const originalRequest = apiCall;
-        originalRequest.defaults = originalRequest.defaults || {};
-        originalRequest.defaults.headers = originalRequest.defaults.headers || {};
-        originalRequest.defaults.headers.common = originalRequest.defaults.headers.common || {};
-        originalRequest.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        return apiCall;
-      };
-
-      // Get all certificati and immobili
-      const [certificatiRes, immobiliRes] = await Promise.all([
-        setupAuth(certificatiEnergeticiAPI).getAll(),
-        setupAuth(unitaImmobiliariAPI).getAll(),
-      ]);
-
-      const allCertificati = certificatiRes.data;
-      const immobili = immobiliRes.data;
-
-      // Create immobili lookup
-      const immobiliMap = {};
-      immobili.forEach(imm => {
-        immobiliMap[imm.id] = imm;
+      // APE documents expired or expiring within 90 days (effective scadenza).
+      const res = await documentiAPI.list({
+        entity_type: 'IMMOBILE', tipo_codice: 'APE', scadenza_entro_giorni: 90, limit: 500,
       });
+      const allCertificati = (res.data || []).map((doc) => ({
+        id: doc.id,
+        unita_immobiliare_id: doc.entity_id,
+        label: doc.entity_label,
+        classe: doc.dati?.classe,
+        data_scadenza: doc.data_scadenza_effettiva,
+      }));
 
       // Calculate dates
       const today = new Date();
@@ -74,7 +58,6 @@ function CertificatiScadenzaWidget() {
       const certificatiInScadenza = allCertificati
         .map(cert => {
           const dataScadenza = new Date(cert.data_scadenza);
-          const immobile = immobiliMap[cert.unita_immobiliare_id];
 
           // Calculate urgency
           let urgency = 'ok';
@@ -92,7 +75,6 @@ function CertificatiScadenzaWidget() {
 
           return {
             ...cert,
-            immobile,
             dataScadenza,
             urgency,
           };
@@ -150,7 +132,7 @@ function CertificatiScadenzaWidget() {
           </span>
           Certificati in Scadenza
         </h3>
-        <Link to="/certificati-energetici" className="view-all-link">
+        <Link to="/immobili/documenti?tipo=APE" className="view-all-link">
           Vedi tutto
         </Link>
       </div>
@@ -190,10 +172,10 @@ function CertificatiScadenzaWidget() {
                 </span>
                 <div className="certificato-content">
                   <div className="certificato-title">
-                    {cert.immobile ? cert.immobile.codice : `Immobile #${cert.unita_immobiliare_id}`}
+                    {cert.label || `Immobile #${cert.unita_immobiliare_id}`}
                   </div>
                   <div className="certificato-subtitle">
-                    {cert.immobile?.indirizzo || 'Indirizzo non disponibile'}
+                    {cert.classe ? `APE classe ${cert.classe}` : 'APE'}
                   </div>
                   <div className="certificato-date">
                     Scadenza: {formatDate(cert.data_scadenza)}
@@ -215,7 +197,7 @@ function CertificatiScadenzaWidget() {
       {/* Quick Action */}
       {certificati.length > 0 && (
         <div className="widget-actions">
-          <Link to="/certificati-energetici" className="ds-btn ds-btn--secondary ds-btn--md widget-action-btn">
+          <Link to="/immobili/documenti?tipo=APE" className="ds-btn ds-btn--secondary ds-btn--md widget-action-btn">
             Gestisci Certificati
           </Link>
         </div>

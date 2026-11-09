@@ -193,7 +193,7 @@ function Home() {
             <p>Tecnici, certificati energetici e documenti</p>
             <div className="feature-links">
               <Link to="/tecnici">Tecnici</Link>
-              <Link to="/certificati-energetici">Certificati</Link>
+              <Link to="/immobili/documenti">Documenti</Link>
             </div>
           </div>
         </div>

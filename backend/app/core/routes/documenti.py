@@ -12,6 +12,7 @@ from app.core.auth.models import User
 from app.core.file_storage import file_storage
 from app.core.platform.models import Documento, DocumentoFile, EntityType, TipoDocumento as TipoDocumentoModel
 from app.core.platform_services.documento_service import DocumentoService, FileInput
+from app.core.platform_services.entity_label_registry import entity_label_registry
 from app.core.schemas.documenti import DocumentoOut, DocumentoResponse, DocumentoUpdate, TipoDocumentoOut
 import logging
 import mimetypes
@@ -123,7 +124,14 @@ def get_documenti(
         .all()
     )
     service = DocumentoService(db, None, None)
-    return [to_out(d, service) for d in documenti]
+    result = [to_out(d, service) for d in documenti]
+    by_type = {}
+    for d in result:
+        by_type.setdefault(d.entity_type.value, []).append(d.entity_id)
+    labels = {t: entity_label_registry.labels(db, t, ids) for t, ids in by_type.items()}
+    for d in result:
+        d.entity_label = labels[d.entity_type.value].get(d.entity_id)
+    return result
 
 
 @router.get("/files/{file_id}/view")

@@ -235,9 +235,17 @@ manifest = {
             "required_permission": "conduttori.read"
         },
         {
+            "id": "immobili.documenti",
+            "label": "Documenti",
+            "path": "/immobili/documenti",
+            "icon": "file-text",
+            "order_index": 27,
+            "required_permission": "documenti.read"
+        },
+        {
             "id": "immobili.certificati",
             "label": "Certificati Energetici",
-            "path": "/certificati-energetici",
+            "path": "/immobili/documenti?tipo=APE",
             "icon": "zap",
             "order_index": 40,
             "required_permission": "certificato_energetico.view"

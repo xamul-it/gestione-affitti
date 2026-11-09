@@ -170,3 +170,19 @@ async def test_view_rejects_other_tenant_file(db_session, tmp_path):
     with pytest.raises(HTTPException) as exc:
         view_file(f.id, db=db_session, tenant_schema=TENANT)
     assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_includes_entity_label(db_session):
+    from immobili.models import UnitaImmobiliare
+    import immobili  # noqa: F401  registers the IMMOBILE label resolver
+    u = UnitaImmobiliare(codice="TEST-LBL-1", tipo="Box", indirizzo="VIA VERDI 2", citta="Milano")
+    db_session.add(u)
+    db_session.flush()
+    await _upload(db_session, tipo_codice="ALTRO_IMMOBILE", entity_id=u.id)
+    await _upload(db_session, tipo_codice="ALTRO_IMMOBILE", entity_id=999999991)
+    res = get_documenti(entity_type=EntityType.IMMOBILE, entity_id=None, tipo_codice="ALTRO_IMMOBILE", modulo=None,
+                        includi_sostituiti=False, scadenza_entro_giorni=None, skip=0, limit=500, db=db_session)
+    labels = {d.entity_id: d.entity_label for d in res}
+    assert labels[u.id] == "TEST-LBL-1 · VIA VERDI 2, Milano"
+    assert labels[999999991] == "IMMOBILE #999999991"
