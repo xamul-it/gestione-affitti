@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List
+from app.core.auth.dependencies import require_permission
+from app.core.auth.models import User
 from app.core.database import get_db
 from datetime import date
 
@@ -77,7 +79,11 @@ def update_unita_immobiliare(unita_immobiliare_id: int, unita_immobiliare: Unita
 
 
 @router.get("/{unita_immobiliare_id}/variazioni-catastali", response_model=List[VariazioneCatastaleResponse])
-def get_variazioni_catastali(unita_immobiliare_id: int, db: Session = Depends(get_db)):
+def get_variazioni_catastali(
+    unita_immobiliare_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("immobile.view")),
+):
     """Storico delle variazioni dei dati catastali dell'unità, dalla più recente."""
     return (
         db.query(VariazioneCatastale)

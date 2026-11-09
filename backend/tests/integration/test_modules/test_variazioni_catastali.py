@@ -38,3 +38,10 @@ def test_get_variazioni_newest_first(db_session, unit):
     update_unita_immobiliare(unit.id, UnitaImmobiliareUpdate(subalterno="4"), db=db_session)
     res = get_variazioni_catastali(unit.id, db=db_session)
     assert [r.campo for r in res] == ["subalterno", "rendita_catastale"]
+
+
+def test_variazioni_requires_authentication():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    with TestClient(app) as http:
+        assert http.get("/api/v1/unita-immobiliari/1/variazioni-catastali").status_code in (401, 403)
