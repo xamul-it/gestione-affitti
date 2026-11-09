@@ -1,0 +1,31 @@
+/* ApeForm — shares .doc-* styles from core/components/Documenti/Documenti.css. */
+@import '../../../../core/components/Documenti/Documenti.css';
+
+.ape-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  font-family: var(--font-family-base);
+  color: var(--color-ink);
+}
+
+.ape-form .ds-field {
+  margin-bottom: 0;
+}
+
+.ape-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+}
+
+.ape-form__scadenza {
+  margin: 0;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .ape-form__grid {
+    grid-template-columns: 1fr;
+  }
+}

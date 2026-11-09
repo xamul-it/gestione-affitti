@@ -214,9 +214,14 @@ function CodaFile({ items, corrente, onRemove }) {
   );
 }
 
-function ImportVisuraModal({ onClose, onImported }) {
+function EmbeddedFrame({ children }) {
+  return children;
+}
+
+function ImportVisuraModal({ onClose, onImported, initialFiles = [], embedded = false }) {
   const [tipoDocumento, setTipoDocumento] = useState('VISURA_CATASTALE');
-  const [items, setItems] = useState([]);
+  // Files handed over by the core document upload (visura chosen as type).
+  const [items, setItems] = useState(() => initialFiles.map(makeItem));
   const [fase, setFase] = useState('scelta'); // scelta | revisione | fine
   const [corrente, setCorrente] = useState(-1);
   const [proposta, setProposta] = useState(null);
@@ -345,8 +350,12 @@ function ImportVisuraModal({ onClose, onImported }) {
   ];
   const tipoMancante = unitaNuove.some((u) => u.selezionato && !(u.tipo || '').trim());
 
+  // Embedded: rendered inside another modal (core DocumentoUpload), which
+  // already provides the dialog frame.
+  const Frame = embedded ? EmbeddedFrame : FormModal;
+
   return (
-    <FormModal title="Carica da documento" size="large" onClose={requestClose} closeOnBackdrop={false}>
+    <Frame title="Carica da documento" size="large" onClose={requestClose} closeOnBackdrop={false}>
       <div className="visura-import">
         {error && <div className="visura-error" role="alert">{error}</div>}
 
@@ -609,7 +618,7 @@ function ImportVisuraModal({ onClose, onImported }) {
         onConfirm={() => { setConfermaChiusura(false); handleClose(); }}
         onCancel={() => setConfermaChiusura(false)}
       />
-    </FormModal>
+    </Frame>
   );
 }
 

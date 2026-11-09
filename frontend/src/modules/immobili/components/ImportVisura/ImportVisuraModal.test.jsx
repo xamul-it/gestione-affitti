@@ -162,3 +162,12 @@ describe('ImportVisuraModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+describe('ImportVisuraModal with initial files', () => {
+  it('puts the files received from the document upload in the queue', () => {
+    const file = new File(['%PDF'], 'stefi.pdf', { type: 'application/pdf' });
+    render(<ImportVisuraModal onClose={() => {}} onImported={() => {}} initialFiles={[file]} embedded />);
+    expect(screen.getByText('stefi.pdf')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
