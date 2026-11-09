@@ -12,6 +12,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+REGIMI = ("SOSTITUTIVO", "CUMULATIVO")
+
+
+def _valid_scadenza(scadenza) -> bool:
+    if not isinstance(scadenza, dict):
+        return False
+    if scadenza == {"manuale": True}:
+        return True
+    mesi = scadenza.get("mesi")
+    return (
+        set(scadenza) == {"mesi", "da"}
+        and isinstance(mesi, int) and not isinstance(mesi, bool) and mesi > 0
+        and scadenza["da"] == "data_riferimento"
+    )
+
+
 @dataclass
 class DocumentTypeDefinition:
     """
@@ -35,6 +51,13 @@ class DocumentTypeDefinition:
     parsing_service: Optional[str] = None
     parsing_config: Optional[Dict] = field(default_factory=dict)
     inherits_from: Optional[str] = None
+    descrizione: Optional[str] = None
+    entity_types: Optional[List[str]] = None
+    regime: str = "CUMULATIVO"
+    sottotipi: Optional[List[str]] = None
+    scadenza: Optional[Dict] = None
+    promemoria_giorni: Optional[List[int]] = None
+    form: Optional[str] = None
 
     @property
     def full_key(self) -> str:
@@ -53,6 +76,22 @@ class DocumentTypeDefinition:
         # Validazione parsing_config
         if self.parsing_config is None:
             self.parsing_config = {}
+
+        if self.regime not in REGIMI:
+            raise ValueError(f"{self.codice}: regime '{self.regime}' non valido ({', '.join(REGIMI)})")
+        if self.entity_types is not None:
+            from app.core.platform.models.documento import EntityType
+            valid = {e.value for e in EntityType}
+            unknown = [e for e in self.entity_types if e not in valid]
+            if unknown:
+                raise ValueError(f"{self.codice}: entity_types sconosciuti {unknown}")
+        if self.scadenza is not None and not _valid_scadenza(self.scadenza):
+            raise ValueError(
+                f"{self.codice}: scadenza deve essere null, {{'manuale': true}} "
+                f"o {{'mesi': n>0, 'da': 'data_riferimento'}}"
+            )
+        if self.scadenza is not None:
+            self.richiede_scadenza = True
 
 
 class DocumentTypeRegistry:
@@ -120,7 +159,14 @@ class DocumentTypeRegistry:
                     richiede_scadenza=type_def.get("richiede_scadenza", False),
                     parsing_service=type_def.get("parsing_service"),
                     parsing_config=type_def.get("parsing_config", {}),
-                    inherits_from=type_def.get("inherits_from")
+                    inherits_from=type_def.get("inherits_from"),
+                    descrizione=type_def.get("descrizione"),
+                    entity_types=type_def.get("entity_types"),
+                    regime=type_def.get("regime", "CUMULATIVO"),
+                    sottotipi=type_def.get("sottotipi"),
+                    scadenza=type_def.get("scadenza"),
+                    promemoria_giorni=type_def.get("promemoria_giorni"),
+                    form=type_def.get("form"),
                 )
 
                 # Registra con chiave completa

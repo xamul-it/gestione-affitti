@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect
 from typing import List, Optional
+from app.core.platform_services.document_type_sync import apply_override
 from app.core.database import get_db, get_public_db, get_tenant_schema
 from app.core.auth.dependencies import get_current_user, require_permission
 from app.core.auth.models import User
@@ -240,21 +241,9 @@ def list_tipi_documento(
 
     result = []
     for t in tipi:
-        o = overrides_by_id.get(t.id)
-        if o and o.is_deleted:
-            continue
-        result.append({
-            "id": t.id,
-            "codice": o.codice if o and o.codice is not None else t.codice,
-            "nome": o.nome if o and o.nome is not None else t.nome,
-            "descrizione": o.descrizione if o and o.descrizione is not None else t.descrizione,
-            "categoria": o.categoria if o and o.categoria is not None else t.categoria,
-            "richiede_scadenza": o.richiede_scadenza if o and o.richiede_scadenza is not None else t.richiede_scadenza,
-            "attivo": o.attivo if o and o.attivo is not None else t.attivo,
-            "parsing_service": t.parsing_service,
-            "parsing_config": t.parsing_config,
-            "parsing_callback_url": t.parsing_callback_url,
-        })
+        merged = apply_override(t, overrides_by_id.get(t.id))
+        if merged is not None:
+            result.append(merged)
 
     return result
 
@@ -284,21 +273,10 @@ def get_tipo_documento(
         except Exception:
             override = None
 
-    if override and override.is_deleted:
+    merged = apply_override(tipo, override)
+    if merged is None:
         raise HTTPException(status_code=404, detail="Tipo documento non trovato")
-
-    return {
-        "id": tipo.id,
-        "codice": override.codice if override and override.codice is not None else tipo.codice,
-        "nome": override.nome if override and override.nome is not None else tipo.nome,
-        "descrizione": override.descrizione if override and override.descrizione is not None else tipo.descrizione,
-        "categoria": override.categoria if override and override.categoria is not None else tipo.categoria,
-        "richiede_scadenza": override.richiede_scadenza if override and override.richiede_scadenza is not None else tipo.richiede_scadenza,
-        "attivo": override.attivo if override and override.attivo is not None else tipo.attivo,
-        "parsing_service": tipo.parsing_service,
-        "parsing_config": tipo.parsing_config,
-        "parsing_callback_url": tipo.parsing_callback_url,
-    }
+    return merged
 
 
 @router.get("/categorie-documento", response_model=List[dict])

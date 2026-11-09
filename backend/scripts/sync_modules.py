@@ -44,6 +44,7 @@ from sqlalchemy import create_engine, text  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
 from app.core.module_system.alembic_utils import build_module_alembic_config  # noqa: E402
+from app.core.platform_services.document_type_sync import sync_document_types  # noqa: E402
 
 MODULE_DIR = Path(settings.resolved_module_dir)
 sys.path.insert(0, str(MODULE_DIR))
@@ -227,6 +228,28 @@ def main() -> int:
                 log("==> Installazioni fallite: seed pubblici non eseguiti")
                 return 1
 
+    log("==> Tipologie documentali")
+    # complete=True deactivates also unowned legacy types: only safe when
+    # every registered module's manifest was read.
+    complete = len(manifests) == len(registered)
+    declared = sum(len(m.get("document_types") or []) for m in manifests.values())
+    log(f"  {declared} tipologie dichiarate da {len(manifests)} moduli (completo: {complete})")
+    if not args.dry_run:
+        with Session(engine) as db:
+            try:
+                db.execute(text("SET search_path TO public"))
+                report = sync_document_types(db, manifests, complete=complete)
+                db.commit()
+                log(f"  create {report.creati or '-'}; aggiornate {report.aggiornati or '-'}; "
+                    f"disattivate {report.disattivati or '-'}")
+                for e in report.errori:
+                    log(f"  ERRORE tipologia {e}")
+                    ok = False
+            except Exception as exc:
+                db.rollback()
+                log(f"  ERRORE sync tipologie: {exc}")
+                ok = False
+
     log("==> Seed pubblici")
     seeds = [
         (n, (manifests[n].get("endpoints") or {}).get("register"))
@@ -237,7 +260,7 @@ def main() -> int:
     for name, entry in seeds:
         log(f"  {name}: {entry}")
     if args.dry_run or not seeds:
-        return 0
+        return 0 if ok else 1
 
     load_all_models(order)
     for name, entry in seeds:
