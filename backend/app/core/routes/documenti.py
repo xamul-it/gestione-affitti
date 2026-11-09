@@ -3,7 +3,8 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from sqlalchemy.orm import Session, joinedload, selectinload
 from typing import List, Optional
 from app.core.database import get_db, get_tenant_schema
 from app.core.auth.dependencies import require_permission
@@ -18,6 +19,8 @@ import mimetypes
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/documenti", tags=["Documenti"])
+
+MAX_LIMIT = 500
 
 # Legacy TipoDocumentoEnum values that have a typed equivalent.
 _LEGACY_ALIASES = {"PLANIMETRIA": "PLANIMETRIA_CATASTALE", "CERTIFICATO_ENERGETICO": "APE"}
@@ -105,16 +108,22 @@ def get_documenti(
             query = query.filter(TipoDocumentoModel.modulo == modulo)
     if not includi_sostituiti:
         query = query.filter(Documento.stato == "CORRENTE")
-    documenti = query.order_by(
-        Documento.data_riferimento.desc().nullslast(), Documento.created_at.desc()
-    ).all()
-
-    service = DocumentoService(db, None, None)
-    result = [to_out(d, service) for d in documenti]
     if scadenza_entro_giorni is not None:
         soglia = date.today() + timedelta(days=scadenza_entro_giorni)
-        result = [d for d in result if d.data_scadenza_effettiva and d.data_scadenza_effettiva <= soglia]
-    return result[skip: skip + limit]
+        # Effective scadenza = min(data_scadenza, dati.decaduto_il): <= soglia iff either is.
+        query = query.filter(or_(
+            Documento.data_scadenza <= soglia,
+            Documento.dati.op("->>")("decaduto_il") <= soglia.isoformat(),
+        ))
+    documenti = (
+        query.options(selectinload(Documento.files), joinedload(Documento.tipo))
+        .order_by(Documento.data_riferimento.desc().nullslast(), Documento.created_at.desc(), Documento.id.desc())
+        .offset(max(skip, 0))
+        .limit(max(1, min(limit, MAX_LIMIT)))
+        .all()
+    )
+    service = DocumentoService(db, None, None)
+    return [to_out(d, service) for d in documenti]
 
 
 @router.get("/files/{file_id}/view")
@@ -130,15 +139,44 @@ def view_file(
     return _inline(f.file_path, f.nome_file, f.mime_type)
 
 
+# Types shown inline in the preview, detected from the file's first bytes
+# (the stored/uploaded content type is client-controlled). Anything else is
+# served as an attachment.
+_PREVIEW_SIGNATURES = (
+    (b"%PDF-", "application/pdf"),
+    (b"\x89PNG\r\n\x1a\n", "image/png"),
+    (b"\xff\xd8\xff", "image/jpeg"),
+    (b"GIF87a", "image/gif"),
+    (b"GIF89a", "image/gif"),
+)
+_SAFE_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": "sandbox; default-src 'none'; img-src 'self'; object-src 'self'",
+}
+
+
+def _preview_type(path) -> Optional[str]:
+    with open(path, "rb") as fh:
+        head = fh.read(16)
+    for signature, mime in _PREVIEW_SIGNATURES:
+        if head.startswith(signature):
+            return mime
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
 def _inline(relative_path: str, nome_file: Optional[str], mime_type: Optional[str]) -> FileResponse:
     path = file_storage.get_file_path(relative_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail="File non trovato sul filesystem")
+    preview = _preview_type(path)
     return FileResponse(
         path=path,
         filename=nome_file,
-        media_type=mime_type or mimetypes.guess_type(nome_file or "")[0] or "application/octet-stream",
-        content_disposition_type="inline",
+        media_type=preview or "application/octet-stream",
+        content_disposition_type="inline" if preview else "attachment",
+        headers=_SAFE_HEADERS,
     )
 
 
