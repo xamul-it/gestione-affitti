@@ -1,243 +1,194 @@
+/* CertificatiScadenzaWidget — design system tokens (styles/tokens.css).
+ * All rules scoped under .certificati-scadenza-widget: widget CSS is global
+ * once loaded, and names like .stat-badge/.btn are reused by other widgets. */
+
 .certificati-scadenza-widget {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   height: 100%;
-  padding: 16px;
-  background: white;
-  border-radius: 8px;
+  font-family: var(--font-family-base);
+  color: var(--color-ink);
 }
 
 /* Header */
-.widget-header {
+.certificati-scadenza-widget .widget-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: var(--space-3);
+  padding-right: var(--space-6); /* room for the container's remove button */
 }
 
-.widget-header h3 {
+.certificati-scadenza-widget .widget-title {
   margin: 0;
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-h3);
   font-weight: 600;
-  color: #333;
+  color: var(--color-ink);
 }
 
-.view-all-link {
-  color: #007bff;
+.certificati-scadenza-widget .widget-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--gray-200);
+  color: var(--color-ink);
+}
+
+.certificati-scadenza-widget .view-all-link {
+  color: var(--color-brand);
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  transition: color 0.2s;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.view-all-link:hover {
-  color: #0056b3;
+.certificati-scadenza-widget .view-all-link:hover {
+  color: var(--color-brand-dark);
   text-decoration: underline;
 }
 
 /* Stats Summary */
-.stats-summary {
+.certificati-scadenza-widget .stats-summary {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-.stat-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.stat-badge.scaduto {
-  background-color: #fee;
-  color: #c00;
-  border: 1px solid #fcc;
-}
-
-.stat-badge.urgente {
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
-}
-
-.stat-badge.attenzione {
-  background-color: #fff9e6;
-  color: #996600;
-  border: 1px solid #ffe5a3;
-}
-
-.badge-value {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.badge-label {
-  font-size: 12px;
-  font-weight: 500;
-}
-
 /* Certificates List */
-.certificati-list {
+.certificati-scadenza-widget .certificati-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-2);
   flex: 1;
   overflow-y: auto;
   max-height: 300px;
 }
 
-.certificato-item {
+.certificati-scadenza-widget .certificato-item {
   display: flex;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 6px;
-  border-left: 4px solid transparent;
-  background-color: #f8f9fa;
-  transition: all 0.2s;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-200);
+  border-left: 3px solid var(--gray-400);
+  background: var(--gray-100);
 }
 
-.certificato-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateX(4px);
+.certificati-scadenza-widget .certificato-item.scaduto {
+  border-left-color: var(--color-danger);
 }
 
-.certificato-item.scaduto {
-  border-left-color: #dc3545;
-  background-color: #fff5f5;
+.certificati-scadenza-widget .certificato-item.urgente {
+  border-left-color: var(--color-warning);
 }
 
-.certificato-item.urgente {
-  border-left-color: #ffc107;
-  background-color: #fffbf0;
+.certificati-scadenza-widget .certificato-item.attenzione {
+  border-left-color: var(--gray-500);
 }
 
-.certificato-item.attenzione {
-  border-left-color: #f0ad4e;
-  background-color: #fffef7;
-}
-
-.certificato-icon {
-  font-size: 20px;
-  line-height: 1;
+.certificati-scadenza-widget .certificato-icon {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  padding-top: 1px;
+  color: var(--gray-600);
 }
 
-.certificato-content {
+.certificati-scadenza-widget .certificato-item.scaduto .certificato-icon {
+  color: var(--color-danger);
+}
+
+.certificati-scadenza-widget .certificato-item.urgente .certificato-icon {
+  color: #856404;
+}
+
+.certificati-scadenza-widget .certificato-content {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
-.certificato-title {
-  font-size: 14px;
+.certificati-scadenza-widget .certificato-title {
+  font-size: var(--font-size-small);
   font-weight: 600;
-  color: #333;
+  color: var(--color-ink);
 }
 
-.certificato-subtitle {
+.certificati-scadenza-widget .certificato-subtitle {
   font-size: 12px;
-  color: #666;
+  color: var(--gray-700);
 }
 
-.certificato-date {
-  font-size: 11px;
-  color: #999;
-  font-weight: 500;
+.certificati-scadenza-widget .certificato-date {
+  font-size: 12px;
+  color: var(--gray-600);
 }
 
 /* No Certificates */
-.no-certificates {
+.certificati-scadenza-widget .no-certificates {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
   text-align: center;
-  color: #28a745;
+  color: var(--gray-700);
   flex: 1;
 }
 
-.no-certificates .icon {
-  font-size: 48px;
-  margin-bottom: 12px;
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #d4edda;
-  border-radius: 50%;
-  color: #28a745;
+.certificati-scadenza-widget .no-certificates-icon {
+  color: var(--color-success);
 }
 
-.no-certificates p {
+.certificati-scadenza-widget .no-certificates p {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--font-size-small);
   font-weight: 500;
 }
 
 /* Quick Actions */
-.widget-actions {
+.certificati-scadenza-widget .widget-actions {
   margin-top: auto;
 }
 
-.btn {
-  display: inline-block;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-warning {
-  background-color: #ffc107;
-  color: #212529;
-}
-
-.btn-warning:hover {
-  background-color: #e0a800;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
-}
-
-.btn-block {
-  display: block;
+.certificati-scadenza-widget .widget-action-btn {
   width: 100%;
+  box-sizing: border-box;
+  text-decoration: none;
 }
 
 /* Loading & Error States */
-.widget-loading,
-.widget-error {
+.certificati-scadenza-widget .widget-loading,
+.certificati-scadenza-widget .widget-error {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: var(--space-6) var(--space-4);
   text-align: center;
-  color: #666;
+  color: var(--gray-600);
 }
 
-.widget-error {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 6px;
+.certificati-scadenza-widget .widget-error {
+  color: var(--color-danger-dark);
+  background-color: #fde3d8;
+  border-radius: var(--radius-md);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .certificati-list {
+  .certificati-scadenza-widget .certificati-list {
     max-height: 200px;
   }
 }

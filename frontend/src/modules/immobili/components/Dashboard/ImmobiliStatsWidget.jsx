@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { unitaImmobiliariAPI, proprietariAPI, condominAPI } from '../../services/immobiliAPI';
+import '../../../../components/UI/Button.css';
+import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import './ImmobiliStatsWidget.css';
 
 /**
@@ -79,7 +81,7 @@ function ImmobiliStatsWidget() {
   if (error) {
     return (
       <div className="immobili-stats-widget">
-        <div className="widget-error">{error}</div>
+        <div className="widget-error" role="alert">{error}</div>
       </div>
     );
   }
@@ -88,7 +90,12 @@ function ImmobiliStatsWidget() {
     <div className="immobili-stats-widget">
       {/* Header */}
       <div className="widget-header">
-        <h3>🏢 Immobili</h3>
+        <h3 className="widget-title">
+          <span className="widget-title-icon" aria-hidden="true">
+            {renderIcon('building', { size: 18 })}
+          </span>
+          Immobili
+        </h3>
         <Link to="/immobili" className="view-all-link">
           Vedi tutto
         </Link>
@@ -96,44 +103,47 @@ function ImmobiliStatsWidget() {
 
       {/* Stats Grid */}
       <div className="stats-grid">
-        <div className="stat-card totale">
-          <div className="stat-value">{stats.totale_immobili}</div>
-          <div className="stat-label">Unità Immobiliari</div>
-        </div>
+        <Link to="/immobili" className="stat-card totale">
+          <span className="stat-value">{stats.totale_immobili}</span>
+          <span className="stat-label">Unità Immobiliari</span>
+        </Link>
 
-        <div className="stat-card proprietari">
-          <div className="stat-icon">👤</div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.totale_proprietari}</div>
-            <div className="stat-label">Proprietari</div>
-          </div>
-        </div>
+        <Link to="/proprietari" className="stat-card stat-card--row">
+          <span className="stat-icon" aria-hidden="true">
+            {renderIcon('user-tie', { size: 22 })}
+          </span>
+          <span className="stat-content">
+            <span className="stat-value">{stats.totale_proprietari}</span>
+            <span className="stat-label">Proprietari</span>
+          </span>
+        </Link>
 
-        <div className="stat-card condomini">
-          <div className="stat-icon">🏛️</div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.totale_condomini}</div>
-            <div className="stat-label">Condomini</div>
-          </div>
-        </div>
+        <Link to="/condomini" className="stat-card stat-card--row">
+          <span className="stat-icon" aria-hidden="true">
+            {renderIcon('building-columns', { size: 22 })}
+          </span>
+          <span className="stat-content">
+            <span className="stat-value">{stats.totale_condomini}</span>
+            <span className="stat-label">Condomini</span>
+          </span>
+        </Link>
 
-        <div className="stat-card liberi">
+        <div className="stat-card stat-card--liberi">
           <div className="stat-value">{stats.immobili_liberi}</div>
           <div className="stat-label">Liberi</div>
-          <div className="stat-badge available">●</div>
         </div>
 
-        <div className="stat-card affittati">
+        <div className="stat-card stat-card--affittati">
           <div className="stat-value">{stats.immobili_affittati}</div>
           <div className="stat-label">Affittati</div>
-          <div className="stat-badge occupied">●</div>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="widget-actions">
-        <Link to="/immobili/nuovo" className="btn btn-primary btn-block">
-          + Nuova Unità Immobiliare
+        <Link to="/immobili" className="ds-btn ds-btn--secondary ds-btn--md widget-action-btn">
+          {renderIcon('building', { size: 16 })}
+          Gestisci Unità Immobiliari
         </Link>
       </div>
     </div>

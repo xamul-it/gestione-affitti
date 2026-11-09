@@ -1,199 +1,184 @@
+/* ImmobiliStatsWidget — design system tokens (styles/tokens.css).
+ * All rules scoped under .immobili-stats-widget: widget CSS is global once
+ * loaded, and names like .stat-badge/.btn are reused by other widgets. */
+
 .immobili-stats-widget {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   height: 100%;
-  padding: 16px;
-  background: white;
-  border-radius: 8px;
+  font-family: var(--font-family-base);
+  color: var(--color-ink);
 }
 
 /* Header */
-.widget-header {
+.immobili-stats-widget .widget-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: var(--space-3);
+  padding-right: var(--space-6); /* room for the container's remove button */
 }
 
-.widget-header h3 {
+.immobili-stats-widget .widget-title {
   margin: 0;
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-h3);
   font-weight: 600;
-  color: #333;
+  color: var(--color-ink);
 }
 
-.view-all-link {
-  color: #007bff;
+.immobili-stats-widget .widget-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--gray-200);
+  color: var(--color-ink);
+}
+
+.immobili-stats-widget .view-all-link {
+  color: var(--color-brand);
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  transition: color 0.2s;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.view-all-link:hover {
-  color: #0056b3;
+.immobili-stats-widget .view-all-link:hover {
+  color: var(--color-brand-dark);
   text-decoration: underline;
 }
 
 /* Stats Grid */
-.stats-grid {
+.immobili-stats-widget .stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
   flex: 1;
 }
 
-.stat-card {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  padding: 12px;
+.immobili-stats-widget .stat-card {
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  position: relative;
-  transition: all 0.2s;
+  gap: var(--space-2);
+  color: inherit;
+  text-decoration: none;
 }
 
-.stat-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+.immobili-stats-widget a.stat-card {
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.stat-card.totale {
+.immobili-stats-widget a.stat-card:hover {
+  border-color: var(--gray-400);
+  background: #fff;
+}
+
+.immobili-stats-widget .stat-card.totale {
   grid-column: span 2;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
-  border: none;
+  background: var(--color-ink);
+  border-color: var(--color-ink);
 }
 
-.stat-card.totale .stat-value {
-  font-size: 36px;
-  color: white;
+.immobili-stats-widget .stat-card.totale .stat-value {
+  font-size: var(--font-size-h1);
+  color: #fff;
 }
 
-.stat-card.totale .stat-label {
-  color: rgba(255, 255, 255, 0.9);
+.immobili-stats-widget .stat-card.totale .stat-label {
+  color: var(--gray-300);
 }
 
-.stat-card.proprietari,
-.stat-card.condomini {
+.immobili-stats-widget a.stat-card.totale:hover {
+  background: var(--color-ink-hover);
+}
+
+.immobili-stats-widget .stat-card--liberi {
+  border-left: 3px solid var(--color-warning);
+}
+
+.immobili-stats-widget .stat-card--affittati {
+  border-left: 3px solid var(--color-success);
+}
+
+.immobili-stats-widget .stat-card--row {
   flex-direction: row;
   justify-content: flex-start;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-.stat-icon {
-  font-size: 28px;
-  line-height: 1;
+.immobili-stats-widget .stat-icon {
+  display: inline-flex;
+  color: var(--gray-600);
 }
 
-.stat-content {
+.immobili-stats-widget .stat-content {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.stat-value {
-  font-size: 24px;
+.immobili-stats-widget .stat-value {
+  font-size: var(--font-size-h2);
   font-weight: 700;
-  color: #333;
+  color: var(--color-ink);
   line-height: 1;
 }
 
-.stat-label {
+.immobili-stats-widget .stat-label {
   font-size: 12px;
-  font-weight: 500;
-  color: #666;
+  font-weight: 600;
+  color: var(--gray-600);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.stat-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 16px;
-  line-height: 1;
-}
-
-.stat-badge.available {
-  color: #28a745;
-}
-
-.stat-badge.occupied {
-  color: #ffc107;
-}
-
-.stat-card.liberi {
-  border-left: 3px solid #28a745;
-}
-
-.stat-card.affittati {
-  border-left: 3px solid #ffc107;
-}
-
 /* Quick Actions */
-.widget-actions {
+.immobili-stats-widget .widget-actions {
   margin-top: auto;
 }
 
-.btn {
-  display: inline-block;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background-color: #007bff;
-  color: white;
-}
-
-.btn-primary:hover {
-  background-color: #0056b3;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
-}
-
-.btn-block {
-  display: block;
+.immobili-stats-widget .widget-action-btn {
   width: 100%;
+  box-sizing: border-box;
+  text-decoration: none;
 }
 
 /* Loading & Error States */
-.widget-loading,
-.widget-error {
+.immobili-stats-widget .widget-loading,
+.immobili-stats-widget .widget-error {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: var(--space-6) var(--space-4);
   text-align: center;
-  color: #666;
+  color: var(--gray-600);
 }
 
-.widget-error {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 6px;
+.immobili-stats-widget .widget-error {
+  color: var(--color-danger-dark);
+  background-color: #fde3d8;
+  border-radius: var(--radius-md);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .stats-grid {
+  .immobili-stats-widget .stats-grid {
     grid-template-columns: 1fr;
   }
 
-  .stat-card.totale {
+  .immobili-stats-widget .stat-card.totale {
     grid-column: span 1;
   }
 }

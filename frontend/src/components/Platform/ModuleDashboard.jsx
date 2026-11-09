@@ -1,6 +1,10 @@
 import React, { useState, useEffect, Suspense } from 'react'
 import axios from 'axios'
+import {
+  AlertTriangle, BarChart3, Check, CheckCircle, ChartLine, Inbox, Plus, Puzzle, RefreshCw, RotateCcw, Save, X,
+} from 'lucide-react'
 import { LazyWidgetLoader } from '../../core/widgets'
+import { Button } from '../UI'
 import './ModuleDashboard.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
@@ -135,6 +139,15 @@ function ModuleDashboard({ moduleId, moduleLabel }) {
     }
   }
 
+  useEffect(() => {
+    if (!showWidgetSelector) return undefined
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setShowWidgetSelector(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [showWidgetSelector])
+
   function openWidgetSelector() {
     const currentWidgetIds = widgets.map(w => w.id)
     setSelectedWidgetIds(currentWidgetIds)
@@ -156,11 +169,11 @@ function ModuleDashboard({ moduleId, moduleLabel }) {
     return (
       <div className="module-dashboard">
         <div className="dashboard-error">
-          <i className="fas fa-exclamation-triangle"></i>
+          <AlertTriangle size={48} strokeWidth={1.7} className="dashboard-error-icon" aria-hidden="true" />
           <p>{error}</p>
-          <button onClick={loadModuleWidgets} className="retry-btn">
-            <i className="fas fa-redo"></i> Riprova
-          </button>
+          <Button variant="primary" onClick={loadModuleWidgets}>
+            <RotateCcw size={16} strokeWidth={1.7} aria-hidden="true" /> Riprova
+          </Button>
         </div>
       </div>
     )
@@ -170,26 +183,27 @@ function ModuleDashboard({ moduleId, moduleLabel }) {
     <div className="module-dashboard">
       <div className="module-dashboard-header">
         <h2>
-          <i className="fas fa-chart-line"></i> Dashboard {moduleLabel}
+          <ChartLine size={22} strokeWidth={1.7} className="module-dashboard-title-icon" aria-hidden="true" />
+          Dashboard {moduleLabel}
         </h2>
         <div className="dashboard-actions">
-          <button className="btn-add-widget" onClick={openWidgetSelector}>
-            <i className="fas fa-plus"></i> Widget
-          </button>
-          <button className="btn-refresh" onClick={loadModuleWidgets}>
-            <i className="fas fa-sync-alt"></i> Aggiorna
-          </button>
+          <Button variant="secondary" onClick={openWidgetSelector}>
+            <Plus size={16} strokeWidth={1.7} aria-hidden="true" /> Widget
+          </Button>
+          <Button variant="ghost" onClick={loadModuleWidgets}>
+            <RefreshCw size={16} strokeWidth={1.7} aria-hidden="true" /> Aggiorna
+          </Button>
         </div>
       </div>
 
       {widgets.length === 0 ? (
         <div className="dashboard-empty">
-          <i className="fas fa-chart-bar"></i>
+          <BarChart3 size={48} strokeWidth={1.7} className="dashboard-empty-icon" aria-hidden="true" />
           <h3>Nessun Widget Attivo</h3>
           <p>Clicca su "Widget" per aggiungere widget alla tua dashboard {moduleLabel}</p>
-          <button className="btn-add-widget" onClick={openWidgetSelector}>
-            <i className="fas fa-plus"></i> Aggiungi Widget
-          </button>
+          <Button variant="primary" onClick={openWidgetSelector}>
+            <Plus size={16} strokeWidth={1.7} aria-hidden="true" /> Aggiungi Widget
+          </Button>
         </div>
       ) : (
         <div className="module-dashboard-grid">
@@ -206,8 +220,9 @@ function ModuleDashboard({ moduleId, moduleLabel }) {
                 className="widget-remove-btn"
                 onClick={() => removeWidget(widget.id)}
                 title="Rimuovi widget"
+                aria-label="Rimuovi widget"
               >
-                ×
+                <X size={16} strokeWidth={2} aria-hidden="true" />
               </button>
               <div className="widget-body">
                 <Suspense fallback={
@@ -230,13 +245,23 @@ function ModuleDashboard({ moduleId, moduleLabel }) {
       {/* Widget Selector Modal */}
       {showWidgetSelector && (
         <div className="widget-manager-modal" onClick={() => setShowWidgetSelector(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="module-dashboard-widget-dialog-title"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
-              <h2>
-                <i className="fas fa-puzzle-piece"></i> Widget {moduleLabel}
+              <h2 id="module-dashboard-widget-dialog-title">
+                <Puzzle size={20} strokeWidth={1.7} className="modal-title-icon" aria-hidden="true" /> Widget {moduleLabel}
               </h2>
-              <button className="modal-close-btn" onClick={() => setShowWidgetSelector(false)}>
-                <i className="fas fa-times"></i>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowWidgetSelector(false)}
+                aria-label="Chiudi"
+              >
+                <X size={18} strokeWidth={1.7} aria-hidden="true" />
               </button>
             </div>
 
@@ -247,7 +272,7 @@ function ModuleDashboard({ moduleId, moduleLabel }) {
 
               {availableWidgets.length === 0 ? (
                 <div className="no-widgets-message">
-                  <i className="fas fa-inbox"></i>
+                  <Inbox size={40} strokeWidth={1.7} aria-hidden="true" />
                   <p>Nessun widget disponibile per questo modulo</p>
                 </div>
               ) : (
@@ -269,7 +294,7 @@ function ModuleDashboard({ moduleId, moduleLabel }) {
                             onChange={() => toggleWidget(widget.id)}
                           />
                           <div className="checkbox-custom">
-                            <i className="fas fa-check"></i>
+                            <Check size={14} strokeWidth={2.5} aria-hidden="true" />
                           </div>
                         </div>
                         <div className="widget-card-content">
@@ -296,16 +321,16 @@ function ModuleDashboard({ moduleId, moduleLabel }) {
               <div className="modal-footer">
                 <div className="modal-footer-info">
                   <span>
-                    <i className="fas fa-check-circle"></i> {selectedWidgetIds.length} widget selezionati
+                    <CheckCircle size={16} strokeWidth={1.7} aria-hidden="true" /> {selectedWidgetIds.length} widget selezionati
                   </span>
                 </div>
                 <div className="modal-footer-actions">
-                  <button className="btn-modal-cancel" onClick={() => setShowWidgetSelector(false)}>
+                  <Button variant="secondary" onClick={() => setShowWidgetSelector(false)}>
                     Annulla
-                  </button>
-                  <button className="btn-modal-save" onClick={saveWidgetSelection}>
-                    <i className="fas fa-save"></i> Salva
-                  </button>
+                  </Button>
+                  <Button variant="primary" onClick={saveWidgetSelection}>
+                    <Save size={16} strokeWidth={1.7} aria-hidden="true" /> Salva
+                  </Button>
                 </div>
               </div>
             )}
