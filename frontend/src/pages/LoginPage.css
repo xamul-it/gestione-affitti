@@ -3,158 +3,79 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: var(--gray-100);
+  font-family: var(--font-family-base);
 }
 
 .login-container {
   width: 100%;
   max-width: 400px;
-  padding: 20px;
+  padding: var(--space-4);
 }
 
 .login-card {
-  background: white;
-  border-radius: 10px;
-  padding: 40px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  padding: var(--space-5);
 }
 
 .login-card h1 {
-  margin: 0 0 10px 0;
-  font-size: 24px;
-  color: #333;
+  margin: 0 0 var(--space-1) 0;
+  font-size: var(--font-size-h2);
+  color: var(--color-ink);
   text-align: center;
 }
 
 .login-card h2 {
-  margin: 0 0 30px 0;
-  font-size: 18px;
-  color: #666;
+  margin: 0 0 var(--space-4) 0;
+  font-size: var(--font-size-body);
+  color: var(--gray-600);
   text-align: center;
-  font-weight: normal;
+  font-weight: 400;
 }
 
-.error-message {
-  background-color: #fee;
-  color: #c33;
-  padding: 15px;
-  border-radius: 5px;
-  margin-bottom: 20px;
-  border: 1px solid #fcc;
-  font-size: 13px;
-  line-height: 1.6;
-  white-space: pre-line; /* Preserva i line break \n */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+/* Preserva i line break \n nei messaggi di errore del backend */
+.login-card .core-error-message {
+  margin-bottom: var(--space-3);
+}
+
+.login-card .core-error-message__text {
+  white-space: pre-line;
   max-height: 300px;
   overflow-y: auto;
-  text-align: left;
 }
 
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  color: #333;
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 14px;
-  transition: border-color 0.3s;
-  box-sizing: border-box;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.form-group input:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-}
-
-.login-button {
-  width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.login-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-}
-
-.login-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.login-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.login-footer {
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
-  text-align: center;
-  color: #666;
-  font-size: 13px;
-}
-
-.login-footer p {
-  margin: 5px 0;
-}
-
-.login-footer strong {
-  color: #333;
-}
-
-/* Checkbox styling */
-.checkbox-group {
-  margin-bottom: 20px;
-}
-
-.checkbox-label {
+.login-remember {
   display: flex;
   align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-small);
+  color: var(--gray-700);
   cursor: pointer;
-  font-weight: normal;
   user-select: none;
 }
 
-.checkbox-label input[type="checkbox"] {
-  width: auto;
-  margin-right: 10px;
+.login-remember input[type="checkbox"] {
+  accent-color: var(--color-brand);
   cursor: pointer;
-  accent-color: #667eea;
 }
 
-.checkbox-label span {
-  font-size: 14px;
-  color: #555;
+.login-submit {
+  width: 100%;
 }
 
-.checkbox-label input[type="checkbox"]:disabled {
-  cursor: not-allowed;
+.login-footer {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--gray-200);
+  text-align: center;
+  color: var(--gray-600);
+  font-size: var(--font-size-small);
 }
 
-.checkbox-label input[type="checkbox"]:disabled + span {
-  color: #aaa;
+.login-footer p {
+  margin: var(--space-1) 0;
+}
+
+.login-footer strong {
+  color: var(--color-ink);
 }

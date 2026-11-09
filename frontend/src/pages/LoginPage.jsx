@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
+import { Button, Card, FormField } from '../components/UI';
+import { ErrorMessage } from '../core/components/common';
 import './LoginPage.css';
 
 export default function LoginPage() {
@@ -34,7 +36,7 @@ export default function LoginPage() {
         navigate(from, { replace: true });
       } catch (err) {
         console.error('Failed to fetch tenants:', err);
-        setError('Login successful but failed to load tenants. Please refresh the page.');
+        setError('Accesso effettuato, ma non è stato possibile caricare i database. Ricarica la pagina.');
       }
     } else {
       setError(result.error);
@@ -46,19 +48,14 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-container">
-        <div className="login-card">
+        <Card className="login-card">
           <h1>Gestione Affitti</h1>
-          <h2>Login</h2>
+          <h2>Accedi al tuo account</h2>
 
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
+          {error && <ErrorMessage message={error} onDismiss={() => setError('')} />}
 
           <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="username">Username</label>
+            <FormField label="Username" htmlFor="username">
               <input
                 type="text"
                 id="username"
@@ -66,49 +63,44 @@ export default function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 autoFocus
+                autoComplete="username"
                 disabled={loading}
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
+            <FormField label="Password" htmlFor="password">
               <input
                 type="password"
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
                 disabled={loading}
               />
-            </div>
+            </FormField>
 
-            <div className="form-group checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  disabled={loading}
-                />
-                <span>Ricordami (mantieni la sessione per 30 giorni)</span>
-              </label>
-            </div>
+            <label className="login-remember">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                disabled={loading}
+              />
+              <span>Ricordami (mantieni la sessione per 30 giorni)</span>
+            </label>
 
-            <button
-              type="submit"
-              className="login-button"
-              disabled={loading}
-            >
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
+            <Button type="submit" variant="primary" className="login-submit" loading={loading}>
+              {loading ? 'Accesso in corso...' : 'Accedi'}
+            </Button>
           </form>
 
           <div className="login-footer">
-            <p>Default credentials:</p>
+            <p>Credenziali di default:</p>
             <p><strong>Username:</strong> admin</p>
             <p><strong>Password:</strong> changeme123</p>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );
