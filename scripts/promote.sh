@@ -57,7 +57,7 @@ STORAGE_LIST_BEFORE="$BACKUP_DIR/storage_${STORAGE_STAMP}.before.txt"
 if [ -d "$STORAGE_DIR" ]; then
     echo "==> Archivio documenti (backend/storage)"
     (umask 077; tar -C "$STABLE_DIR/backend" -czf "$STORAGE_ARCHIVE" storage)
-    (umask 077; find "$STORAGE_DIR" -type f | sort > "$STORAGE_LIST_BEFORE")
+    (umask 077; find "$STORAGE_DIR" -type f | LC_ALL=C sort > "$STORAGE_LIST_BEFORE")
     echo "    $STORAGE_ARCHIVE ($(wc -l < "$STORAGE_LIST_BEFORE") file)"
     ls -t "$BACKUP_DIR"/storage_*.tgz 2>/dev/null | tail -n +15 | while read -r old; do
         rm -f "$old" "${old%.tgz}.before.txt"
@@ -75,7 +75,7 @@ git merge --ff-only refs/tmp/promote-source
 git update-ref -d refs/tmp/promote-source
 
 if [ -f "$STORAGE_LIST_BEFORE" ]; then
-    missing="$(comm -23 "$STORAGE_LIST_BEFORE" <(find "$STORAGE_DIR" -type f 2>/dev/null | sort))"
+    missing="$(LC_ALL=C comm -23 "$STORAGE_LIST_BEFORE" <(find "$STORAGE_DIR" -type f 2>/dev/null | LC_ALL=C sort))"
     if [ -n "$missing" ]; then
         echo "ERRORE: l'aggiornamento del codice ha tolto documenti da backend/storage:" >&2
         echo "$missing" | sed 's/^/    /' >&2
