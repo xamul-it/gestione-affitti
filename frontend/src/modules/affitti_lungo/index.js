@@ -32,4 +32,4 @@ export { default as TecnicoForm } from './components/Tecnici/TecnicoForm';
 
 // Documenti
 export { default as DocumentiSection } from '../../components/Documenti/DocumentiSection';
-export { default as DocumentoUpload } from '../../components/Documenti/DocumentoUpload';
+export { default as DocumentoUpload } from '../../core/components/Documenti/DocumentoUpload';

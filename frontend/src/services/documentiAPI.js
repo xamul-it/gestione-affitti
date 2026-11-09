@@ -28,6 +28,15 @@ export const documentiAPI = {
   getAll: (entityType, entityId) => api.get('/documenti/', {
     params: { entity_type: entityType, entity_id: entityId }
   }),
+  // Document types applicable to an entity type (manifest-declared, with tenant overrides).
+  getTipi: (entityType) => api.get('/documenti/tipi', { params: { entity_type: entityType } }),
+  // Filters: entity_type, entity_id, tipo_codice, modulo, includi_sostituiti, scadenza_entro_giorni.
+  list: (params) => api.get('/documenti/', { params }),
+  storico: (id) => api.get(`/documenti/${id}/storico`),
+  // Preview needs the Authorization header: fetch as blob, show via object URL.
+  view: (id) => api.get(`/documenti/${id}/view`, { responseType: 'blob' }),
+  viewFile: (fileId) => api.get(`/documenti/files/${fileId}/view`, { responseType: 'blob' }),
+  remove: (id) => api.delete(`/documenti/${id}`),
   getById: (id) => api.get(`/documenti/${id}`),
   upload: (formData) => api.post('/documenti/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
