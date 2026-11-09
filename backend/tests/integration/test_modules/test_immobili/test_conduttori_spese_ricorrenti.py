@@ -13,7 +13,6 @@ from sqlalchemy import text
 
 from app.core.auth.models import User
 from app.core.auth.security import get_password_hash
-from app.core.database import SessionLocal
 from app.core.platform.models import Scadenza, StatoScadenza
 
 from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
@@ -49,15 +48,11 @@ def override_get_db():
 
 
 @pytest.fixture
-def pg_session():
-    session = SessionLocal()
-    try:
-        session.execute(text(f"SET search_path TO {TENANT}, public"))
-        session.commit()
-        yield session
-    finally:
-        session.rollback()
-        session.close()
+def pg_session(db_session):
+    # Rolled-back transaction from tests/integration/conftest.py: commits in
+    # the routes only release a savepoint, nothing reaches the dev DB.
+    db_session.execute(text(f"SET search_path TO {TENANT}, public"))
+    return db_session
 
 
 @pytest.fixture

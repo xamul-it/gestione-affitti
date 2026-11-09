@@ -1,13 +1,16 @@
 """
-Integration tests for Soggetti API endpoints.
+Integration tests for the Soggetti API (/anagrafica/soggetti-v2).
 
-Tests the complete API stack with database.
+Tests the complete API stack with database. Ported from the old
+/anagrafica/soggetti routes (routes/soggetti.py, no longer registered);
+its find-similar endpoint has no v2 counterpart, the similarity logic is
+covered by tests/unit/test_modules/test_anagrafica/test_similarity_service.py.
 """
 
 import pytest
 from datetime import date
 
-from modules.anagrafica_italiana.models import SoggettoAnagrafico
+from anagrafica_italiana.models import SoggettoAnagrafico
 
 
 @pytest.mark.integration
@@ -29,7 +32,7 @@ class TestSoggettiCRUDAPI:
         }
 
         # Act
-        response = auth_client.post("/api/v1/anagrafica/soggetti/", json=payload)
+        response = auth_client.post("/api/v1/anagrafica/soggetti-v2/", json=payload)
 
         # Assert
         assert response.status_code == 201
@@ -55,7 +58,7 @@ class TestSoggettiCRUDAPI:
             "cognome": "Rossi",
             "codice_fiscale": "RSSMRA80A01H501Z",
         }
-        auth_client.post("/api/v1/anagrafica/soggetti/", json=first_payload)
+        auth_client.post("/api/v1/anagrafica/soggetti-v2/", json=first_payload)
 
         # Act - try to create duplicate
         duplicate_payload = {
@@ -64,7 +67,7 @@ class TestSoggettiCRUDAPI:
             "cognome": "Verdi",
             "codice_fiscale": "RSSMRA80A01H501Z",  # Same CF
         }
-        response = auth_client.post("/api/v1/anagrafica/soggetti/", json=duplicate_payload)
+        response = auth_client.post("/api/v1/anagrafica/soggetti-v2/", json=duplicate_payload)
 
         # Assert
         assert response.status_code == 400
@@ -90,12 +93,12 @@ class TestSoggettiCRUDAPI:
         tenant_db_session.commit()
 
         # Act
-        response = auth_client.get("/api/v1/anagrafica/soggetti/")
+        response = auth_client.get("/api/v1/anagrafica/soggetti-v2/")
 
         # Assert
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 2
+        # The shared test tenant may already hold other soggetti.
         assert any(s["nome"] == "Mario" for s in data)
         assert any(s["nome"] == "Luigi" for s in data)
 
@@ -113,7 +116,7 @@ class TestSoggettiCRUDAPI:
         tenant_db_session.refresh(soggetto)
 
         # Act
-        response = auth_client.get(f"/api/v1/anagrafica/soggetti/{soggetto.id}")
+        response = auth_client.get(f"/api/v1/anagrafica/soggetti-v2/{soggetto.id}")
 
         # Assert
         assert response.status_code == 200
@@ -140,7 +143,7 @@ class TestSoggettiCRUDAPI:
             "telefono": "+39 123 456 7890",
         }
         response = auth_client.put(
-            f"/api/v1/anagrafica/soggetti/{soggetto.id}",
+            f"/api/v1/anagrafica/soggetti-v2/{soggetto.id}",
             json=update_payload
         )
 
@@ -168,151 +171,16 @@ class TestSoggettiCRUDAPI:
         soggetto_id = soggetto.id
 
         # Act
-        response = auth_client.delete(f"/api/v1/anagrafica/soggetti/{soggetto_id}")
+        response = auth_client.delete(f"/api/v1/anagrafica/soggetti-v2/{soggetto_id}")
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 204
 
         # Verify deletion
         deleted = tenant_db_session.query(SoggettoAnagrafico).filter_by(
             id=soggetto_id
         ).first()
         assert deleted is None
-
-
-@pytest.mark.integration
-@pytest.mark.module_anagrafica
-class TestFindSimilarAPI:
-    """Test find-similar endpoint for duplicate detection."""
-
-    def test_find_similar_exact_cf_match(self, auth_client, tenant_db_session):
-        """Should find exact codice fiscale match with 100% score."""
-        # Arrange - create existing soggetto
-        existing = SoggettoAnagrafico(
-            tipo_soggetto="PERSONA_FISICA",
-            nome="Mario",
-            cognome="Rossi",
-            codice_fiscale="RSSMRA80A01H501Z",
-            data_nascita=date(1980, 1, 1),
-        )
-        tenant_db_session.add(existing)
-        tenant_db_session.commit()
-
-        # Act - search for similar with same CF
-        response = auth_client.post(
-            "/api/v1/anagrafica/soggetti/find-similar",
-            json={"codice_fiscale": "RSSMRA80A01H501Z"}
-        )
-
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-        assert data["total"] == 1
-        assert data["candidates"][0]["similarity_score"] == 1.0
-        assert data["candidates"][0]["match_quality"] == "perfect"
-        assert data["candidates"][0]["recommended_action"] == "USE_EXISTING"
-
-    def test_find_similar_fuzzy_name_match(self, auth_client, tenant_db_session):
-        """Should find fuzzy name matches."""
-        # Arrange - create similar soggetto
-        similar = SoggettoAnagrafico(
-            tipo_soggetto="PERSONA_FISICA",
-            nome="Mario",
-            cognome="Rossi",
-            data_nascita=date(1980, 1, 1),
-        )
-        tenant_db_session.add(similar)
-        tenant_db_session.commit()
-
-        # Act - search with exact same name and DOB
-        response = auth_client.post(
-            "/api/v1/anagrafica/soggetti/find-similar",
-            json={
-                "nome": "Mario",
-                "cognome": "Rossi",
-                "data_nascita": "1980-01-01"
-            }
-        )
-
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-        assert data["total"] >= 1
-        # With exact name and DOB match, score should be very high
-        assert data["candidates"][0]["similarity_score"] >= 0.95
-
-    def test_find_similar_no_matches(self, auth_client, tenant_db_session):
-        """Should return empty list when no matches found."""
-        # Act - search for non-existent person
-        response = auth_client.post(
-            "/api/v1/anagrafica/soggetti/find-similar",
-            json={
-                "nome": "NonExistent",
-                "cognome": "Person",
-                "codice_fiscale": "XXXYYY00A00Z000Z"
-            }
-        )
-
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-        assert data["total"] == 0
-        assert data["candidates"] == []
-
-    def test_find_similar_with_threshold(self, auth_client, tenant_db_session):
-        """Should filter results by threshold."""
-        # Arrange - create soggetto with similar but not exact data
-        similar = SoggettoAnagrafico(
-            tipo_soggetto="PERSONA_FISICA",
-            nome="Mario",
-            cognome="Rossi",
-            data_nascita=date(1985, 6, 15),  # Different DOB
-        )
-        tenant_db_session.add(similar)
-        tenant_db_session.commit()
-
-        # Act - search with high threshold
-        response = auth_client.post(
-            "/api/v1/anagrafica/soggetti/find-similar",
-            json={
-                "nome": "Mario",
-                "cognome": "Rossi",
-                "data_nascita": "1980-01-01",
-                "threshold": 0.90  # High threshold
-            }
-        )
-
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-        # Different DOB should result in score < 0.90, so no matches
-        assert data["total"] == 0
-
-    def test_find_similar_exclude_id(self, auth_client, tenant_db_session):
-        """Should exclude specified ID from results."""
-        # Arrange
-        soggetto = SoggettoAnagrafico(
-            tipo_soggetto="PERSONA_FISICA",
-            nome="Mario",
-            cognome="Rossi",
-            codice_fiscale="RSSMRA80A01H501Z",
-        )
-        tenant_db_session.add(soggetto)
-        tenant_db_session.commit()
-
-        # Act - exclude the only match
-        response = auth_client.post(
-            "/api/v1/anagrafica/soggetti/find-similar",
-            json={
-                "codice_fiscale": "RSSMRA80A01H501Z",
-                "exclude_id": soggetto.id
-            }
-        )
-
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-        assert data["total"] == 0
 
 
 @pytest.mark.integration
@@ -339,14 +207,14 @@ class TestSoggettiTenantIsolation:
         tenant_db_session.commit()
 
         # Act - tenant A can see their soggetto
-        response_a = auth_client.get("/api/v1/anagrafica/soggetti/")
+        response_a = auth_client.get("/api/v1/anagrafica/soggetti-v2/")
         assert response_a.status_code == 200
         data_a = response_a.json()
         assert len(data_a) >= 1
         assert any(s["nome"] == "Tenant A User" for s in data_a)
 
         # Act - tenant B sees nothing
-        response_b = another_tenant_client.get("/api/v1/anagrafica/soggetti/")
+        response_b = another_tenant_client.get("/api/v1/anagrafica/soggetti-v2/")
         assert response_b.status_code == 200
         data_b = response_b.json()
         # Tenant B should not see tenant A's soggetto
@@ -370,7 +238,7 @@ class TestSoggettiTenantIsolation:
 
         # Act - tenant B tries to access tenant A's soggetto
         response = another_tenant_client.get(
-            f"/api/v1/anagrafica/soggetti/{soggetto_a.id}"
+            f"/api/v1/anagrafica/soggetti-v2/{soggetto_a.id}"
         )
 
         # Assert - should not find it

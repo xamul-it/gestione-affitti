@@ -61,9 +61,9 @@ class AuthenticatedClient:
 
 
 @pytest.fixture
-def client():
+def client(override_get_db):
     """
-    Create FastAPI test client.
+    Create FastAPI test client (get_db routed to the test db_session).
 
     Returns:
         TestClient: FastAPI test client instance

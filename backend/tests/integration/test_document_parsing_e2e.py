@@ -16,6 +16,8 @@ from io import BytesIO
 from datetime import date, datetime
 from unittest.mock import patch, MagicMock
 
+from fastapi import HTTPException
+
 from app.core.platform.models import DocumentJob, JobStatus, Scadenza, StatoScadenza
 from app.core.platform_services import DocumentParsingService
 from app.core.file_storage import FileStorage
@@ -36,8 +38,24 @@ def file_storage(temp_storage):
 
 
 @pytest.fixture
-def mock_mrz_service():
-    """Mock MRZ service HTTP responses."""
+def mock_mrz_service(db_session):
+    """Mock MRZ service HTTP responses.
+
+    The service must also be configured in core_parsing_service_configs,
+    otherwise submission fails before any HTTP call; the row lives in the
+    test transaction and is rolled back with it.
+    """
+    from app.core.platform.models.parsing_service_config import ParsingServiceConfig
+
+    config = db_session.query(ParsingServiceConfig).filter_by(service_key="mrz").first()
+    if config is None:
+        config = ParsingServiceConfig(service_key="mrz")
+        db_session.add(config)
+    config.transport_type = "HTTP"
+    config.endpoint_url = "http://mrz.test/parse"
+    config.enabled = "true"
+    db_session.flush()
+
     with patch('app.core.platform_services.document_parsing_service.httpx.Client') as mock_client:
         # Mock successful submission
         mock_response = MagicMock()
@@ -143,12 +161,13 @@ class TestDocumentUploadAndParsing:
         fake_file = BytesIO(b"data")
         fake_file.filename = "test.jpg"
 
-        with pytest.raises(Exception, match="non valido"):
+        with pytest.raises(HTTPException) as exc_info:
             service.upload_and_parse(
                 file=fake_file,
                 document_type_key="invalid.INVALID",
                 user_id=test_user.id
             )
+        assert "non valido" in exc_info.value.detail
 
 
 class TestCallbackHandling:
@@ -318,6 +337,7 @@ class TestCompleteAnagraficaWorkflow:
         db_session,
         test_user,
         file_storage,
+        mock_mrz_service,
         sample_mrz_result,
         setup_document_types
     ):
@@ -359,7 +379,7 @@ class TestCompleteAnagraficaWorkflow:
 
                 # Step 3: Simulate user completing anagrafica
                 # (This would typically be done via API endpoint)
-                from modules.anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
+                from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
 
                 soggetto = SoggettoAnagrafico(
                     tipo_soggetto=TipoSoggetto.PERSONA_FISICA,
@@ -479,8 +499,10 @@ class TestErrorHandling:
             "result": {}
         }
 
-        with pytest.raises(Exception, match="non trovato"):
+        with pytest.raises(HTTPException) as exc_info:
             service.handle_callback("nonexistent", callback_data)
+        assert exc_info.value.status_code == 404
+        assert "non trovato" in exc_info.value.detail
 
     def test_get_pending_documents_filters_correctly(
         self,

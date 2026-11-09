@@ -64,29 +64,13 @@ def override_get_db():
 
 
 @pytest.fixture
-def pg_session():
-    """
-    Bound to a single, explicitly-checked-out Connection for the fixture's
-    whole lifetime (rather than letting the Session pull from/return to the
-    engine's pool per-transaction, as plain SessionLocal() does). A commit
-    or rollback ends a *logical* transaction and releases the connection
-    back to the pool; the next query can then land on a *different* pooled
-    connection that never had this fixture's `SET search_path` applied,
-    surfacing as a spurious "relation does not exist" on an otherwise
-    correct query.
-    """
-    from app.core.database import engine
-    from sqlalchemy.orm import Session as SASession
-
-    connection = engine.connect()
-    connection.execute(text(f"SET search_path TO {TENANT}, public"))
-    connection.commit()
-    session = SASession(bind=connection)
-    try:
-        yield session
-    finally:
-        session.close()
-        connection.close()
+def pg_session(db_session):
+    """Rolled-back transaction from tests/integration/conftest.py. A sync
+    creates prenotazioni, soggiorni and the compliance comunicazioni they
+    trigger; the per-test deletes missed those comunicazioni (left behind
+    with soggiorno_id NULL), the outer rollback removes all of it."""
+    db_session.execute(text(f"SET search_path TO {TENANT}, public"))
+    return db_session
 
 
 @pytest.fixture

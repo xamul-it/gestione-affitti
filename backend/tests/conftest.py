@@ -57,13 +57,17 @@ def auth_headers(client, user_token_with_tenant):
     return {"Authorization": f"Bearer {user_token_with_tenant}"}
 
 
-# Database dependency override for integration tests
-@pytest.fixture(autouse=True, scope="function")
+# Database dependency override for API tests
+@pytest.fixture(scope="function")
 def override_get_db(db_session):
     """
-    Automatically override database dependency for all tests.
+    Route get_db to the SQLite db_session.
 
-    This ensures all tests use the test database session.
+    Not autouse: requested by the `client` fixture only. As autouse it built
+    a SQLite database for every test, DB or not, so tests that never touch
+    the database errored at setup whenever create_all() hit a
+    PostgreSQL-only construct. Modules that define their own
+    override_get_db still shadow this one.
     """
     from app.main import app
 

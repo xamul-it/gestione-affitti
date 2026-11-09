@@ -13,7 +13,17 @@ from sqlalchemy import create_engine, text, event
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.compiler import compiles
+
 from app.core.database import Base
+
+
+# SQLite has JSON but not PostgreSQL's JSONB: render it as JSON so models
+# using JSONB columns can be created in the in-memory unit-test database.
+@compiles(JSONB, "sqlite")
+def _jsonb_as_json_on_sqlite(type_, compiler, **kw):
+    return "JSON"
 
 
 @pytest.fixture(scope="function")
@@ -32,6 +42,13 @@ def db_engine():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
+    # Platform tables are declared with schema="public" (core_tenants,
+    # core_users, ...). SQLite has no schemas, but an attached database
+    # named "public" makes "public.<table>" resolve the same way.
+    @event.listens_for(engine, "connect")
+    def _attach_public(dbapi_connection, connection_record):
+        dbapi_connection.execute("ATTACH DATABASE ':memory:' AS public")
 
     # Create all tables
     Base.metadata.create_all(bind=engine)
