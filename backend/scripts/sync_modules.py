@@ -16,8 +16,12 @@ arrivano mai a un DB gia' esistente.
 Riallinea anche core_modules.install_path alla cartella moduli di questo
 backend: un DB copiato da un altro ambiente punterebbe al codice di quello.
 
-Non cancella mai dati. Un tenant con il modulo abilitato ma mai installato
-viene solo segnalato: installarlo e' una decisione, non un aggiornamento.
+Un modulo abilitato su un tenant ma mai installato (nessuna tabella
+alembic_version_<codice>) viene installato con l'installatore dell'app,
+TenantModuleService.install_module_for_tenant, senza dati di esempio:
+"abilitato" deve voler dire che le sue funzioni ci sono.
+
+Non cancella mai dati.
 
 Uso (dalla cartella backend, con il venv attivo):
     python scripts/sync_modules.py            # esegue
@@ -27,6 +31,7 @@ Exit code 1 se un passo fallisce.
 import argparse
 import importlib
 import inspect
+import os
 import runpy
 import subprocess
 import sys
@@ -42,6 +47,9 @@ from app.core.module_system.alembic_utils import build_module_alembic_config  # 
 
 MODULE_DIR = Path(settings.resolved_module_dir)
 sys.path.insert(0, str(MODULE_DIR))
+# L'installatore dei moduli lancia "alembic" come comando: deve essere
+# quello di questo venv anche quando lo script non e' lanciato dal venv attivo.
+os.environ["PATH"] = f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '')}"
 
 PUBLIC_TARGETS = {"public", "public + tenant"}
 
@@ -137,9 +145,10 @@ def main() -> int:
         registered = conn.execute(text(
             "SELECT technical_name, install_path, state FROM public.core_modules WHERE registered"
         )).all()
-        tenants = [r[0] for r in conn.execute(text(
-            "SELECT schema_name FROM public.core_tenants ORDER BY schema_name"
-        ))]
+        tenant_ids = {r[0]: r[1] for r in conn.execute(text(
+            "SELECT schema_name, id FROM public.core_tenants ORDER BY schema_name"
+        ))}
+        tenants = list(tenant_ids)
         enabled = {(r[0], r[1]) for r in conn.execute(text(
             "SELECT t.schema_name, tm.module_id FROM public.core_tenant_modules tm "
             "JOIN public.core_tenants t ON t.id = tm.tenant_id WHERE tm.enabled"
@@ -175,6 +184,7 @@ def main() -> int:
                     {"p": str(MODULE_DIR / name), "n": name},
                 )
 
+    to_install = []
     for name in order:
         manifest = manifests[name]
         if not manifest.get("migrations_path") or not manifest.get("module_short_code"):
@@ -187,11 +197,35 @@ def main() -> int:
             if (schema, f"alembic_version_{code}") in version_tables:
                 ok &= run_module_alembic(name, manifest, schema, args.dry_run)
             elif (schema, name) in enabled:
-                log(f"    ATTENZIONE: {name} abilitato su {schema} ma mai installato (nessuna migrazione eseguita)")
+                to_install.append((schema, name))
 
     if not ok:
-        log("==> Migrazioni di modulo fallite: seed pubblici non eseguiti")
+        log("==> Migrazioni di modulo fallite: installazioni e seed pubblici non eseguiti")
         return 1
+
+    from sqlalchemy.orm import Session
+
+    if to_install:
+        log("==> Installazione moduli abilitati ma mai installati")
+        for schema, name in to_install:
+            log(f"  {name} -> {schema}")
+        if not args.dry_run:
+            load_all_models(order)
+            from app.core.services.tenant_module_service import TenantModuleService
+            for schema, name in to_install:  # in ordine di dipendenza
+                with Session(engine) as db:
+                    try:
+                        TenantModuleService.install_module_for_tenant(
+                            tenant_ids[schema], name, db, run_migrations=True, seed_test_data=False,
+                        )
+                        db.commit()
+                    except Exception as exc:
+                        db.rollback()
+                        log(f"  ERRORE installazione {name} su {schema}: {exc}")
+                        ok = False
+            if not ok:
+                log("==> Installazioni fallite: seed pubblici non eseguiti")
+                return 1
 
     log("==> Seed pubblici")
     seeds = [
@@ -206,7 +240,6 @@ def main() -> int:
         return 0
 
     load_all_models(order)
-    from sqlalchemy.orm import Session
     for name, entry in seeds:
         with Session(engine) as db:
             try:
