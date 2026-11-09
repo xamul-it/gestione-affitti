@@ -18,11 +18,6 @@ from app.core.platform.models.documento import TipoDocumentoEnum
 logger = logging.getLogger(__name__)
 
 
-def _file_exists(file_path: str) -> bool:
-    try:
-        return file_storage.get_file_path(file_path).exists() or Path(file_path).exists()
-    except Exception:
-        return False
 
 
 def migra_ape(db: Session, tenant_schema: str) -> dict:
@@ -66,7 +61,8 @@ def migra_ape(db: Session, tenant_schema: str) -> dict:
                 "certificato_id": r.id,
             },
         )
-        if r.file_path and _file_exists(r.file_path):
+        # Only files inside this tenant's storage: the old free-text file_path is not trusted.
+        if file_storage.resolve_in_tenant(r.file_path, tenant_schema) is not None:
             nome = Path(r.file_path).name
             documento.nome_file, documento.file_path, documento.mime_type = nome, r.file_path, "application/pdf"
             documento.files.append(DocumentoFile(

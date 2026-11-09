@@ -117,3 +117,14 @@ def test_post_sync_runs_everything(db_session, units):
     report = post_sync(db_session, TENANT)
     assert report["ape"]["creati"] == 1
     assert len(_ape_docs(db_session, units[0].id)) == 1
+
+
+@pytest.mark.parametrize("bad_path", ["/etc/passwd", "../tenant_principale/x.pdf", "tenant_principale/x.pdf"])
+def test_migra_ape_rejects_paths_outside_tenant(db_session, units, tmp_path, bad_path):
+    (tmp_path / "tenant_principale").mkdir(exist_ok=True)
+    (tmp_path / "tenant_principale" / "x.pdf").write_bytes(b"%PDF-1.4 other tenant")
+    _cert(db_session, units[0].id, "B", date(2020, 1, 10), date(2030, 1, 10), bad_path)
+    report = migra_ape(db_session, TENANT)
+    assert report["senza_file"] == 1
+    doc = _ape_docs(db_session, units[0].id)[0]
+    assert doc.files == [] and doc.file_path is None

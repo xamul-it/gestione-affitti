@@ -181,7 +181,7 @@ async def test_download_documento_returns_existing_file(pg_session):
             tenant_schema=TENANT,
         )
 
-        response = await download_documento(documento.id, db=pg_session)
+        response = await download_documento(documento.id, db=pg_session, tenant_schema=TENANT)
         assert response.path.exists()
         assert response.filename == "test.pdf"
     finally:

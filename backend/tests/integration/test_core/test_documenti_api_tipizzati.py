@@ -124,7 +124,7 @@ def test_tipi_for_immobile(db_session):
 @pytest.mark.asyncio
 async def test_view_file_inline(db_session):
     out = await _upload(db_session, tipo_codice="ALTRO_IMMOBILE")
-    response = view_file(out.files[0].id, db=db_session)
+    response = view_file(out.files[0].id, db=db_session, tenant_schema=TENANT)
     assert response.headers["content-disposition"].startswith("inline")
 
 
@@ -133,7 +133,7 @@ async def test_view_unsafe_type_is_attachment(db_session):
     html = UploadFile(file=io.BytesIO(b"<script>alert(1)</script>"), filename="x.html",
                       headers={"content-type": "text/html"})
     out = await _upload(db_session, tipo_codice="ALTRO_IMMOBILE", files=[html])
-    response = view_file(out.files[0].id, db=db_session)
+    response = view_file(out.files[0].id, db=db_session, tenant_schema=TENANT)
     assert response.headers["content-disposition"].startswith("attachment")
     assert response.media_type == "application/octet-stream"
     assert response.headers["x-content-type-options"] == "nosniff"
@@ -142,7 +142,7 @@ async def test_view_unsafe_type_is_attachment(db_session):
 @pytest.mark.asyncio
 async def test_view_pdf_inline_is_sandboxed(db_session):
     out = await _upload(db_session, tipo_codice="ALTRO_IMMOBILE")
-    response = view_file(out.files[0].id, db=db_session)
+    response = view_file(out.files[0].id, db=db_session, tenant_schema=TENANT)
     assert response.headers["x-content-type-options"] == "nosniff"
     assert "sandbox" in response.headers["content-security-policy"]
 
@@ -156,3 +156,17 @@ async def test_list_limit_is_capped(db_session, monkeypatch):
     res = get_documenti(entity_type=EntityType.IMMOBILE, entity_id=UNIT, tipo_codice=None, modulo=None,
                         includi_sostituiti=False, scadenza_entro_giorni=None, skip=0, limit=100, db=db_session)
     assert len(res) == 1
+
+
+@pytest.mark.asyncio
+async def test_view_rejects_other_tenant_file(db_session, tmp_path):
+    from app.core.platform.models import DocumentoFile
+    out = await _upload(db_session, tipo_codice="ALTRO_IMMOBILE")
+    (tmp_path / "tenant_principale").mkdir(exist_ok=True)
+    (tmp_path / "tenant_principale" / "s.pdf").write_bytes(b"%PDF-1.4 secret")
+    f = db_session.get(DocumentoFile, out.files[0].id)
+    f.file_path = "tenant_principale/s.pdf"
+    db_session.flush()
+    with pytest.raises(HTTPException) as exc:
+        view_file(f.id, db=db_session, tenant_schema=TENANT)
+    assert exc.value.status_code == 404

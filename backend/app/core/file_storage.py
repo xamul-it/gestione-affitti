@@ -260,6 +260,23 @@ class FileStorage:
             print(f"Errore eliminazione file: {e}")
         return False
 
+    def resolve_in_tenant(self, relative_path: Optional[str], tenant_schema: Optional[str]) -> Optional[Path]:
+        """
+        Absolute path of a stored file only if it exists and lies inside the
+        tenant's directory; None otherwise (absolute paths, '..', other tenants).
+        """
+        if not relative_path or not tenant_schema:
+            return None
+        try:
+            self._validate_tenant_schema(tenant_schema)
+            tenant_root = (self.base_path / tenant_schema).resolve()
+            resolved = (self.base_path / relative_path).resolve()
+        except Exception:
+            return None
+        if not resolved.is_relative_to(tenant_root) or not resolved.is_file():
+            return None
+        return resolved
+
     def get_file_size(self, relative_path: str, tenant_schema: Optional[str] = None) -> int:
         """
         Ottieni dimensione file in bytes.

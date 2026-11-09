@@ -130,13 +130,14 @@ def get_documenti(
 def view_file(
     file_id: int,
     db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("documenti.read")),
 ):
     """Un file del documento, da mostrare in anteprima (inline)."""
     f = db.get(DocumentoFile, file_id)
     if f is None:
         raise HTTPException(status_code=404, detail="File non trovato")
-    return _inline(f.file_path, f.nome_file, f.mime_type)
+    return _inline(f.file_path, f.nome_file, f.mime_type, tenant_schema)
 
 
 # Types shown inline in the preview, detected from the file's first bytes
@@ -166,10 +167,15 @@ def _preview_type(path) -> Optional[str]:
     return None
 
 
-def _inline(relative_path: str, nome_file: Optional[str], mime_type: Optional[str]) -> FileResponse:
-    path = file_storage.get_file_path(relative_path)
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="File non trovato sul filesystem")
+def _tenant_file(relative_path: Optional[str], tenant_schema):
+    path = file_storage.resolve_in_tenant(relative_path, _tenant(tenant_schema))
+    if path is None:
+        raise HTTPException(status_code=404, detail="File non trovato")
+    return path
+
+
+def _inline(relative_path: str, nome_file: Optional[str], mime_type: Optional[str], tenant_schema) -> FileResponse:
+    path = _tenant_file(relative_path, tenant_schema)
     preview = _preview_type(path)
     return FileResponse(
         path=path,
@@ -184,6 +190,7 @@ def _inline(relative_path: str, nome_file: Optional[str], mime_type: Optional[st
 def view_documento(
     documento_id: int,
     db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("documenti.read")),
 ):
     """Primo file del documento in anteprima (anche per i documenti a file singolo storici)."""
@@ -192,10 +199,10 @@ def view_documento(
         raise HTTPException(status_code=404, detail="Documento non trovato")
     if documento.files:
         f = documento.files[0]
-        return _inline(f.file_path, f.nome_file, f.mime_type)
+        return _inline(f.file_path, f.nome_file, f.mime_type, tenant_schema)
     if not documento.file_path:
         raise HTTPException(status_code=404, detail="Il documento non ha file")
-    return _inline(documento.file_path, documento.nome_file, documento.mime_type)
+    return _inline(documento.file_path, documento.nome_file, documento.mime_type, tenant_schema)
 
 
 @router.get("/{documento_id}/storico", response_model=List[DocumentoOut])
@@ -306,6 +313,7 @@ async def upload_documento(
 async def download_documento(
     documento_id: int,
     db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("documenti.read")),
 ):
     """Download di un documento"""
@@ -316,17 +324,13 @@ async def download_documento(
             detail=f"Documento con ID {documento_id} non trovato"
         )
 
-    file_path = file_storage.get_file_path(documento.file_path)
-    if not file_path.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File non trovato sul filesystem"
-        )
-
+    relative = documento.files[0].file_path if documento.files else documento.file_path
+    file_path = _tenant_file(relative, tenant_schema)
     return FileResponse(
         path=file_path,
         filename=documento.nome_file,
-        media_type=documento.mime_type
+        media_type="application/octet-stream",
+        headers=_SAFE_HEADERS,
     )
 
 
