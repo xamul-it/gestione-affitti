@@ -507,3 +507,38 @@ def test_routes_require_anagrafica_permissions():
 
 def test_preview_does_not_block_event_loop():
     assert not inspect.iscoroutinefunction(visura_import_routes.preview_import_visura)
+
+
+# --- Visure per immobile, imported one after the other (upload queue) --------
+
+def _fill_tipo(proposta):
+    for u in proposta.unita:
+        if u.azione == "crea":
+            u.tipo = "Appartamento"
+    return proposta
+
+
+def test_visure_per_immobile_in_sequence_share_soggetto(pg_session, storage):
+    seed_tipi_documento(pg_session)
+
+    first = _fill_tipo(_preview(pg_session, "immobile_tabellare.pdf"))
+    assert [u.azione for u in first.unita] == ["crea"]
+    r1 = apply_import_visura(
+        body=VisuraApplyRequest(upload_token=first.upload_token, proposta=first),
+        db=pg_session, tenant_schema=TENANT, current_user=None,
+    )
+    assert len(r1.unita_create) == 1
+    assert r1.soggetti_creati == 1
+
+    # Previewed only after the first import: the shared owner is now known.
+    second = _fill_tipo(_preview(pg_session, "immobile_attuale.pdf"))
+    azioni = {s.codice_fiscale: s.azione for s in second.soggetti}
+    assert azioni["ZNDLMT73E17F205F"] != "crea"
+    assert azioni["BRSSFN72L45F205G"] == "crea"
+    r2 = apply_import_visura(
+        body=VisuraApplyRequest(upload_token=second.upload_token, proposta=second),
+        db=pg_session, tenant_schema=TENANT, current_user=None,
+    )
+    assert len(r2.unita_create) == 1
+    assert r2.soggetti_creati == 1
+    assert r2.diritti_creati == 2

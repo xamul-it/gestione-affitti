@@ -163,3 +163,81 @@ def test_analitica_unit_666_19(analitica):
     for value in vars(u).values():
         if isinstance(value, str):
             assert "FRAZIONAMENTO" not in value
+
+
+# --- Visure per immobile (Milano) -------------------------------------------
+
+@pytest.fixture(scope="module")
+def immobile_tabellare():
+    """Older tabular "Visura per immobile" (single unit, one intestato)."""
+    return parse_visura(_load("immobile_tabellare.pdf"))
+
+
+@pytest.fixture(scope="module")
+def immobile_attuale():
+    """"Visura attuale per immobile": descriptive two-column layout, two intestati."""
+    return parse_visura(_load("immobile_attuale.pdf"))
+
+
+def test_immobile_tabellare_header(immobile_tabellare):
+    assert immobile_tabellare.formato == FormatoVisura.SINTETICA
+    assert immobile_tabellare.numero == "T27278"
+    assert immobile_tabellare.data == date(2021, 2, 21)
+    assert immobile_tabellare.terreni_count == 0
+    assert immobile_tabellare.warnings == []
+    assert len(immobile_tabellare.fabbricati) == 1
+
+
+def test_immobile_tabellare_unit(immobile_tabellare):
+    u = _unit(immobile_tabellare, "481", "60", "21")
+    assert u.comune == "MILANO"
+    assert u.codice_catastale_comune == "F205"
+    assert u.sezione_urbana is None
+    assert u.zona_censuaria == "2"
+    assert u.categoria == "A/3"
+    assert u.classe == "4"
+    assert u.consistenza == "6 vani"
+    assert u.vani == Decimal("6")
+    assert u.superficie_totale == Decimal("143")
+    assert u.superficie_escluse_aree == Decimal("142")
+    assert u.rendita == Decimal("821.17")
+    assert u.indirizzo == "VIALE UMBRIA n. 49 interno 23"
+    assert u.piano == "5-S1-7"
+    assert len(u.intestati) == 1
+    i = u.intestati[0]
+    assert i.codice_fiscale == "ZNDLMT73E17F205F"
+    assert i.cognome == "ZANDERIGHI"
+    assert i.nome == "Luigi Matteo Massimiliano"
+    assert i.data_nascita == date(1973, 5, 17)
+    assert i.luogo_nascita == "MILANO"
+    assert i.tipo_diritto == TipoDiritto.PROPRIETARIO
+    assert i.quota_percentuale == Decimal("100.00")
+
+
+def test_immobile_attuale_header(immobile_attuale):
+    assert immobile_attuale.formato == FormatoVisura.ANALITICA
+    assert immobile_attuale.numero == "T431866/2024"
+    assert immobile_attuale.data == date(2024, 4, 4)
+    assert immobile_attuale.warnings == []
+    assert len(immobile_attuale.fabbricati) == 1
+
+
+def test_immobile_attuale_unit(immobile_attuale):
+    u = _unit(immobile_attuale, "393", "457", "716")
+    assert u.comune == "MILANO"
+    assert u.codice_catastale_comune == "F205"
+    assert u.provincia == "MI"
+    assert u.zona_censuaria == "2"
+    assert u.categoria == "A/3"
+    assert u.classe == "4"
+    assert u.consistenza == "4 vani"
+    assert u.superficie_totale == Decimal("64")
+    assert u.superficie_escluse_aree == Decimal("64")
+    assert u.rendita == Decimal("547.44")
+    assert u.indirizzo == "VIA ARCHIMEDE n. 73A"
+    assert u.piano == "T"
+    cfs = sorted(i.codice_fiscale for i in u.intestati)
+    assert cfs == ["BRSSFN72L45F205G", "ZNDLMT73E17F205F"]
+    for i in u.intestati:
+        assert i.tipo_diritto == TipoDiritto.COMPROPRIETARIO
+        assert i.quota_percentuale == Decimal("50.00")

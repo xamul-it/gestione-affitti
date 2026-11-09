@@ -94,4 +94,71 @@ describe('ImportVisuraModal', () => {
     await uploadAndAnalyze();
     expect(await screen.findByText(/Formato non supportato/)).toBeInTheDocument();
   });
+
+  it('processes several files as a queue: next preview only after import', async () => {
+    visuraImportAPI.preview.mockResolvedValue({ data: proposta });
+    visuraImportAPI.apply.mockResolvedValue({
+      data: { soggetti_creati: 1, soggetti_aggiornati: 0, unita_create: [1], unita_aggiornate: [], diritti_creati: 1, documenti_allegati: 1 },
+    });
+    render(<ImportVisuraModal onClose={() => {}} onImported={() => {}} />);
+    const a = new File(['%PDF'], 'a.pdf', { type: 'application/pdf' });
+    const b = new File(['%PDF-b'], 'b.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText(/file pdf/i), { target: { files: [a, b] } });
+    fireEvent.click(screen.getByRole('button', { name: /analizza 2 file/i }));
+
+    expect(await screen.findByText('Visura 1 di 2')).toBeInTheDocument();
+    expect(visuraImportAPI.preview).toHaveBeenCalledTimes(1);
+    expect(visuraImportAPI.preview.mock.calls[0][0].name).toBe('a.pdf');
+
+    fireEvent.change(screen.getByLabelText(/tipo immobile foglio 99 particella 666 sub 30/i), {
+      target: { value: 'Box' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^importa$/i }));
+
+    expect(await screen.findByText('Visura 2 di 2')).toBeInTheDocument();
+    expect(visuraImportAPI.preview).toHaveBeenCalledTimes(2);
+    expect(visuraImportAPI.preview.mock.calls[1][0].name).toBe('b.pdf');
+    expect(visuraImportAPI.apply).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips a visura and reports per-file outcome', async () => {
+    visuraImportAPI.preview.mockResolvedValue({ data: proposta });
+    const onImported = vi.fn();
+    render(<ImportVisuraModal onClose={() => {}} onImported={onImported} />);
+    await uploadAndAnalyze();
+    fireEvent.click(await screen.findByRole('button', { name: /salta/i }));
+    expect(await screen.findByText('Nessuna visura importata')).toBeInTheDocument();
+    expect(screen.getByText('Saltata')).toBeInTheDocument();
+    expect(visuraImportAPI.apply).not.toHaveBeenCalled();
+    fireEvent.click(screen.getAllByRole('button', { name: /chiudi/i }).at(-1));
+    expect(onImported).not.toHaveBeenCalled();
+  });
+
+  it('accepts dropped files and flags non-PDF files without analysing them', async () => {
+    visuraImportAPI.preview.mockResolvedValue({ data: proposta });
+    render(<ImportVisuraModal onClose={() => {}} onImported={() => {}} />);
+    const pdf = new File(['%PDF'], 'visura.pdf', { type: 'application/pdf' });
+    const txt = new File(['x'], 'note.txt', { type: 'text/plain' });
+    fireEvent.drop(screen.getByText(/trascina qui/i).closest('.visura-dropzone'), {
+      dataTransfer: { files: [pdf, txt] },
+    });
+    expect(screen.getByText('visura.pdf')).toBeInTheDocument();
+    expect(screen.getByText('Non è un file PDF')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^analizza$/i }));
+    expect(await screen.findByText('Visura 1 di 2')).toBeInTheDocument();
+    expect(visuraImportAPI.preview).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks for confirmation before closing mid-review', async () => {
+    visuraImportAPI.preview.mockResolvedValue({ data: proposta });
+    const onClose = vi.fn();
+    render(<ImportVisuraModal onClose={onClose} onImported={() => {}} />);
+    await uploadAndAnalyze();
+    await screen.findByText('Anagrafiche da aggiungere');
+    fireEvent.click(screen.getAllByRole('button', { name: /chiudi/i })[0]);
+    expect(screen.getByText("Interrompere l'importazione?")).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /interrompi/i }));
+    expect(onClose).toHaveBeenCalled();
+  });
 });

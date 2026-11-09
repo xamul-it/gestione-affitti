@@ -1,5 +1,8 @@
 """
-Parser for "Visura attuale per soggetto" (analitica).
+Parser for "Visura attuale per soggetto" (analitica) and its single-unit
+sibling "Visura attuale per immobile" (same layout, but the unit header has
+no "n.N" line and intestati come under "Intestazione attuale dell'immobile -
+totale intestati: K").
 
 Two-column layout: the right column ("Causali di aggiornamento ed
 annotazioni") is dropped by keeping, for each line, only the text before
@@ -43,6 +46,7 @@ _TOT = re.compile(r"^Totale: (\d+(?:,\d+)?) m")
 _ESCL = re.compile(r"^Totale escluse aree scoperte\s*\w?\)?: (\d+(?:,\d+)?) m")
 _INTEST_RANGE = re.compile(r"^Intestazione attuale degli immobili dal n\. (\d+) al n\. (\d+)")
 _INTEST_ONE = re.compile(r"^Intestazione attuale dell'immobile n\. (\d+)")
+_INTEST_SINGLE = re.compile(r"^Intestazione attuale dell.immobile - totale intestati")
 _ENTRY = re.compile(r"^(\d+)\.\s+(\S.*)$")
 _CF = re.compile(r"^\(CF ([A-Z0-9]{11,16})\)")
 _NATO = re.compile(r"^nat[oa] a (.+?) il (\d{2}/\d{2}/\d{4})")
@@ -75,7 +79,7 @@ def _finish_entry(entry: Optional[dict], out: List[IntestatoParsed]) -> None:
     ))
 
 
-def parse_analitica(text: str) -> VisuraParsed:
+def parse_analitica(text: str, per_immobile: bool = False) -> VisuraParsed:
     numero_m = re.search(r"Numero Pratica:\s*(\S+)", text)
     data_m = re.search(r"Data:\s*(\d{2}/\d{2}/\d{4})", text)
     if not numero_m or not data_m:
@@ -106,6 +110,11 @@ def parse_analitica(text: str) -> VisuraParsed:
             if mode == "intest":
                 _finish_entry(entry, intest_list)
                 entry = None
+            if per_immobile and hdr.group(1) == "fabbricati" and not units:
+                current = {"n": 1}
+                units[1] = current
+                mode = "unit"
+                continue
             expect_unit_n = hdr.group(1)
             mode = None
             continue
@@ -124,8 +133,14 @@ def parse_analitica(text: str) -> VisuraParsed:
 
         r = _INTEST_RANGE.match(line)
         o = _INTEST_ONE.match(line)
-        if r or o:
-            start, end = (int(r.group(1)), int(r.group(2))) if r else (int(o.group(1)), int(o.group(1)))
+        single = per_immobile and _INTEST_SINGLE.match(line)
+        if r or o or single:
+            if r:
+                start, end = int(r.group(1)), int(r.group(2))
+            elif o:
+                start = end = int(o.group(1))
+            else:
+                start = end = 1
             intest_list = []
             intestati_ranges.append((start, end, intest_list))
             mode = "intest"

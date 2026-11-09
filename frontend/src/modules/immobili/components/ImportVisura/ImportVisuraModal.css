@@ -1,119 +1,347 @@
-.visura-modal {
-  max-width: 820px;
-  width: 95vw;
-  max-height: 90vh;
-  overflow-y: auto;
-}
+/* ImportVisuraModal — design system tokens (styles/tokens.css), rendered
+ * inside the shared FormModal. All rules scoped under .visura-import. */
 
-.visura-upload {
+.visura-import {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body);
+  color: var(--color-ink);
 }
 
-.visura-field {
+.visura-import .visura-muted {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: var(--font-size-small);
+}
+
+.visura-import .visura-error {
+  background: #fde3d8;
+  color: var(--color-danger-dark);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-small);
+}
+
+/* Upload step */
+.visura-import .visura-upload {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.9rem;
-  font-weight: 500;
+  gap: var(--space-4);
+}
+
+.visura-import .visura-upload .ds-field {
+  margin-bottom: 0;
+}
+
+.visura-import .visura-select,
+.visura-import .visura-field input {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--gray-400);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--font-size-body);
+  color: var(--color-ink);
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.visura-import .visura-select:focus-visible,
+.visura-import .visura-field input:focus-visible {
+  outline: none;
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.visura-import .visura-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-6) var(--space-4);
+  border: 2px dashed var(--gray-400);
+  border-radius: var(--radius-md);
+  background: var(--gray-100);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.visura-import .visura-dropzone:hover,
+.visura-import .visura-dropzone--over {
+  border-color: var(--color-ink);
+  background: #fff;
+}
+
+.visura-import .visura-dropzone:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.visura-import .visura-dropzone__icon {
+  color: var(--gray-600);
+  margin-bottom: var(--space-2);
+}
+
+.visura-import .visura-dropzone__title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.visura-import .visura-dropzone__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* File queue */
+.visura-import .visura-coda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.visura-import .visura-coda__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.visura-import .visura-coda__item--corrente {
+  border-color: var(--color-ink);
+}
+
+.visura-import .visura-coda__icon {
+  color: var(--gray-600);
+}
+
+.visura-import .visura-coda__nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-small);
+}
+
+.visura-import .visura-coda__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--gray-600);
+  cursor: pointer;
+}
+
+.visura-import .visura-coda__remove:hover {
+  background: var(--gray-100);
+  color: var(--color-ink);
+}
+
+.visura-import .visura-coda__errore {
+  grid-column: 2 / -1;
+  font-size: var(--font-size-small);
+  color: var(--color-danger-dark);
+}
+
+/* Review step */
+.visura-import .visura-progress {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--gray-300);
+}
+
+.visura-import .visura-progress__step {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.visura-import .visura-progress__file {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--gray-600);
+  font-size: var(--font-size-small);
+}
+
+.visura-import .visura-summary {
+  font-weight: 600;
+  margin: var(--space-3) 0;
+}
+
+.visura-import .visura-review section {
+  margin-bottom: var(--space-5);
+}
+
+.visura-import .visura-review h3 {
+  font-size: var(--font-size-h4);
+  font-weight: 600;
+  margin: 0 0 var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.visura-import .visura-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  cursor: pointer;
+}
+
+.visura-import input[type="checkbox"] {
+  accent-color: var(--color-ink);
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.visura-import .visura-unit {
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.visura-import .visura-unit-fields {
+  display: flex;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 var(--space-2) var(--space-5);
+}
+
+.visura-import .visura-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-small);
+  font-weight: 600;
   flex: 1;
 }
 
-.visura-field input,
-.visura-field select {
-  padding: 6px 8px;
-  border: 1px solid #ccd3da;
-  border-radius: 6px;
-  font-size: 0.95rem;
+.visura-import .visura-field__error {
+  font-weight: 500;
+  color: var(--color-danger-dark);
 }
 
-.visura-field--small {
-  flex: 0 0 90px;
+.visura-import .visura-field--small {
+  flex: 0 0 96px;
 }
 
-.visura-field--missing input {
-  border-color: #e74c3c;
-  background: #fdf1f0;
+.visura-import .visura-field--missing input {
+  border-color: var(--color-danger);
+  background: #fdf3ee;
 }
 
-.visura-muted {
-  color: #6b7785;
-  font-size: 0.85rem;
+.visura-import .visura-diritti,
+.visura-import .visura-modifiche,
+.visura-import .visura-avvisi {
+  list-style: none;
+  margin: var(--space-1) 0 0 var(--space-5);
+  padding: 0;
+  font-size: var(--font-size-small);
 }
 
-.visura-error {
-  background: #fdecea;
-  color: #b3261e;
-  border-radius: 6px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
+.visura-import .visura-diritti li,
+.visura-import .visura-modifiche li {
+  padding: 2px 0;
 }
 
-.visura-summary {
-  font-weight: 600;
-  margin-top: 0;
-}
-
-.visura-review section {
-  margin-bottom: 20px;
-}
-
-.visura-review h3 {
-  font-size: 1rem;
-  margin: 0 0 8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #e3e7eb;
-}
-
-.visura-row {
+.visura-import .visura-avvisi li {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 4px 0;
-  cursor: pointer;
+  gap: var(--space-1);
+  color: #856404;
 }
 
-.visura-unit {
-  border: 1px solid #e3e7eb;
-  border-radius: 8px;
-  padding: 8px 12px;
-  margin-bottom: 8px;
+.visura-import .visura-avvisi svg {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
-.visura-unit-fields {
-  display: flex;
-  gap: 10px;
-  margin: 6px 0 6px 24px;
-}
-
-.visura-diritti,
-.visura-modifiche,
-.visura-avvisi {
-  list-style: none;
-  margin: 4px 0 0 24px;
-  padding: 0;
-  font-size: 0.9rem;
-}
-
-.visura-avvisi li {
-  color: #9a6700;
-}
-
-.visura-old {
+.visura-import .visura-old {
   text-decoration: line-through;
-  color: #8a94a0;
+  color: var(--gray-600);
 }
 
-.visura-new {
+.visura-import .visura-new {
   font-weight: 600;
 }
 
-.visura-invariati summary {
+.visura-import .visura-invariati summary {
   cursor: pointer;
-  color: #4a5662;
+  color: var(--gray-700);
 }
 
-.visura-result ul {
+/* Result step */
+.visura-import .visura-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.visura-import .visura-result h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-h3);
+}
+
+.visura-import .visura-result__ok {
+  color: var(--color-success);
+}
+
+.visura-import .visura-result__totali {
+  margin: 0;
+  padding-left: var(--space-5);
   line-height: 1.8;
+}
+
+/* Actions: stay visible at the bottom of the scrolling modal content */
+.visura-import .visura-actions {
+  position: sticky;
+  bottom: calc(-1 * var(--space-5));
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin: 0 calc(-1 * var(--space-5)) calc(-1 * var(--space-5));
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--gray-300);
+  background: #fff;
+}
+
+.visura-import .visura-actions__hint {
+  margin-right: auto;
+  align-self: center;
+  font-size: var(--font-size-small);
+  color: var(--color-danger-dark);
+}
+
+@media (max-width: 640px) {
+  .visura-import .visura-unit-fields {
+    flex-direction: column;
+    margin-left: 0;
+  }
+
+  .visura-import .visura-field--small {
+    flex: 1;
+  }
 }

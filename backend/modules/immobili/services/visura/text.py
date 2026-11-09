@@ -13,9 +13,12 @@ from typing import Optional, Tuple
 
 from immobili.models.diritti_immobile import TipoDiritto
 
-from .models import FormatoVisura, IntestatoParsed, VisuraFormatError
+from .models import IntestatoParsed, VisuraFormatError
 
-UNSUPPORTED_MSG = "Formato non supportato: carica una visura catastale sintetica o analitica"
+UNSUPPORTED_MSG = (
+    "Formato non supportato: carica una visura catastale per soggetto "
+    "(sintetica o analitica) o per immobile"
+)
 
 _CF_PF = re.compile(r"^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$")
 _CF_PG = re.compile(r"^\d{11}$")
@@ -38,14 +41,6 @@ def pdf_to_text(pdf_bytes: bytes) -> str:
     if result.returncode != 0 or not text.strip():
         raise VisuraFormatError("Impossibile leggere il PDF: nessun testo trovato (scansioni non supportate)")
     return text
-
-
-def detect_formato(text: str) -> FormatoVisura:
-    if "Visura attuale sintetica per soggetto" in text:
-        return FormatoVisura.SINTETICA
-    if "Visura attuale per soggetto" in text:
-        return FormatoVisura.ANALITICA
-    raise VisuraFormatError(UNSUPPORTED_MSG)
 
 
 def split_lines(text: str) -> list:
