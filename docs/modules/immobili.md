@@ -39,7 +39,7 @@ nello stesso commit.
 | Unità immobiliari | Anagrafica dell'unità: codice, tipo, indirizzo, città, CAP, provincia, piano, locali, superficie, dati catastali (foglio, particella, subalterno, categoria, rendita), condominio (`condominio_id`, oggi non impostabile dal form). Non ci sono ancora comune catastale, sezione, classe, consistenza e interno. Lista `/unita-immobiliari`, scheda `/unita-immobiliari/:id`. | `unita-immobiliari` |
 | Terreni | Foglio, particella, qualità, classe, redditi; tipologie di terreno. | `terreni`, `tipologie-terreno` |
 | Proprietari e diritti | Proprietario (legato a un soggetto anagrafico) e diritti sull'unità con tipo diritto e quota. | `proprietari`, `diritti-immobile` |
-| Conduttori | Conduttore e assegnazioni all'unità con periodo. Le assegnazioni restituiscono anche `soggetto_id` e `conduttore_nome`, mostrati nella scheda con il link all'anagrafica. | `conduttori`, `assegnazioni-conduttore` |
+| Conduttori | Conduttore e assegnazioni all'unità con periodo. Le assegnazioni restituiscono anche `soggetto_id` e `conduttore_nome` (solo a chi ha `soggetto.view`, come le relazioni), mostrati nella scheda con il link all'anagrafica. | `conduttori`, `assegnazioni-conduttore` |
 | Condomini | Condominio/complesso, tabelle millesimali e millesimi per unità; amministratore come relazione. | `condomini`, `tabelle-millesimali`, `millesimi-immobile` |
 | Spese ricorrenti | Spese periodiche dell'unità o del condominio. | `spese-ricorrenti` |
 | Categorie catastali | Catalogo (schema `public`). | `categorie-catastali` |

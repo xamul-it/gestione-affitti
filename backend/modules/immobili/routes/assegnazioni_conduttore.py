@@ -14,10 +14,22 @@ from ..schemas import (
 router = APIRouter(prefix="/assegnazioni-conduttore", tags=["assegnazioni-conduttore"])
 
 
-def _con_nome(db: Session, assegnazioni):
-    """Attach soggetto_id and conduttore_nome to each assignment (one query)."""
+def _vede_soggetti(user) -> bool:
+    """Names of anagrafiche need soggetto.view, as in the relazioni API."""
+    permessi = user.get_permissions() if hasattr(user, "get_permissions") else set()
+    return "*" in permessi or "soggetto.view" in permessi
+
+
+def _con_nome(db: Session, assegnazioni, user):
+    """Attach soggetto_id and conduttore_nome to each assignment (one query),
+    only for users allowed to see anagrafiche."""
     from anagrafica_italiana.models import SoggettoAnagrafico
 
+    if not _vede_soggetti(user):
+        for a in assegnazioni:
+            a.soggetto_id = None
+            a.conduttore_nome = None
+        return assegnazioni
     ids = {a.conduttore_id for a in assegnazioni}
     righe = (
         db.query(Conduttore.id, SoggettoAnagrafico)
@@ -53,7 +65,7 @@ def get_assegnazioni(
     if solo_correnti:
         query = query.filter(AssegnazioneConduttore.data_fine.is_(None))
 
-    return _con_nome(db, query.order_by(AssegnazioneConduttore.unita_immobiliare_id, AssegnazioneConduttore.data_inizio).all())
+    return _con_nome(db, query.order_by(AssegnazioneConduttore.unita_immobiliare_id, AssegnazioneConduttore.data_inizio).all(), current_user)
 
 
 @router.get("/unita-immobiliare/{unita_immobiliare_id}", response_model=List[AssegnazioneConduttoreResponse])
@@ -65,7 +77,7 @@ def get_assegnazioni_by_unita(unita_immobiliare_id: int, db: Session = Depends(g
 
     return _con_nome(db, db.query(AssegnazioneConduttore).filter(
         AssegnazioneConduttore.unita_immobiliare_id == unita_immobiliare_id
-    ).order_by(AssegnazioneConduttore.data_inizio.desc()).all())
+    ).order_by(AssegnazioneConduttore.data_inizio.desc()).all(), current_user)
 
 
 @router.get("/{assegnazione_id}", response_model=AssegnazioneConduttoreResponse)
@@ -74,7 +86,7 @@ def get_assegnazione(assegnazione_id: int, db: Session = Depends(get_db), curren
     assegnazione = db.query(AssegnazioneConduttore).filter(AssegnazioneConduttore.id == assegnazione_id).first()
     if not assegnazione:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assegnazione non trovata")
-    return _con_nome(db, [assegnazione])[0]
+    return _con_nome(db, [assegnazione], current_user)[0]
 
 
 @router.post("/", response_model=AssegnazioneConduttoreResponse, status_code=status.HTTP_201_CREATED)
@@ -92,7 +104,7 @@ def create_assegnazione(assegnazione: AssegnazioneConduttoreCreate, db: Session 
     db.add(db_assegnazione)
     db.commit()
     db.refresh(db_assegnazione)
-    return _con_nome(db, [db_assegnazione])[0]
+    return _con_nome(db, [db_assegnazione], current_user)[0]
 
 
 @router.put("/{assegnazione_id}", response_model=AssegnazioneConduttoreResponse)
@@ -111,7 +123,7 @@ def update_assegnazione(
 
     db.commit()
     db.refresh(db_assegnazione)
-    return _con_nome(db, [db_assegnazione])[0]
+    return _con_nome(db, [db_assegnazione], current_user)[0]
 
 
 @router.delete("/{assegnazione_id}", status_code=status.HTTP_204_NO_CONTENT)

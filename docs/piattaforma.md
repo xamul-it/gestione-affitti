@@ -236,3 +236,15 @@ Pagina di debug per gli amministratori: `/admin/document-parsing-debug`.
   `ALTER DATABASE … REFRESH COLLATION VERSION`), con backup.
 - Permessi di `affitti_brevi` senza punto (vedi 4).
 - Anagrafica non eliminabile se ha relazioni nascoste (vedi 5).
+- **Interfaccia comune** (revisione del 2026-11-10):
+  - icone: `components/Navigation/iconRegistry.jsx`; un test controlla che
+    ogni icona dichiarata nei manifest (frontend e backend) sia registrata; un
+    nome sconosciuto mostra un'icona neutra (e un avviso in sviluppo), un
+    emoji resta testo;
+  - widget della dashboard: si registrano con `widgetRegistry.registerWidget`
+    nell'`index.js` del modulo, non con `registerModuleComponent`;
+  - `useEntityCRUD.fetchAll` ignora le richieste annullate da una più recente;
+  - la regola globale su `button` in `index.css` (padding, sfondo blu) colpisce
+    ogni pulsante senza stile proprio: usare `Button` di `components/UI`; i
+    pulsanti-icona devono azzerare il padding. Togliere la regola globale
+    richiede di migrare prima le pagine vecchie.

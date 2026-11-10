@@ -319,3 +319,27 @@ def test_assegnazioni_di_unita_riportano_nome_del_conduttore(pg_session, test_us
         pg_session.query(AssegnazioneConduttore).filter_by(conduttore_id=conduttore.id).delete()
         pg_session.query(Conduttore).filter_by(id=conduttore.id).delete()
         pg_session.commit()
+
+
+def test_nome_del_conduttore_solo_con_permesso_soggetto_view(pg_session, test_user, soggetto_conduttore, unita):
+    """Like the relazioni API, names of anagrafiche need soggetto.view."""
+    from types import SimpleNamespace
+    from immobili.routes.assegnazioni_conduttore import get_assegnazioni_by_unita
+
+    senza = SimpleNamespace(is_superuser=False, get_permissions=lambda: {"conduttore.view"})
+    con = SimpleNamespace(is_superuser=False, get_permissions=lambda: {"conduttore.view", "soggetto.view"})
+    conduttore = create_conduttore(ConduttoreCreate(soggetto_id=soggetto_conduttore.id), db=pg_session)
+    try:
+        create_assegnazione(
+            AssegnazioneConduttoreCreate(unita_immobiliare_id=unita.id, conduttore_id=conduttore.id),
+            db=pg_session,
+        )
+        [riga] = get_assegnazioni_by_unita(unita.id, db=pg_session, current_user=senza)
+        assert (riga.conduttore_nome, riga.soggetto_id) == (None, None)
+        [riga] = get_assegnazioni_by_unita(unita.id, db=pg_session, current_user=con)
+        assert riga.conduttore_nome == "Mario Conduttore"
+    finally:
+        pg_session.rollback()
+        pg_session.query(AssegnazioneConduttore).filter_by(conduttore_id=conduttore.id).delete()
+        pg_session.query(Conduttore).filter_by(id=conduttore.id).delete()
+        pg_session.commit()
