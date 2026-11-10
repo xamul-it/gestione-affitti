@@ -1,0 +1,36 @@
+.soggetti-ruoli {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.soggetti-ruolo {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--gray-200);
+  color: var(--color-ink);
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+}
+
+.soggetti-ruolo--cessato {
+  background: transparent;
+  border: 1px dashed var(--gray-400);
+  color: var(--gray-600);
+}
+
+.soggetti-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.soggetti-toolbar select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--gray-400);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--font-size-small);
+}

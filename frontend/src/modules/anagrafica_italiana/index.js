@@ -15,6 +15,7 @@ widgetRegistry.registerWidget(
 
 // Components
 export { default as SoggettiAnagraficiList } from './components/SoggettiAnagrafici/SoggettiAnagraficiList';
+export { default as SoggettiTable, nomeSoggetto, linkSoggetto } from './components/SoggettiAnagrafici/SoggettiTable';
 export { default as SoggettoDetail } from './components/SoggettiAnagrafici/SoggettoDetail';
 export { default as SoggettoNew } from './components/SoggettiAnagrafici/SoggettoNew';
 
