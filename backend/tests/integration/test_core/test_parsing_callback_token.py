@@ -92,3 +92,16 @@ def test_token_oscurato_nel_log(db_session, job):
     db_session.flush()
     log = db_session.query(DocumentParsingLog).filter_by(job_uuid=job.job_uuid).one()
     assert callback_token(job.job_uuid) not in str(log.request_payload)
+
+
+def test_richiamata_lavora_nello_schema_del_tenant_del_job(client, job, db_session):
+    """The callback has no user nor tenant: get_db leaves search_path on public.
+    The job's tenant tables (scadenze, documento files) must still be found."""
+    from sqlalchemy import text
+    db_session.execute(text("SET search_path TO public"))
+    res = client.post(
+        f"/api/v1/document-parsing/callback/{job.job_uuid}?token={callback_token(job.job_uuid)}",
+        json={"status": "finished", "result": {"document_number": "YC1"}, "error": None})
+    assert res.status_code == 200, res.text
+    db_session.refresh(job)
+    assert job.status == JobStatus.COMPLETED

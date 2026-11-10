@@ -235,6 +235,14 @@ async def parsing_callback(
         raise HTTPException(status_code=http_status.HTTP_409_CONFLICT,
                             detail=f"Job già concluso ({job.status.value})")
 
+    # No user nor tenant on this request: get_db left search_path on public.
+    # Work in the job's tenant schema (scadenze, documento files live there).
+    from sqlalchemy import text
+    from app.core.models.tenant import Tenant
+    if not db.query(Tenant.id).filter(Tenant.schema_name == job.tenant_schema).first():
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Tenant del job non trovato")
+    db.execute(text(f'SET search_path TO "{job.tenant_schema}", public'))
+
     # Use service to handle callback
     service = DocumentParsingService(db, job.tenant_schema)
 
