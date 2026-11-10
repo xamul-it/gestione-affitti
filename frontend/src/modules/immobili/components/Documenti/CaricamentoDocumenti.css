@@ -1,0 +1,126 @@
+/* CaricamentoDocumenti — design tokens; shared .doc-* from core Documenti.css. */
+.caricamento {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.caricamento__righe {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.caricamento__riga {
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.caricamento__intestazione {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.caricamento__intestazione:disabled {
+  cursor: default;
+}
+
+.caricamento__intestazione:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.caricamento__nome {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.caricamento__motivo {
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-3);
+  color: var(--color-danger-dark);
+}
+
+.caricamento__scelte > * {
+  flex: 1 1 220px;
+}
+
+.caricamento__dettaglio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.caricamento__scelte {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.caricamento__riepilogo {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.caricamento__riepilogo dt {
+  color: var(--gray-600);
+}
+
+.caricamento__riepilogo dd {
+  margin: 0;
+}
+
+.caricamento__differenze {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+.caricamento__differenze label,
+.caricamento__forza {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.caricamento__avviso {
+  margin: 0;
+  color: var(--gray-800);
+}
+
+.caricamento__azioni {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Screen-reader only: announces row state changes. */
+.caricamento__annuncio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

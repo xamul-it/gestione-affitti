@@ -4,6 +4,10 @@ import { MemoryRouter } from 'react-router-dom';
 import DocumentiImmobiliPage from './DocumentiImmobiliPage';
 import { documentiAPI } from '../../../../services/documentiAPI';
 
+vi.mock('../../services/immobiliAPI', () => ({
+  unitaImmobiliariAPI: { getAll: vi.fn(() => Promise.resolve({ data: [] })) },
+  caricamentoDocumentiAPI: { analizza: vi.fn(), stato: vi.fn(), rianalizza: vi.fn(), conferma: vi.fn() },
+}));
 vi.mock('../../../../services/documentiAPI', () => ({
   documentiAPI: { getTipi: vi.fn(), list: vi.fn(), download: vi.fn(), view: vi.fn() },
 }));

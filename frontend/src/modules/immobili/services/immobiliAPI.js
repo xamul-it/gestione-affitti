@@ -39,6 +39,19 @@ export const visuraImportAPI = {
   }),
 };
 
+// Caricamento unico dei documenti degli immobili (/immobili/documenti)
+const CARICAMENTO = '/unita-immobiliari/caricamento-documenti';
+export const caricamentoDocumentiAPI = {
+  analizza: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`${CARICAMENTO}/analizza`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  stato: (uploadToken) => api.get(`${CARICAMENTO}/analizza/${uploadToken}`),
+  rianalizza: (body) => api.post(`${CARICAMENTO}/rianalizza`, body),
+  conferma: (body) => api.post(`${CARICAMENTO}/conferma`, body),
+};
+
 // Unita Immobiliari API
 export const unitaImmobiliariAPI = {
   getAll: () => api.get('/unita-immobiliari/'),

@@ -9,6 +9,7 @@ import DocumentoPreview from '../../../../core/components/Documenti/DocumentoPre
 import { scaricaDocumento } from '../../../../core/components/Documenti/scaricaDocumento';
 import { formatDate, statoScadenza } from '../../../../core/components/Documenti/documentiUtils';
 import '../../../../core/components/Documenti/Documenti.css';
+import CaricamentoDocumenti from './CaricamentoDocumenti';
 import './DocumentiImmobiliPage.css';
 
 const SCADENZE = [
@@ -33,6 +34,7 @@ export default function DocumentiImmobiliPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [versione, setVersione] = useState(0);
 
   const setFiltro = (key, value) => {
     const next = new URLSearchParams(params);
@@ -55,7 +57,7 @@ export default function DocumentiImmobiliPage() {
       .catch((err) => { if (attivo) setError(formatApiError(err)); })
       .finally(() => { if (attivo) setLoading(false); });
     return () => { attivo = false; };
-  }, [tipo, sostituiti, scadenza]);
+  }, [tipo, sostituiti, scadenza, versione]);
 
   const tipiByCodice = useMemo(() => Object.fromEntries(tipi.map((t) => [t.codice, t])), [tipi]);
 
@@ -65,6 +67,8 @@ export default function DocumentiImmobiliPage() {
         <h2>Documenti</h2>
         <p className="doc-muted">Visure, APE, planimetrie e gli altri documenti di tutte le unità immobiliari.</p>
       </header>
+
+      <CaricamentoDocumenti onCaricato={() => setVersione((v) => v + 1)} />
 
       <div className="documenti-immobili__filtri">
         <FormField label="Tipologia" htmlFor="doc-filtro-tipo">
