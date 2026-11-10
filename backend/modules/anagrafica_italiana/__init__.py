@@ -250,3 +250,13 @@ def register_module(app):
     print("[Anagrafica Italiana Module] Registering module...")
     print("[Anagrafica Italiana Module] Providing Italian registry functionality")
     print("[Anagrafica Italiana Module] Registration complete!")
+
+
+def post_sync(db, tenant_schema: str) -> dict:
+    """
+    Data alignment run per tenant by scripts/sync_modules.py after the
+    relation types sync: copies the legacy business roles
+    (anag_ruoli_azienda) into core_relazioni. Idempotent.
+    """
+    from .services.ruoli_azienda_relazioni import migra_legacy
+    return {"ruoli_azienda": migra_legacy(db, tenant_schema)}

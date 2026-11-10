@@ -10,7 +10,8 @@ class RuoloAziendaBase(BaseModel):
     """Base schema for RuoloAzienda"""
     persona_fisica_id: int = Field(..., description="ID della persona fisica")
     persona_giuridica_id: int = Field(..., description="ID dell'azienda (persona giuridica)")
-    ruolo: str = Field(..., min_length=1, max_length=100, description="Nome del ruolo (es: Amministratore, Segretaria)")
+    ruolo_tipo_id: Optional[int] = Field(None, description="Tipo di ruolo (anag_ruoli_azienda_tipi)")
+    ruolo: Optional[str] = Field(None, max_length=100, description="Ruolo in testo libero, se manca il tipo")
     data_inizio: Optional[date] = Field(None, description="Data di inizio del ruolo")
     data_fine: Optional[date] = Field(None, description="Data di fine del ruolo (null se attivo)")
 
@@ -22,7 +23,8 @@ class RuoloAziendaCreate(RuoloAziendaBase):
 
 class RuoloAziendaUpdate(BaseModel):
     """Schema for updating a RuoloAzienda"""
-    ruolo: Optional[str] = Field(None, min_length=1, max_length=100)
+    ruolo_tipo_id: Optional[int] = None
+    ruolo: Optional[str] = Field(None, max_length=100)
     data_inizio: Optional[date] = None
     data_fine: Optional[date] = None
 
@@ -52,6 +54,7 @@ class SoggettoBasic(BaseModel):
 class RuoloAziendaResponse(RuoloAziendaBase):
     """Schema for RuoloAzienda response with full details"""
     id: int
+    ruolo_tipo_nome: Optional[str] = None
     persona_fisica: SoggettoBasic
     persona_giuridica: SoggettoBasic
     created_at: datetime

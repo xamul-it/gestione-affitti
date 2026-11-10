@@ -20,6 +20,7 @@ manifest = {
     "endpoints": {
         "register": "seeds.seed_public:seed_public",
         "install": "seeds.seed_tenant:seed_tenant",
+        "post_sync": ":post_sync",  # Ruoli in azienda legacy -> core_relazioni (sync_modules.py)
     },
     "author": "Gestione Affitti Team",
     # Module configuration

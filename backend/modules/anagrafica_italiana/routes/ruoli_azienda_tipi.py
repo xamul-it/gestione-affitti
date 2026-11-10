@@ -267,13 +267,12 @@ def merge_ruoli_tipi(
     if not target:
         raise HTTPException(status_code=404, detail=f"Ruolo target (ID {merge_data.target_id}) non trovato")
 
-    # Sposta tutte le associazioni da source a target
-    associazioni = db.query(RuoloAzienda).filter(RuoloAzienda.ruolo_tipo_id == merge_data.source_id).all()
-    updated_count = len(associazioni)
-
-    for associazione in associazioni:
+    # Sposta le associazioni da source a target: relazioni core (ruolo_azienda)
+    # e, per i dati storici, la vecchia tabella anag_ruoli_azienda.
+    from ..services.ruoli_azienda_relazioni import sposta_tipo
+    updated_count = sposta_tipo(db, merge_data.source_id, merge_data.target_id)
+    for associazione in db.query(RuoloAzienda).filter(RuoloAzienda.ruolo_tipo_id == merge_data.source_id).all():
         associazione.ruolo_tipo_id = merge_data.target_id
-        # Azzera il campo ruolo text (ora usa ruolo_tipo)
         associazione.ruolo = None
 
     # Elimina il ruolo source
