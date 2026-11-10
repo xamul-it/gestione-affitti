@@ -54,6 +54,7 @@ from app.core.routes.scadenze import router as scadenze_router
 from app.core.routes.notifiche import router as notifiche_router
 from app.core.routes.document_parsing import router as document_parsing_router
 from app.core.routes.documenti import router as documenti_router
+from app.core.routes.relazioni import router as relazioni_router
 
 # Import auth routes
 from app.core.auth.routes import router as auth_router
@@ -524,6 +525,7 @@ app.include_router(scadenze_router, prefix=settings.API_V1_STR)
 app.include_router(notifiche_router, prefix=settings.API_V1_STR)
 app.include_router(document_parsing_router, prefix=settings.API_V1_STR)
 app.include_router(documenti_router, prefix=settings.API_V1_STR)
+app.include_router(relazioni_router, prefix=settings.API_V1_STR)
 
 # ====================================================================
 # AUTO-DISCOVERY: Register all module routers dynamically
