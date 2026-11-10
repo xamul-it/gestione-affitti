@@ -161,10 +161,12 @@ def create_default_roles(db: Session, permissions: dict) -> dict:
             db.add(role)
             logger.info(f"Created role: {role_name}")
 
-        # Assign permissions to role
-        role.permissions.clear()
+        # Add the missing default permissions, never remove any: module
+        # permissions are granted to these roles by sync_module_permissions
+        # and must survive every startup.
+        current = {p.name for p in role.permissions}
         for perm_name in config["permissions"]:
-            if perm_name in permissions:
+            if perm_name in permissions and perm_name not in current:
                 role.permissions.append(permissions[perm_name])
 
         roles[role_name] = role

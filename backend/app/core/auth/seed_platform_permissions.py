@@ -43,10 +43,26 @@ def _normalize_manifest_permissions(manifest: dict) -> list[dict]:
     return normalized
 
 
+def _azione(name: str) -> str:
+    return name.rsplit(".", 1)[-1] if "." in name else ""
+
+
+# Which module permissions each default role gets. Names not shaped like
+# "<resource>.<action>" (no dot) go to the admin roles only.
+_ROLE_GRANTS = {
+    "Admin": lambda name: True,
+    "Platform Administrator": lambda name: True,
+    "Tenant Administrator": lambda name: True,
+    "Manager": lambda name: _azione(name) not in ("", "delete", "admin"),
+    "Viewer": lambda name: _azione(name) in ("view", "read"),
+}
+
+
 def sync_module_permissions(db: Session, manifest: dict) -> dict:
     """
     Ensure module permissions exist in core_permissions and grant them to
-    the standard admin roles used by the platform.
+    the default roles per _ROLE_GRANTS (admin roles all, Manager all but
+    delete/admin, Viewer view/read). Only adds, never removes.
     """
     permissions_data = _normalize_manifest_permissions(manifest)
     if not permissions_data:
@@ -71,10 +87,9 @@ def sync_module_permissions(db: Session, manifest: dict) -> dict:
             existing += 1
         permission_objects.append(perm)
 
-    admin_role_names = ["Admin", "Platform Administrator", "Tenant Administrator"]
     roles_updated = 0
 
-    for role_name in admin_role_names:
+    for role_name, grants in _ROLE_GRANTS.items():
         role = db.query(Role).filter_by(name=role_name).first()
         if not role:
             continue
@@ -82,7 +97,7 @@ def sync_module_permissions(db: Session, manifest: dict) -> dict:
         added_any = False
         current_permission_names = {perm.name for perm in role.permissions}
         for perm in permission_objects:
-            if perm.name not in current_permission_names:
+            if grants(perm.name) and perm.name not in current_permission_names:
                 role.permissions.append(perm)
                 added_any = True
 

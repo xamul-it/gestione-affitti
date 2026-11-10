@@ -135,7 +135,7 @@ echo "    backup verificato: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1), $(
 
 # Tiene solo gli ultimi 14 backup (con le loro fotografie)
 ls -t "$BACKUP_DIR"/${PROD_DB}_*.sql 2>/dev/null | tail -n +15 | while read -r old; do
-    rm -f "$old" "${old%.sql}.before.txt" "${old%.sql}.after.txt"
+    rm -f "$old" "${old%.sql}.before.txt" "${old%.sql}.after.txt" "${old%.sql}.started.txt"
 done
 
 # Da qui un errore lascia il backend fermo: va prima capito cosa e' successo.
@@ -150,11 +150,10 @@ python scripts/sync_modules.py
 
 trap - ERR
 
-echo "==> Verifica preservazione dati"
-(umask 077; "${PSQL[@]}" -f "$SNAPSHOT_SQL" > "$SNAP_AFTER" 2>/dev/null)
-# Errore se una tabella sparisce o perde righe; le versioni alembic e le
-# tabelle/righe nuove sono solo riportate.
-if ! awk '
+# confronta PRIMA DOPO: errore se una tabella sparisce o perde righe; le
+# versioni alembic e le tabelle/righe nuove sono solo riportate.
+confronta() {
+    awk '
     NR == FNR { before[$1] = $2; next }
     { after[$1] = $2 }
     END {
@@ -169,7 +168,13 @@ if ! awk '
         }
         for (t in after) if (!(t in before)) print "  nuova tabella " t
         exit bad
-    }' "$SNAP_BEFORE" "$SNAP_AFTER" | sort; then
+    }' "$1" "$2" | sort
+    return "${PIPESTATUS[0]}"
+}
+
+echo "==> Verifica preservazione dati"
+(umask 077; "${PSQL[@]}" -f "$SNAPSHOT_SQL" > "$SNAP_AFTER" 2>/dev/null)
+if ! confronta "$SNAP_BEFORE" "$SNAP_AFTER"; then
     echo "ERRORE: dati persi durante la migrazione. Backend lasciato fermo." >&2
     echo "    Fotografie: $SNAP_BEFORE  $SNAP_AFTER" >&2
     print_restore
@@ -194,7 +199,20 @@ if ! curl -sf -m 2 http://127.0.0.1:8001/health > /dev/null; then
 fi
 echo "    backend attivo, /health ok"
 
+# L'avvio del backend esegue a sua volta seed e allineamenti (ruoli,
+# permessi, menu): anche quelli non devono togliere dati.
+echo "==> Verifica preservazione dati dopo l'avvio"
+SNAP_STARTED="$BACKUP_DIR/${PROD_DB}_${STAMP}.started.txt"
+(umask 077; "${PSQL[@]}" -f "$SNAPSHOT_SQL" > "$SNAP_STARTED" 2>/dev/null)
+if ! confronta "$SNAP_AFTER" "$SNAP_STARTED"; then
+    echo "ERRORE: l'avvio del backend ha tolto dati (backend attivo)." >&2
+    echo "    Fotografie: $SNAP_AFTER  $SNAP_STARTED" >&2
+    print_restore
+    exit 1
+fi
+echo "    nessuna tabella o riga persa all'avvio"
+
 echo
 echo "==> Promozione completata."
 echo "    Backup: $BACKUP_FILE"
-echo "    Fotografie: $SNAP_BEFORE  $SNAP_AFTER"
+echo "    Fotografie: $SNAP_BEFORE  $SNAP_AFTER  $SNAP_STARTED"
