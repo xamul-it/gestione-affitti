@@ -16,7 +16,6 @@ class UnitaImmobiliareBase(BaseModel):
     superficie_mq: Optional[float] = None
     locali: Optional[int] = None
     piano: Optional[str] = None
-    classe_energetica: Optional[str] = None
     rendita_catastale: Optional[float] = None
     foglio: Optional[str] = None
     particella: Optional[str] = None
@@ -69,7 +68,6 @@ class UnitaImmobiliareUpdate(BaseModel):
     superficie_mq: Optional[float] = None
     locali: Optional[int] = None
     piano: Optional[str] = None
-    classe_energetica: Optional[str] = None
     rendita_catastale: Optional[float] = None
     foglio: Optional[str] = None
     particella: Optional[str] = None
@@ -115,6 +113,8 @@ class UnitaImmobiliareResponse(UnitaImmobiliareBase):
     categoria_catastale: Optional[CategoriaCatastale] = None  # Nested relationship
     codice_auto_generated: Optional[bool] = None
     indirizzo_parsed_warnings: Optional[List[str]] = None
+    # From the current APE (services/ape.py), never from the old column.
+    classe_energetica: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -10,9 +10,17 @@ from ..models import UnitaImmobiliare, VariazioneCatastale
 from ..schemas.immobili import (
     UnitaImmobiliareCreate, UnitaImmobiliareUpdate, UnitaImmobiliareResponse, VariazioneCatastaleResponse,
 )
+from ..services.ape import classi_da_ape
 from ..services.variazioni_catastali import registra_variazioni
 
 router = APIRouter(prefix="/unita-immobiliari", tags=["Unità Immobiliari"])
+
+
+def _risposte(db: Session, unita: List[UnitaImmobiliare]) -> List[UnitaImmobiliareResponse]:
+    """Responses with the energy class of the current APE."""
+    classi = classi_da_ape(db, [u.id for u in unita])
+    return [UnitaImmobiliareResponse.model_validate(u).model_copy(update={"classe_energetica": classi.get(u.id)})
+            for u in unita]
 
 
 @router.get("/", response_model=List[UnitaImmobiliareResponse])
@@ -26,7 +34,7 @@ def get_unita_immobiliari(
     unita_immobiliari = db.query(UnitaImmobiliare)\
         .options(joinedload(UnitaImmobiliare.categoria_catastale))\
         .offset(skip).limit(limit).all()
-    return unita_immobiliari
+    return _risposte(db, unita_immobiliari)
 
 
 @router.get("/{unita_immobiliare_id}", response_model=UnitaImmobiliareResponse)
@@ -44,7 +52,7 @@ def get_unita_immobiliare(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Unità immobiliare con ID {unita_immobiliare_id} non trovato"
         )
-    return unita_immobiliare
+    return _risposte(db, [unita_immobiliare])[0]
 
 
 @router.post("/", response_model=UnitaImmobiliareResponse, status_code=status.HTTP_201_CREATED)
@@ -65,7 +73,7 @@ def create_unita_immobiliare(
     db.add(new_unita)
     db.commit()
     db.refresh(new_unita)
-    return new_unita
+    return _risposte(db, [new_unita])[0]
 
 
 @router.put("/{unita_immobiliare_id}", response_model=UnitaImmobiliareResponse)
@@ -93,7 +101,7 @@ def update_unita_immobiliare(
 
     db.commit()
     db.refresh(db_unita)
-    return db_unita
+    return _risposte(db, [db_unita])[0]
 
 
 @router.get("/{unita_immobiliare_id}/variazioni-catastali", response_model=List[VariazioneCatastaleResponse])

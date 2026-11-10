@@ -72,7 +72,6 @@ function UnitaImmobiliareForm({ unitaImmobiliare, onClose, showSchedaLink = true
     superficie_mq: '',
     locali: '',
     piano: '',
-    classe_energetica: '',
     rendita_catastale: '',
     foglio: '',
     particella: '',
@@ -303,21 +302,6 @@ function UnitaImmobiliareForm({ unitaImmobiliare, onClose, showSchedaLink = true
           </div>
 
           <div className="form-row">
-            <div className="form-group">
-              <label>Classe Energetica</label>
-              <select name="classe_energetica" value={formData.classe_energetica} onChange={handleChange}>
-                <option value="">Seleziona...</option>
-                <option value="A+">A+</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-                <option value="D">D</option>
-                <option value="E">E</option>
-                <option value="F">F</option>
-                <option value="G">G</option>
-              </select>
-            </div>
-
             <div className="form-group">
               <label>Rendita Catastale</label>
               <input
