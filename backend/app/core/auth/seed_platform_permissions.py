@@ -44,7 +44,10 @@ def _normalize_manifest_permissions(manifest: dict) -> list[dict]:
 
 
 def _azione(name: str) -> str:
-    return name.rsplit(".", 1)[-1] if "." in name else ""
+    """Action of a "<resource>.<action>" permission; "" for any other shape
+    (no dot, or sub-resources like pec.audit.view), which only admin roles get."""
+    parts = name.split(".")
+    return parts[1] if len(parts) == 2 else ""
 
 
 # Allowlists: a new kind of action (e.g. "purge", "manage") reaches Manager
@@ -53,7 +56,7 @@ _AZIONI_VIEWER = frozenset({"view", "read"})
 _AZIONI_MANAGER = _AZIONI_VIEWER | {"create", "edit", "reply", "import", "export"}
 
 # Which module permissions each default role gets. Names not shaped like
-# "<resource>.<action>" (no dot) go to the admin roles only.
+# "<resource>.<action>" go to the admin roles only.
 _ROLE_GRANTS = {
     "Admin": lambda name: True,
     "Platform Administrator": lambda name: True,
@@ -62,12 +65,17 @@ _ROLE_GRANTS = {
     "Viewer": lambda name: _azione(name) in _AZIONI_VIEWER,
 }
 
+# Roles whose module permissions follow _ROLE_GRANTS exactly: a module
+# permission the rule no longer grants is taken back.
+_ROLE_REVOCABILI = ("Manager", "Viewer")
+
 
 def sync_module_permissions(db: Session, manifest: dict) -> dict:
     """
     Ensure module permissions exist in core_permissions and grant them to
     the default roles per _ROLE_GRANTS (admin roles all, Manager and Viewer by
-    the action allowlists below). Only adds, never removes.
+    the action allowlists below). Admin roles only gain permissions; Manager
+    and Viewer also lose the module permissions the rule doesn't grant.
     """
     permissions_data = _normalize_manifest_permissions(manifest)
     if not permissions_data:
@@ -104,6 +112,9 @@ def sync_module_permissions(db: Session, manifest: dict) -> dict:
         for perm in permission_objects:
             if grants(perm.name) and perm.name not in current_permission_names:
                 role.permissions.append(perm)
+                added_any = True
+            elif role_name in _ROLE_REVOCABILI and not grants(perm.name) and perm.name in current_permission_names:
+                role.permissions.remove(perm)
                 added_any = True
 
         if added_any:

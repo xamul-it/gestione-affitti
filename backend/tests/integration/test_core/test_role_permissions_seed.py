@@ -40,12 +40,31 @@ def test_manager_senza_delete_ne_admin(db_session):
     init_auth_data(db_session)
     sync_module_permissions(db_session, MANIFEST)
     assert _perms(db_session, "Manager") == {
-        "zz_test.view", "zz_test.create", "zz_test.edit", "zz_test.read", "zz_test.audit.view",
+        "zz_test.view", "zz_test.create", "zz_test.edit", "zz_test.read",
         "zz_test.reply", "zz_test.import", "zz_test.export",
-    }  # an unknown action (purge) is not granted: allowlist, not denylist
+    }  # unknown actions (purge) and sub-resources (audit.view) are not granted
 
 
 def test_viewer_solo_lettura(db_session):
     init_auth_data(db_session)
     sync_module_permissions(db_session, MANIFEST)
-    assert _perms(db_session, "Viewer") == {"zz_test.view", "zz_test.read", "zz_test.audit.view"}
+    assert _perms(db_session, "Viewer") == {"zz_test.view", "zz_test.read"}
+
+
+def test_grant_fuori_regola_revocati_a_manager_e_viewer(db_session):
+    """Module permissions Manager/Viewer got from an earlier, broader rule are
+    taken back at the next sync; admin roles keep everything."""
+    from app.core.auth.models import Permission
+    init_auth_data(db_session)
+    sync_module_permissions(db_session, MANIFEST)
+    audit = db_session.query(Permission).filter_by(name="zz_test.audit.view").one()
+    ruoli = [db_session.query(Role).filter_by(name=nome).one() for nome in ("Manager", "Viewer")]
+    for ruolo in ruoli:
+        ruolo.permissions.append(audit)
+    db_session.flush()
+
+    sync_module_permissions(db_session, MANIFEST)
+
+    assert "zz_test.audit.view" not in _perms(db_session, "Manager")
+    assert "zz_test.audit.view" not in _perms(db_session, "Viewer")
+    assert "zz_test.audit.view" in _perms(db_session, "Admin")
