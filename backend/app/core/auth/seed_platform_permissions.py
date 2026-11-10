@@ -47,22 +47,27 @@ def _azione(name: str) -> str:
     return name.rsplit(".", 1)[-1] if "." in name else ""
 
 
+# Allowlists: a new kind of action (e.g. "purge", "manage") reaches Manager
+# or Viewer only once it is added here on purpose.
+_AZIONI_VIEWER = frozenset({"view", "read"})
+_AZIONI_MANAGER = _AZIONI_VIEWER | {"create", "edit", "reply", "import", "export"}
+
 # Which module permissions each default role gets. Names not shaped like
 # "<resource>.<action>" (no dot) go to the admin roles only.
 _ROLE_GRANTS = {
     "Admin": lambda name: True,
     "Platform Administrator": lambda name: True,
     "Tenant Administrator": lambda name: True,
-    "Manager": lambda name: _azione(name) not in ("", "delete", "admin"),
-    "Viewer": lambda name: _azione(name) in ("view", "read"),
+    "Manager": lambda name: _azione(name) in _AZIONI_MANAGER,
+    "Viewer": lambda name: _azione(name) in _AZIONI_VIEWER,
 }
 
 
 def sync_module_permissions(db: Session, manifest: dict) -> dict:
     """
     Ensure module permissions exist in core_permissions and grant them to
-    the default roles per _ROLE_GRANTS (admin roles all, Manager all but
-    delete/admin, Viewer view/read). Only adds, never removes.
+    the default roles per _ROLE_GRANTS (admin roles all, Manager and Viewer by
+    the action allowlists below). Only adds, never removes.
     """
     permissions_data = _normalize_manifest_permissions(manifest)
     if not permissions_data:

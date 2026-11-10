@@ -17,7 +17,8 @@ pytestmark = pytest.mark.integration
 MANIFEST = {"permissions": [
     {"name": "zz_test.view"}, {"name": "zz_test.create"}, {"name": "zz_test.edit"},
     {"name": "zz_test.delete"}, {"name": "zz_test.read"}, {"name": "zz_test.admin"},
-    {"name": "zz_test.audit.view"},
+    {"name": "zz_test.audit.view"}, {"name": "zz_test.purge"}, {"name": "zz_test.reply"},
+    {"name": "zz_test.import"}, {"name": "zz_test.export"},
 ]}
 
 
@@ -40,7 +41,8 @@ def test_manager_senza_delete_ne_admin(db_session):
     sync_module_permissions(db_session, MANIFEST)
     assert _perms(db_session, "Manager") == {
         "zz_test.view", "zz_test.create", "zz_test.edit", "zz_test.read", "zz_test.audit.view",
-    }
+        "zz_test.reply", "zz_test.import", "zz_test.export",
+    }  # an unknown action (purge) is not granted: allowlist, not denylist
 
 
 def test_viewer_solo_lettura(db_session):
