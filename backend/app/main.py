@@ -311,6 +311,10 @@ app.add_middleware(
 from app.core.middleware.tenant_middleware import TenantMiddleware
 app.add_middleware(TenantMiddleware)
 
+# Per-tenant module gate: a module's API answers only where it is enabled.
+from app.core.middleware.module_gate import ModuleGateMiddleware, proteggi_rotte
+app.add_middleware(ModuleGateMiddleware, fastapi_app=app)
+
 
 @app.on_event("shutdown")
 async def stop_background_schedulers():
@@ -578,6 +582,8 @@ if module_registry:
             app.include_router(router, prefix=settings.API_V1_STR)
             logger.info(f"Registered module router from registry: {router.prefix}")
         logger.info(f"Total registry routers: {len(module_routers)}")
+
+logger.info("Module gate: %s module routes gated per tenant", proteggi_rotte(app))
 
 if __name__ == "__main__":
     import uvicorn
