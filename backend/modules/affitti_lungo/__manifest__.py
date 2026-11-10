@@ -23,8 +23,25 @@ manifest = {
     "endpoints": {
         "register": "seeds:seed_public",
         "install": "seeds:seed_tenant",
-        "register_roles": "roles:register_roles",
     },
+
+    # Tipi di relazione (spec 2026-11-10-relazioni-ruoli-soggetti)
+    "relation_types": [
+        {
+            "codice": "affittuario",
+            "nome": "Affittuario",
+            "descrizione": "Conduttore con contratto di locazione",
+            "fonte": "MODULO",
+            "provider": "affitti_lungo.relations:affittuari",
+        },
+        {
+            "codice": "tecnico",
+            "nome": "Tecnico",
+            "descrizione": "Tecnico o manutentore",
+            "fonte": "MODULO",
+            "provider": "affitti_lungo.relations:tecnici",
+        },
+    ],
 
     # Models provided
     "models": [
@@ -80,30 +97,6 @@ manifest = {
         {"name": "tecnico.delete", "description": "Eliminare tecnici"},
     ],
 
-    # Available roles registered in the system
-    "ruoli_disponibili": [
-        {
-            "technical_name": "proprietario",
-            "nome_ruolo": "Proprietario",
-            "descrizione": "Proprietario di immobili",
-            "tabella_specializzazione": "proprietari",
-            "modulo_origine": "affitti_lungo",
-        },
-        {
-            "technical_name": "affittuario",
-            "nome_ruolo": "Affittuario / Inquilino",
-            "descrizione": "Affittuario o inquilino di un immobile",
-            "tabella_specializzazione": "affittuari",
-            "modulo_origine": "affitti_lungo",
-        },
-        {
-            "technical_name": "tecnico",
-            "nome_ruolo": "Tecnico",
-            "descrizione": "Tecnico manutentore",
-            "tabella_specializzazione": "tecnici",
-            "modulo_origine": "affitti_lungo",
-        },
-    ],
 
     # Dashboard widgets
     "widgets": [

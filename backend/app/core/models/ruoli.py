@@ -4,7 +4,7 @@ Sistema di registrazione dinamica dei ruoli.
 Permette ai moduli di registrare i propri ruoli senza che il core
 debba conoscerli in anticipo, mantenendo la modularità del sistema.
 """
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, UniqueConstraint
+from sqlalchemy import JSON, Column, Integer, String, Boolean, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -47,6 +47,17 @@ class RuoloDisponibile(Base):
     # Metadati aggiuntivi in formato JSON (opzionale)
     # Può contenere configurazioni specifiche del modulo
     metadata_json = Column(Text, nullable=True)
+
+    # Campi dichiarati dal manifest (relation_types), vedi
+    # app.core.platform_services.relation_type_sync
+    entity_types = Column(JSON, nullable=True)
+    fonte = Column(String(10), nullable=False, default="CORE", server_default="CORE")
+    provider = Column(String(200), nullable=True)
+    scadenza = Column(JSON, nullable=True)
+    promemoria_giorni = Column(JSON, nullable=True)
+    sottotipi_fonte = Column(String(100), nullable=True)
+    unico_per_oggetto = Column(Boolean, nullable=False, default=False, server_default="false")
+    permesso_oggetto = Column(String(100), nullable=True)
 
     # Flag attivo/disattivo
     attivo = Column(Boolean, default=True, nullable=False)

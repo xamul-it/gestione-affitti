@@ -285,25 +285,16 @@ manifest = {
         },
     ],
 
-    # Available roles that other modules can assign to soggetti
-    "ruoli_disponibili": [
+    # Tipi di relazione (spec 2026-11-10-relazioni-ruoli-soggetti)
+    "relation_types": [
         {
-            "technical_name": "proprietario",
-            "nome_ruolo": "Proprietario",
-            "descrizione": "Proprietario di immobili",
-            "modulo_origine": "immobili",
-        },
-        {
-            "technical_name": "affittuario",
-            "nome_ruolo": "Affittuario",
-            "descrizione": "Affittuario/Inquilino",
-            "modulo_origine": "affitti_lungo",
-        },
-        {
-            "technical_name": "tecnico",
-            "nome_ruolo": "Tecnico",
-            "descrizione": "Tecnico/Manutentore",
-            "modulo_origine": "affitti_lungo",
+            "codice": "ruolo_azienda",
+            "nome": "Ruolo in azienda",
+            "descrizione": "Ruolo di una persona fisica in una persona giuridica",
+            "entity_types": ["SOGGETTO_ANAGRAFICO"],
+            "sottotipi_fonte": "anag_ruoli_azienda_tipi",
+            "scadenza": {"manuale": True},
+            "permesso_oggetto": "soggetto.view",
         },
     ],
 }

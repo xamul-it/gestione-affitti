@@ -21,6 +21,38 @@ manifest = {
         "post_sync": ":post_sync",  # Allineamento dati per tenant dopo migrazioni e tipologie (sync_modules.py)
     },
 
+    # Tipi di relazione soggetto -> oggetto (spec 2026-11-10-relazioni-ruoli-soggetti)
+    "relation_types": [
+        {
+            "codice": "proprietario",
+            "nome": "Proprietario",
+            "descrizione": "Titolare di un diritto reale su un'unità immobiliare",
+            "entity_types": ["IMMOBILE"],
+            "fonte": "MODULO",
+            "provider": "immobili.relations:proprietari",
+            "permesso_oggetto": "immobile.view",
+        },
+        {
+            "codice": "conduttore",
+            "nome": "Conduttore",
+            "descrizione": "Chi occupa o usa un'unità immobiliare, con o senza contratto",
+            "entity_types": ["IMMOBILE"],
+            "fonte": "MODULO",
+            "provider": "immobili.relations:conduttori",
+            "permesso_oggetto": "immobile.view",
+        },
+        {
+            "codice": "amministratore_condominio",
+            "nome": "Amministratore condominio",
+            "descrizione": "Incarico annuale, rinnovato per eguale durata (art. 1129 c.c.)",
+            "entity_types": ["CONDOMINIO"],
+            "scadenza": {"mesi": 12, "da": "data_inizio"},
+            "promemoria_giorni": [60, 30],
+            "unico_per_oggetto": True,
+            "permesso_oggetto": "condominio.view",
+        },
+    ],
+
     # Campi opzionali
     "author": "Gestione Affitti Team",
     "sequence": 20,

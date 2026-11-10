@@ -285,6 +285,25 @@ class ModuleLoader:
             logger.error(f"Failed to load manifest from '{manifest_path}': {e}")
             raise
 
+    def _sync_relation_types(self, technical_name: str, manifest: dict) -> None:
+        """Persist this module's relation types (partial sync, public schema)."""
+        if not manifest.get("relation_types"):
+            return
+        from sqlalchemy import text
+        from app.core.platform_services.relation_type_sync import sync_relation_types
+        db = self.registry.db
+        try:
+            db.execute(text("SET search_path TO public"))
+            report = sync_relation_types(db, {technical_name: manifest})
+            db.commit()
+            logger.info(
+                f"Tipi di relazione {technical_name}: {len(report.creati)} creati, "
+                f"{len(report.aggiornati)} aggiornati, {len(report.disattivati)} disattivati"
+            )
+        except Exception:
+            db.rollback()
+            logger.exception(f"Sync tipi di relazione fallita per {technical_name}")
+
     def _sync_document_types(self, technical_name: str, manifest: dict) -> None:
         """Persist this module's document types (partial sync, public schema)."""
         if not manifest.get("document_types"):
@@ -417,6 +436,7 @@ class ModuleLoader:
             from app.core.platform_services.document_type_registry import document_type_registry
             document_type_registry.register_from_manifest(technical_name, manifest)
             self._sync_document_types(technical_name, manifest)
+            self._sync_relation_types(technical_name, manifest)
 
             # 5. Return module metadata for installation
             return {

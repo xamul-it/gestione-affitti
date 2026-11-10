@@ -45,6 +45,7 @@ from sqlalchemy import create_engine, text  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.core.module_system.alembic_utils import build_module_alembic_config  # noqa: E402
 from app.core.platform_services.document_type_sync import sync_document_types  # noqa: E402
+from app.core.platform_services.relation_type_sync import sync_relation_types  # noqa: E402
 
 MODULE_DIR = Path(settings.resolved_module_dir)
 sys.path.insert(0, str(MODULE_DIR))
@@ -249,6 +250,26 @@ def main() -> int:
             except Exception as exc:
                 db.rollback()
                 log(f"  ERRORE sync tipologie: {exc}")
+                ok = False
+
+    log("==> Tipi di relazione")
+    declared = sum(len(m.get("relation_types") or []) for m in manifests.values())
+    log(f"  {declared} tipi dichiarati da {len(manifests)} moduli (completo: {complete})")
+    if not args.dry_run:
+        load_all_models(order)
+        with Session(engine) as db:
+            try:
+                db.execute(text("SET search_path TO public"))
+                report = sync_relation_types(db, manifests, complete=complete)
+                db.commit()
+                log(f"  creati {report.creati or '-'}; aggiornati {report.aggiornati or '-'}; "
+                    f"disattivati {report.disattivati or '-'}")
+                for e in report.errori:
+                    log(f"  ERRORE tipo di relazione {e}")
+                    ok = False
+            except Exception as exc:
+                db.rollback()
+                log(f"  ERRORE sync tipi di relazione: {exc}")
                 ok = False
 
     log("==> Permessi dei moduli")
