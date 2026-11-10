@@ -4,7 +4,7 @@ API routes for document parsing orchestration.
 Endpoints:
 - POST /document-parsing/upload-and-parse: Upload document and start parsing
 - GET /document-parsing/status/{job_uuid}: Check job status
-- POST /document-parsing/callback/{job_uuid}: Callback from parsing service (no auth)
+- POST /document-parsing/callback/{job_uuid}: Callback from parsing service (per-job token, no user auth)
 - GET /document-parsing/my-jobs: Get user's parsing jobs
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status as http_status
@@ -17,6 +17,7 @@ from app.core.auth.dependencies import get_current_user
 from app.core.auth.models import User
 from app.core.platform.models import JobStatus
 from app.core.platform_services import DocumentParsingService
+from app.core.platform_services.document_parsing_service import callback_token_valido
 
 router = APIRouter(prefix="/document-parsing", tags=["document-parsing"])
 logger = logging.getLogger(__name__)
@@ -176,6 +177,7 @@ def get_parsing_status(
 async def parsing_callback(
     job_uuid: str,
     callback_data: dict,
+    token: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -204,10 +206,13 @@ async def parsing_callback(
         404: Job not found
 
     Security Notes:
-        - TODO: Add HMAC signature validation
-        - TODO: Add IP whitelist for parsing services
+        - Requires ?token=<callback_token(job_uuid)>: the backend puts it in
+          the callback URL it hands to the service (403 otherwise).
     """
     logger.info(f"[DocumentParsing][Callback] Received callback for job {job_uuid}")
+    if not callback_token_valido(job_uuid, token):
+        logger.warning(f"[DocumentParsing][Callback] Rejected callback without a valid token for job {job_uuid}")
+        raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Token di richiamata non valido")
     logger.debug(f"[DocumentParsing][Callback] Payload: {callback_data}")
 
     # Import DocumentJob here to avoid circular import

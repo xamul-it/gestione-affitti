@@ -10,6 +10,8 @@ Orchestrates the workflow:
 
 Supports multi-tenant isolation and retry logic.
 """
+import hashlib
+import hmac
 import logging
 import uuid
 from typing import Optional, Dict, Any, BinaryIO
@@ -32,6 +34,16 @@ from app.core.platform.models import (
 from app.core.platform_services.document_type_registry import document_type_registry
 
 logger = logging.getLogger(__name__)
+
+
+def callback_token(job_uuid: str) -> str:
+    """Per-job secret the parsing callback must carry (the callback has no user auth)."""
+    return hmac.new(settings.SECRET_KEY.encode(), f"parsing-callback:{job_uuid}".encode(),
+                    hashlib.sha256).hexdigest()
+
+
+def callback_token_valido(job_uuid: str, token: Optional[str]) -> bool:
+    return bool(token) and hmac.compare_digest(token, callback_token(job_uuid))
 
 
 class DocumentParsingService:
@@ -537,9 +549,9 @@ class DocumentParsingService:
         default_url = f"{settings.API_BASE_URL}/document-parsing/callback/{job.job_uuid}"
         parsing_config = job.parsing_config or {}
         override = parsing_config.get("callback_url")
-        if not override:
-            return default_url
-        return self._format_callback_url(override, job.job_uuid)
+        url = self._format_callback_url(override, job.job_uuid) if override else default_url
+        sep = "&" if "?" in url else "?"
+        return f"{url}{sep}token={callback_token(job.job_uuid)}"
 
     def _format_callback_url(self, template: str, job_uuid: str) -> str:
         return (
