@@ -18,7 +18,7 @@ from app.core.platform_services.relazione_service import RelazioneService
 
 pytestmark = pytest.mark.integration
 
-TENANT = "tenant_test"
+from tests.integration.conftest import TEST_TENANT as TENANT
 
 
 @pytest.fixture
