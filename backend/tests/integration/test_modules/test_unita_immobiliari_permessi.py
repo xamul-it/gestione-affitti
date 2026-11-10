@@ -35,7 +35,7 @@ RESOURCES = {
 DOMAIN = {"/categorie-catastali": "immobile.view", "/tipologie-terreno": "terreno.view"}
 SPECIAL = {("POST", "/terreni/{terreno_id}/restore"): "terreno.edit"}
 # already guarded by their own permission scheme, covered by their tests
-SKIP = ("/unita-immobiliari/import-visura", "/certificati-energetici", "/spese-ricorrenti")
+SKIP = ("/unita-immobiliari/import-visura", "/unita-immobiliari/caricamento-documenti", "/certificati-energetici", "/spese-ricorrenti")
 
 ALL_PERMS = {f"{r}.{a}" for r in set(RESOURCES.values()) for a in ACTION.values()} | {"platform.admin"}
 

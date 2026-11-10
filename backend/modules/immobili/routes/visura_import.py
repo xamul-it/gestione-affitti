@@ -10,9 +10,7 @@ document. Temp uploads older than 24h are purged on each preview.
 """
 import io
 import logging
-import re
 import shutil
-import time
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -27,6 +25,8 @@ from app.core.database import get_db, get_tenant_schema
 from app.core.file_storage import file_storage
 
 from ..schemas.visura_import import VisuraApplyRequest, VisuraImportResult, VisuraProposta
+from ..services.upload_temporanei import purge_old_uploads as _purge_old_uploads
+from ..services.upload_temporanei import token_dir as _token_dir
 from ..services.visura import VisuraFormatError, parse_visura
 from ..services.visura_import_service import (
     VisuraImportError,
@@ -42,30 +42,7 @@ logger = logging.getLogger(__name__)
 REQUIRED_PERMISSIONS = ["documenti.write", "soggetto.create", "soggetto.edit"]
 TIPI_DOCUMENTO_SUPPORTATI = {"VISURA_CATASTALE"}
 MAX_SIZE = 10 * 1024 * 1024
-TEMP_TTL_SECONDS = 24 * 3600
-_TOKEN_RE = re.compile(r"^[0-9a-f]{32}$")
 EXPIRED_MSG = "Upload scaduto o non trovato, ricarica la visura"
-
-
-def _temp_root(tenant_schema: str) -> Path:
-    return file_storage._get_tenant_path(tenant_schema) / "temp_uploads"
-
-
-def _purge_old_uploads(tenant_schema: str) -> None:
-    root = _temp_root(tenant_schema)
-    if not root.exists():
-        return
-    cutoff = time.time() - TEMP_TTL_SECONDS
-    for d in root.iterdir():
-        if d.is_dir() and _TOKEN_RE.match(d.name) and d.stat().st_mtime < cutoff:
-            shutil.rmtree(d, ignore_errors=True)
-
-
-def _token_dir(tenant_schema: str, token: str) -> Optional[Path]:
-    if not _TOKEN_RE.match(token or ""):
-        return None
-    d = _temp_root(tenant_schema) / token
-    return d if d.is_dir() else None
 
 
 def _require_tenant(tenant_schema: Optional[str]) -> str:
