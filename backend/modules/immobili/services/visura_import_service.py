@@ -120,14 +120,17 @@ def _unit_key(citta: Optional[str], foglio, particella, sub) -> Tuple:
     return (normalize_nome(citta), strip_zeros(foglio), strip_zeros(particella), strip_zeros(sub))
 
 
-def _resolve_comune(db: Session, f: FabbricatoParsed) -> Optional[ComuneItalia]:
-    if f.codice_catastale_comune:
-        c = db.query(ComuneItalia).filter(ComuneItalia.codice_catastale == f.codice_catastale_comune).first()
+def _resolve_comune(db: Session, codice: Optional[str], nome: Optional[str],
+                    provincia: Optional[str] = None) -> Optional[ComuneItalia]:
+    if codice:
+        c = db.query(ComuneItalia).filter(ComuneItalia.codice_catastale == codice).first()
         if c:
             return c
-    candidates = db.query(ComuneItalia).filter(ComuneItalia.nome_normalized == normalize_nome(f.comune)).all()
-    if f.provincia:
-        same_prov = [c for c in candidates if c.provincia_sigla == f.provincia]
+    if not nome:
+        return None
+    candidates = db.query(ComuneItalia).filter(ComuneItalia.nome_normalized == normalize_nome(nome)).all()
+    if provincia:
+        same_prov = [c for c in candidates if c.provincia_sigla == provincia]
         candidates = same_prov or candidates
     return candidates[0] if len(candidates) == 1 else None
 
@@ -266,7 +269,7 @@ def build_proposal(db: Session, visura: VisuraParsed) -> VisuraProposta:
     unita: List[UnitaProposta] = []
     for f in visura.fabbricati:
         avvisi: List[str] = []
-        comune = _resolve_comune(db, f)
+        comune = _resolve_comune(db, f.codice_catastale_comune, f.comune, f.provincia)
         if comune:
             citta, provincia = comune.nome, comune.provincia_sigla
             cap = re.split(r"[,\-\s]+", comune.cap.strip())[0] if comune.cap else None
