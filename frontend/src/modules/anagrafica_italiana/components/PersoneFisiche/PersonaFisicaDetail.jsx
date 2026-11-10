@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { getSoggettoById, deleteSoggetto, getSoggettoRuoli } from '../../services/anagraficaAPI';
+import { getSoggettoById, deleteSoggetto } from '../../services/anagraficaAPI';
 import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import { DocumentoUpload, DocumentoList, DocumentoParsingPending } from '../Documenti';
 import RuoliAziendaSection from '../RuoliAzienda/RuoliAziendaSection';
+import RelazioniSection from '../../../../core/components/Relazioni/RelazioniSection';
 import { formatApiError } from '../../../../utils/errorHandling';
 import '../SoggettiAnagrafici/SoggettoDetail.css';
 
@@ -19,7 +20,6 @@ function PersonaFisicaDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const [persona, setPersona] = useState(null);
-  const [ruoli, setRuoli] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('anagrafica');
@@ -28,7 +28,6 @@ function PersonaFisicaDetail() {
 
   useEffect(() => {
     loadPersona();
-    loadRuoli();
   }, [id]);
 
   useEffect(() => {
@@ -60,14 +59,6 @@ function PersonaFisicaDetail() {
     }
   };
 
-  const loadRuoli = async () => {
-    try {
-      const data = await getSoggettoRuoli(id);
-      setRuoli(data);
-    } catch (err) {
-      console.error('Error loading ruoli:', err);
-    }
-  };
 
   const handleUploadSuccess = () => {
     setShowUpload(false);
@@ -207,7 +198,7 @@ function PersonaFisicaDetail() {
           <span className="tab-icon" aria-hidden="true">
             {renderIcon('users', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
           </span>
-          Ruoli {ruoli.length > 0 && `(${ruoli.length})`}
+          Relazioni
         </button>
       </div>
 
@@ -524,51 +515,13 @@ function PersonaFisicaDetail() {
         {activeTab === 'ruoli' && (
           <div className="tab-content tab-ruoli">
             <div className="tab-header">
-              <h2>
-                <span className="inline-icon" aria-hidden="true">
-                  {renderIcon('users', { size: 18, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
-                </span>
-                Ruoli Assegnati
-              </h2>
-              <button className="btn btn-primary">
-                <span className="button-icon" aria-hidden="true">
-                  {renderIcon('plus', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
-                </span>
-                Aggiungi Ruolo
-              </button>
+              <h2>Relazioni</h2>
             </div>
-
-            {ruoli.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon" aria-hidden="true">
-                  {renderIcon('users', { size: 48, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
-                </div>
-                <p>Nessun ruolo assegnato</p>
-                <p className="empty-hint">
-                  Aggiungi ruoli per definire le responsabilità di questa persona
-                  (es. Proprietario, Affittuario, Tecnico)
-                </p>
-              </div>
-            ) : (
-              <div className="ruoli-list">
-                {ruoli.map((ruolo) => (
-                  <div key={ruolo.id} className="ruolo-card">
-                    <div className="ruolo-header">
-                      <span className="ruolo-nome">{ruolo.ruolo_nome}</span>
-                      <span className="ruolo-modulo">{ruolo.modulo_id}</span>
-                    </div>
-                    {ruolo.ruolo_descrizione && (
-                      <div className="ruolo-descrizione">{ruolo.ruolo_descrizione}</div>
-                    )}
-                    {ruolo.note && (
-                      <div className="ruolo-note">
-                        <strong>Note:</strong> {ruolo.note}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <p className="empty-hint">
+              Proprietà, conduzioni, incarichi e ruoli di questa anagrafica, ricavati dalle schede degli immobili,
+              dei condomini e delle aziende.
+            </p>
+            <RelazioniSection soggettoId={Number(id)} />
           </div>
         )}
       </div>

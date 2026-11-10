@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { getSoggettoById, deleteSoggetto } from '../../services/anagraficaAPI';
 import { DocumentoUpload, DocumentoList, DocumentoParsingPending } from '../Documenti';
 import RuoliAziendaSection from '../RuoliAzienda/RuoliAziendaSection';
+import RelazioniSection from '../../../../core/components/Relazioni/RelazioniSection';
 import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import { formatApiError } from '../../../../utils/errorHandling';
 import '../SoggettiAnagrafici/SoggettoDetail.css';
@@ -183,6 +184,15 @@ function PersonaGiuridicaDetail() {
           </span>
           Documenti
         </button>
+        <button
+          className={`tab ${activeTab === 'relazioni' ? 'active' : ''}`}
+          onClick={() => setActiveTab('relazioni')}
+        >
+          <span className="tab-icon">
+            {renderIcon('users', { size: 16, className: 'detail-icon', fallbackClassName: 'nav-emoji-icon' })}
+          </span>
+          Relazioni
+        </button>
       </div>
 
       {/* Tab Content */}
@@ -350,6 +360,16 @@ function PersonaGiuridicaDetail() {
               soggetto={azienda}
               onUpdate={loadAzienda}
             />
+          </div>
+        )}
+
+        {/* Tab: Relazioni */}
+        {activeTab === 'relazioni' && (
+          <div className="tab-content tab-ruoli">
+            <div className="tab-header">
+              <h2>Relazioni</h2>
+            </div>
+            <RelazioniSection soggettoId={Number(id)} />
           </div>
         )}
 
