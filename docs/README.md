@@ -2,6 +2,17 @@
 
 Welcome to the comprehensive documentation portal for Gestione Affitti - a modular web application for managing rental properties with a FastAPI backend and React frontend.
 
+## Documentazione viva (com'è il sistema oggi)
+
+| Documento | Contenuto |
+|---|---|
+| [piattaforma.md](piattaforma.md) | Piattaforma: tenant, moduli, permessi, relazioni, documenti, lettura automatica, rilascio |
+| [modules/immobili.md](modules/immobili.md) | Modulo immobili: regole di dominio, funzioni, documenti, import visure |
+| [guides/SVILUPPO_CON_AGENTI_E_RAG.md](guides/SVILUPPO_CON_AGENTI_E_RAG.md) | Come si sviluppa e si rilascia; attività aperte |
+| [superpowers/specs/](superpowers/specs/) | Progetti approvati: storico delle decisioni |
+
+Il resto di questa cartella è materiale storico, in parte superato.
+
 ## Quick Start
 
 | Progetto | README |

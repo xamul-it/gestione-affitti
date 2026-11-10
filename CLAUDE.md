@@ -156,6 +156,8 @@ Key files: `app/core/database.py`, `app/core/middleware/tenant_middleware.py`, `
 
 ## Key Documentation
 
+- `docs/piattaforma.md` and `docs/modules/<module>.md` — **living technical-functional docs** (requirements, rules, current behaviour, known limits). Update them in the same commit as the code they describe; create the module doc on the first work on a module.
+
 - `docs/guides/SVILUPPO_CON_AGENTI_E_RAG.md` — **read first when starting new feature work**: development pipeline with agents (verifica-test, rilascio, revisione-ux, domain expert), release to production, the Archivio Fiscale RAG (`search_docs`), open activities
 
 - `docs/guides/WIDGET_DEVELOPMENT_GUIDE.md` — creating modular dashboard widgets

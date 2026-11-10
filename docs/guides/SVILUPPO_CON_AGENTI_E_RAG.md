@@ -1,6 +1,6 @@
 # Sviluppo di nuove funzioni: pipeline con agenti e Archivio Fiscale (RAG)
 
-Stato al 2026-11-09. Questo documento serve per riprendere lo sviluppo da una
+Stato al 2026-11-10. Questo documento serve per riprendere lo sviluppo da una
 sessione nuova: come si lavora, con quali strumenti, cosa resta aperto.
 
 ## 1. Ruoli e ambienti
@@ -30,19 +30,21 @@ meccanico e ripetibile va ad agenti economici guidati da script.
 | Analisi dei requisiti | sessione principale + `search_docs` (Archivio Fiscale); ricerche lunghe con l'agente `esperto-gestione-immobiliare-ita` | Sonnet |
 | Progettazione | sessione principale: spec in `docs/superpowers/specs/`, piano per le cose grandi | — |
 | Sviluppo con TDD | sessione principale; sottoagenti in parallelo solo per compiti indipendenti | Sonnet |
+| Documentazione | sessione principale, nello stesso commit del codice: `docs/piattaforma.md` e `docs/modules/<modulo>.md` (requisiti, regole, comportamento attuale, limiti) | — |
 | Revisione UI/UX | agente `revisione-ux`, se la modifica tocca l'interfaccia | Sonnet |
 | Revisione del codice | revisore, per le modifiche medie e grandi | Sonnet |
 | Test | agente `verifica-test` → `scripts/verifica.sh` | Haiku |
-| Rilascio | agente `rilascio` → commit, push, `scripts/promote.sh` | Haiku |
+| Rilascio | agente `rilascio` → commit, push, `scripts/promote.sh`; segnala con `scripts/controlla_documentazione.sh` il codice cambiato senza documento aggiornato (avviso, non blocca) | Haiku |
 | Bachi su dati reali | `scripts/replica_produzione.sh` + sessione principale | — |
 | Collaudo | l'utente | — |
 
 **Percorsi in base alla dimensione della richiesta**
 - *Piccola* (correzione, ritocco): sviluppo → `verifica-test` → `rilascio`.
-- *Media* (funzione nuova in un modulo esistente): sviluppo → revisione
-  (+ `revisione-ux` se c'è interfaccia) → `verifica-test` → `rilascio`.
+- *Media* (funzione nuova in un modulo esistente): sviluppo → documentazione →
+  revisione (+ `revisione-ux` se c'è interfaccia) → `verifica-test` → `rilascio`.
 - *Grande* (modulo nuovo, come l'import visure): spec approvata dall'utente →
-  piano → sviluppo → UX → revisione → `verifica-test` → `rilascio`.
+  piano → sviluppo → documentazione → UX → revisione → `verifica-test` →
+  `rilascio`.
 
 Niente sottoagenti su Opus senza chiedere (costo).
 
@@ -53,7 +55,7 @@ Niente sottoagenti su Opus senza chiedere (costo).
 | `esperto-gestione-immobiliare-ita` | cerca nell'Archivio Fiscale, cita le fonti, traduce le norme in **regole per il software** distinguendo nazionale, regionale e comunale | non risponde dalla memoria senza dichiararlo |
 | `revisione-ux` | confronta le modifiche al frontend con token (`frontend/src/styles/tokens.css`), componenti `components/UI` e `core/components`, `docs/ux/UX_GUIDELINES.md`, accessibilità; esito `OK` / `DA CORREGGERE` con file:riga | non modifica file |
 | `verifica-test` | esegue `scripts/verifica.sh` e riporta `ESITO: VERDE/ROSSO` con i test falliti | non corregge e non rilancia per tentativi |
-| `rilascio` | commit dei file indicati, merge ff in master, push, `promote.sh`, resoconto | non ripristina backup, non scrive mai in `tenant_produzione` |
+| `rilascio` | commit dei file indicati, merge ff in master, push, `promote.sh`, controllo documentazione, resoconto | non ripristina backup, non scrive mai in `tenant_produzione`, non scrive documentazione |
 
 Si chiamano per nome solo dalla sessione successiva a quella in cui sono stati
 creati o modificati. C'è anche la skill `/rilascio` per un rilascio manuale.
@@ -133,15 +135,17 @@ dati.
 3. Scegliere il percorso (piccola, media o grande); per le grandi far
    approvare la spec.
 4. TDD: test che fallisce → codice → test verde.
-5. `revisione-ux` se c'è interfaccia; revisione per medie e grandi.
-6. `verifica-test` → solo se VERDE, `rilascio`.
-7. Comunicare all'utente cosa collaudare e dove.
+5. Aggiornare `docs/piattaforma.md` e/o `docs/modules/<modulo>.md` (crearlo se è
+   il primo lavoro sul modulo) con requisiti e comportamento implementato.
+6. `revisione-ux` se c'è interfaccia; revisione per medie e grandi.
+7. `verifica-test` → solo se VERDE, `rilascio`.
+8. Comunicare all'utente cosa collaudare e dove.
 
 Se qualcosa va in errore sui dati reali: `replica_produzione.sh`, riprodurre in
 sviluppo, test che fallisce, correzione, pipeline normale. Mai correggere a
 mano in produzione.
 
-## 7. Attività aperte al 2026-11-09
+## 7. Attività aperte al 2026-11-10
 
 **Da fare con l'utente**
 - Prima esecuzione di `scripts/replica_produzione.sh`: il sistema dei permessi
@@ -154,6 +158,11 @@ mano in produzione.
   di `/docs` (CSP sandbox, escape dei titoli).
 
 **Da collaudare in produzione**
+- Relazioni e ruoli dei soggetti (visibilità per permessi e per moduli
+  attivi), blocco delle API dei moduli non attivi, permessi Manager/Viewer:
+  vedi `docs/piattaforma.md` §3–5.
+- Lettura MRZ dei documenti d'identità dalla scheda del soggetto (servizio
+  `mrz-api`/`mrz-worker` attivo dal 2026-11-10).
 - Import visure catastali ("Carica da documento" nelle unità immobiliari).
 - Pagine Login, Impostazioni e Gestione database (design system, toast,
   dialoghi di conferma).
@@ -161,6 +170,18 @@ mano in produzione.
   il 2026-11-09. Esempio componenti è disabilitato.
 
 **Sviluppo e dominio**
+- Caricamento unico dei documenti degli immobili: spec
+  `docs/superpowers/specs/2026-11-10-caricamento-unico-documenti-immobili-design.md`
+  in attesa di approvazione; comprende la modalità "OCR testo + ricerca campi"
+  del servizio in `~/Progetti/mrz`.
+- Documentazione viva: `docs/piattaforma.md` e `docs/modules/immobili.md`
+  esistono; gli altri moduli (anagrafica, affitti lungo/brevi, PEC) si
+  documentano in `docs/modules/` al primo lavoro su ciascuno.
+- DB di collaudo: collation version mismatch (glibc 2.42 → 2.43), indici sui
+  testi da ricostruire con backup.
+- Permessi di `affitti_brevi` senza punto (solo ruoli admin): da rinominare.
+- `~/Progetti/mrz` contiene documenti personali reali accanto al codice: da
+  spostare in una cartella separata.
 - **D.Lgs. 19 giugno 2026, n. 117**: secondo Normattiva abroga gran parte
   dell'art. 4 DL 50/2017 (locazioni brevi). Va studiato con l'Archivio:
   impatta il modulo affitti brevi.

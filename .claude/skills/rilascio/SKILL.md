@@ -16,7 +16,8 @@ La modifica deve aver passato `scripts/verifica.sh` in questa sessione con `ESIT
 
 ## Passi
 
-1. **Commit.** `git status`, poi committa solo i file della modifica. Le modifiche non committate dell'utente che non c'entrano restano fuori: non usare `git add -A` o `git add .`. Messaggio in stile conventional commit (`feat(modulo): ...`, `fix(...)`), con le righe di attribuzione richieste dalla sessione.
+1. **Commit.** Prima annota il commit di partenza: `DA=$(git rev-parse origin/master)`.
+   Poi: `git status`, poi committa solo i file della modifica. Le modifiche non committate dell'utente che non c'entrano restano fuori: non usare `git add -A` o `git add .`. Messaggio in stile conventional commit (`feat(modulo): ...`, `fix(...)`), con le righe di attribuzione richieste dalla sessione.
 2. **Master.** Se sei su un branch di feature: `git checkout master && git merge --ff-only <branch>`. Se il fast-forward non è possibile, fermati e riporta. Non fare rebase e non usare force.
 3. **Push.** `git push origin master`. Se viene rifiutato, fermati: non usare force.
 4. **Promozione.** Dalla radice del repo lancia `scripts/promote.sh master` con timeout di 10 minuti. Lo script:
@@ -24,7 +25,8 @@ La modifica deve aver passato `scripts/verifica.sh` in questa sessione con `ESIT
    - esegue le migrazioni core su tutti gli schema;
    - con `backend/scripts/sync_modules.py`, esegue le migrazioni dei moduli e carica i dati di base pubblici;
    - confronta le righe di ogni tabella prima e dopo, riavvia il backend e controlla `/health`.
-5. **Leggi l'output.** Cerca:
+5. **Documentazione.** Lancia `scripts/controlla_documentazione.sh $DA HEAD`. Non blocca mai il rilascio: riporta nel resoconto le righe `ATTENZIONE documentazione` e `NOTA documentazione` così come sono. Non scrivere tu la documentazione.
+6. **Leggi l'output.** Cerca:
    - `backup verificato:` con il percorso del backup;
    - le righe `migrata ...`, che indicano gli schema aggiornati;
    - `nessuna tabella o riga persa`;
@@ -51,4 +53,5 @@ La modifica deve aver passato `scripts/verifica.sh` in questa sessione con `ESIT
 - schema e moduli migrati, cioè le righe `migrata`, oppure "nessuna migrazione";
 - tabelle o righe nuove, se ci sono;
 - avvisi nuovi, cioè diversi da quelli noti qui sopra;
-- cosa resta da provare a mano dal browser, se la modifica riguarda l'interfaccia.
+- cosa resta da provare a mano dal browser, se la modifica riguarda l'interfaccia;
+- l'esito del controllo documentazione (`documentazione: ok` oppure le righe di avviso).
