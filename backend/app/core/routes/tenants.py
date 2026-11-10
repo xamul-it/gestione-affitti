@@ -398,9 +398,12 @@ def disable_module(
     Disable module (keep data) - PLATFORM ADMIN ONLY.
     """
     ensure_tenant_admin_access(tenant_id, current_user, db)
-    drop_result = TenantModuleService.disable_module_for_tenant(
-        tenant_id, module_id, db, drop_tables=drop_tables
-    )
+    try:
+        drop_result = TenantModuleService.disable_module_for_tenant(
+            tenant_id, module_id, db, drop_tables=drop_tables
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return {
         "status": "disabled",
         "module_id": module_id,

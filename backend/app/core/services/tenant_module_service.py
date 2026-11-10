@@ -21,6 +21,7 @@ from pathlib import Path
 
 from app.core.models.tenant import Tenant, TenantModule
 from app.core.module_system.models import Module
+from app.core.platform_services import relazioni_moduli
 from app.core.module_system.alembic_utils import build_module_alembic_config
 from app.core.module_system.manifest import parse_manifest, validate_manifest, ManifestValidationError
 from app.core.database import Base
@@ -727,6 +728,8 @@ class TenantModuleService:
         if version is not None:
             existing.installed_version = version
 
+        db.flush()
+        relazioni_moduli.riattiva(db, tenant_id, module_id)
         db.commit()
         return existing
 
@@ -902,12 +905,14 @@ class TenantModuleService:
             drop_tables: Whether to drop tenant tables for the module
             db: Database session
         """
+        relazioni_moduli.verifica_dipendenti(db, tenant_id, module_id)
         tenant_module = db.query(TenantModule).filter_by(
             tenant_id=tenant_id,
             module_id=module_id
         ).first()
 
         if tenant_module:
+            relazioni_moduli.sospendi(db, tenant_id, module_id)
             tenant_module.enabled = False
             tenant_module.disabled_at = datetime.utcnow()
             db.commit()
@@ -930,6 +935,10 @@ class TenantModuleService:
         module_record = db.query(Module).filter(Module.technical_name == module_id).first()
         if not module_record:
             raise ValueError(f"Module '{module_id}' is not registered in the platform")
+
+        # The module's objects are going away: so do its core relations.
+        relazioni_moduli.elimina(db, tenant_id, module_id)
+        db.commit()
 
         schema_name = tenant.schema_name
         inspector = inspect(db.get_bind())
@@ -1011,6 +1020,14 @@ class TenantModuleService:
         module_record = db.query(Module).filter(Module.technical_name == module_id).first()
         if not module_record:
             raise ValueError(f"Unknown module: {module_id}")
+
+        relazioni_moduli.verifica_dipendenti(db, tenant_id, module_id)
+        if drop_tables:
+            # The module's objects are going away: so do its core relations.
+            relazioni_moduli.elimina(db, tenant_id, module_id)
+        else:
+            relazioni_moduli.sospendi(db, tenant_id, module_id)
+        db.commit()
 
         if drop_tables:
             schema_name = tenant.schema_name

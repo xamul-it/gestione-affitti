@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.core.models import RuoloDisponibile
 from app.core.platform.models import Relazione
+from app.core.platform_services.relazioni_moduli import moduli_attivi
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +38,12 @@ def _provider(path: str):
     return getattr(importlib.import_module(module_name), func_name)
 
 
-def _tipi(db: Session, tipo: Optional[str]) -> List[RuoloDisponibile]:
+def _tipi(db: Session, tenant_schema: Optional[str], tipo: Optional[str]) -> List[RuoloDisponibile]:
+    """Active types of the modules enabled in the tenant."""
     q = db.query(RuoloDisponibile).filter(RuoloDisponibile.attivo.is_(True))
+    attivi = moduli_attivi(db, tenant_schema)
+    if attivi is not None:
+        q = q.filter(RuoloDisponibile.modulo_id.in_(list(attivi)))
     if tipo:
         q = q.filter(RuoloDisponibile.codice == tipo)
     return q.order_by(RuoloDisponibile.id).all()
@@ -60,7 +65,7 @@ def _descrizione_core(db: Session, tenant_schema: str):
 
 def relazioni_select(db: Session, tenant_schema: str, *, tipo: Optional[str] = None) -> Optional[sa.Select]:
     """UNION ALL of core and module relations; None if there is nothing to select."""
-    tipi = _tipi(db, tipo)
+    tipi = _tipi(db, tenant_schema, tipo)
     parti = []
 
     core = [t for t in tipi if t.fonte == "CORE"]

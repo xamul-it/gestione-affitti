@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import require_permission
+from app.core.platform_services.relazioni_moduli import moduli_attivi
 from app.core.auth.models import User
 from app.core.database import get_db, get_tenant_schema
 from app.core.models import RuoloDisponibile
@@ -30,14 +31,7 @@ def _schema(tenant_schema) -> Optional[str]:
     return tenant_schema if isinstance(tenant_schema, str) else None
 
 
-def _moduli_attivi(db: Session, tenant_schema: Optional[str]) -> Optional[set]:
-    """Enabled modules of the tenant; None when unknown (no filter)."""
-    if not tenant_schema:
-        return None
-    rows = (db.query(TenantModule.module_id)
-            .join(Tenant, Tenant.id == TenantModule.tenant_id)
-            .filter(Tenant.schema_name == tenant_schema, TenantModule.enabled.is_(True)).all())
-    return {r[0] for r in rows} or None
+_moduli_attivi = moduli_attivi
 
 
 # Relation types written only through their module's API, which applies its

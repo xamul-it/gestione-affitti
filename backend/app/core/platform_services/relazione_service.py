@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.core.models import RuoloDisponibile
 from app.core.platform.models import Relazione, StatoScadenza
+from app.core.platform_services.relazioni_moduli import verifica_modulo_attivo
 from app.core.platform_services.scadenze_collegate import apri_o_aggiorna, chiudi, utente_sistema
 
 # Tables holding the objects a relation can point to.
@@ -172,6 +173,7 @@ class RelazioneService:
              data_scadenza: Optional[date] = None, note: Optional[str] = None,
              dati: Optional[dict] = None) -> Relazione:
         tipo = self.tipo(tipo_codice)
+        verifica_modulo_attivo(self.db, self.tenant_schema, tipo)
         if tipo.fonte != "CORE":
             raise ValueError(f"Il tipo '{tipo.nome_display}' è gestito dal modulo {tipo.modulo_id}")
         soggetto = self._soggetto(soggetto_id)
@@ -195,6 +197,7 @@ class RelazioneService:
     def aggiorna(self, relazione_id: int, **campi) -> Relazione:
         rel = self._get(relazione_id)
         tipo = self.db.get(RuoloDisponibile, rel.ruolo_id)
+        verifica_modulo_attivo(self.db, self.tenant_schema, tipo)
         sconosciuti = set(campi) - set(_CAMPI_MODIFICABILI)
         if sconosciuti:
             raise ValueError(f"Campi non modificabili: {', '.join(sorted(sconosciuti))}")
@@ -214,6 +217,7 @@ class RelazioneService:
     def rinnova(self, relazione_id: int) -> Relazione:
         rel = self._get(relazione_id)
         tipo = self.db.get(RuoloDisponibile, rel.ruolo_id)
+        verifica_modulo_attivo(self.db, self.tenant_schema, tipo)
         if not tipo.scadenza or tipo.scadenza.get("manuale") or rel.data_scadenza is None:
             raise ValueError(f"Il tipo '{tipo.nome_display}' non ha una scadenza da rinnovare")
         if not e_corrente(rel.data_fine):

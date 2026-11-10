@@ -6,6 +6,8 @@ from datetime import date
 
 import pytest
 
+from app.core.models.tenant import Tenant, TenantModule
+
 from anagrafica_italiana.models import SoggettoAnagrafico
 from anagrafica_italiana.models.soggetto_anagrafico import TipoSoggetto
 from anagrafica_italiana.__manifest__ import manifest as anagrafica_manifest
@@ -85,7 +87,15 @@ def test_unico_per_oggetto(svc, db_session, rossi, bianchi, condominio):
     assert seconda.data_scadenza == date(2027, 7, 1)
 
 
+def _attiva_modulo(db, module_id):
+    """A test-only module must be enabled in the tenant for its relation types to be writable."""
+    tenant = db.query(Tenant).filter_by(schema_name=TENANT).one()
+    db.add(TenantModule(tenant_id=tenant.id, module_id=module_id, enabled=True))
+    db.flush()
+
+
 def test_duplicato_aperto(svc, db_session, rossi, condominio, unique_suffix):
+    _attiva_modulo(db_session, f"m_{unique_suffix}")
     sync_relation_types(db_session, {f"m_{unique_suffix}": {"relation_types": [
         {"codice": f"cons_{unique_suffix}", "nome": "Consigliere", "entity_types": ["CONDOMINIO"]},
     ]}})
@@ -126,6 +136,7 @@ def test_rinnova_sposta_di_un_periodo(svc, db_session, rossi, condominio):
 
 
 def test_manuale_senza_data_nessuna_scadenza(svc, db_session, rossi, condominio, unique_suffix):
+    _attiva_modulo(db_session, f"m_{unique_suffix}")
     sync_relation_types(db_session, {f"m_{unique_suffix}": {"relation_types": [
         {"codice": f"inc_{unique_suffix}", "nome": "Incarico", "entity_types": ["CONDOMINIO"],
          "scadenza": {"manuale": True}},
