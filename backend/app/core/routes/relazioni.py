@@ -40,7 +40,17 @@ def _moduli_attivi(db: Session, tenant_schema: Optional[str]) -> Optional[set]:
     return {r[0] for r in rows} or None
 
 
+# Relation types written only through their module's API, which applies its
+# own rules and permissions (e.g. soggetto.create/delete for business roles).
+API_DEDICATE = {"ruolo_azienda": "/anagrafica/ruoli-azienda"}
+
+
 def _verifica_scrittura(user: User, tipo: RuoloDisponibile) -> None:
+    if tipo.codice in API_DEDICATE:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"I '{tipo.nome_display}' si gestiscono da {API_DEDICATE[tipo.codice]}",
+        )
     if user.is_superuser or not tipo.permesso_oggetto:
         return
     richiesto = tipo.permesso_oggetto.rsplit(".", 1)[0] + ".edit"

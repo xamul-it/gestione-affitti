@@ -98,3 +98,33 @@ def test_oggetto_inesistente_404(ctx):
     http, s, c = ctx
     _as("soggetto.view", "soggetto.edit", "condominio.edit")
     assert http.post("/api/v1/relazioni/", json=_body(s, c, entity_id=999999999)).status_code == 404
+
+
+def test_ruolo_azienda_solo_dalla_sua_api(ctx, db_session):
+    http, s, _ = ctx
+    azienda = SoggettoAnagrafico(tipo_soggetto=TipoSoggetto.PERSONA_GIURIDICA, ragione_sociale="ACME")
+    db_session.add(azienda)
+    db_session.flush()
+    _as("soggetto.view", "soggetto.edit")
+    res = http.post("/api/v1/relazioni/", json={"soggetto_id": s.id, "tipo": "ruolo_azienda",
+                                               "entity_type": "SOGGETTO_ANAGRAFICO", "entity_id": azienda.id})
+    assert res.status_code == 403
+    assert "/anagrafica/ruoli-azienda" in res.json()["detail"]
+
+
+def test_elimina_condominio_rimuove_le_relazioni(ctx):
+    http, s, c = ctx
+    _as("soggetto.view", "soggetto.edit", "condominio.edit", "condominio.delete")
+    rel = http.post("/api/v1/relazioni/", json=_body(s, c)).json()
+    assert http.delete(f"/api/v1/condomini/{c.id}").status_code == 204
+    assert http.delete(f"/api/v1/relazioni/{rel['id']}").status_code == 404
+
+
+def test_anagrafica_con_relazioni_non_si_elimina(ctx):
+    url = "/api/v1/anagrafica/soggetti-v2/{id}"
+    http, s, c = ctx
+    _as("soggetto.view", "soggetto.edit", "condominio.edit", "soggetto.delete")
+    http.post("/api/v1/relazioni/", json=_body(s, c))
+    res = http.delete(url.format(id=s.id))
+    assert res.status_code == 400
+    assert "relazion" in res.json()["detail"]

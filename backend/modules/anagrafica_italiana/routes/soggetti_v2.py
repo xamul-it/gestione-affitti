@@ -440,6 +440,13 @@ def delete_soggetto_v2(
     if not db_soggetto:
         raise HTTPException(status_code=404, detail="Soggetto non trovato")
 
+    from app.core.platform_services.relazione_service import RelazioneService
+    if RelazioneService(db, tenant_schema if isinstance(tenant_schema, str) else None).conta_per_soggetto(soggetto_id):
+        raise HTTPException(
+            status_code=400,
+            detail="Impossibile eliminare: l'anagrafica ha relazioni (amministratore, ruoli in azienda...). Chiudile o eliminale prima.",
+        )
+
     if _has_role_records(db, db_soggetto, tenant_schema):
         raise HTTPException(
             status_code=400,

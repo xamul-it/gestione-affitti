@@ -50,7 +50,12 @@ def _tipo_ruolo(db: Session, rel: Relazione) -> Optional[RuoloAziendaTipo]:
 
 
 def _soggetto(db: Session, soggetto_id: int) -> dict:
-    s = db.get(SoggettoAnagrafico, soggetto_id)
+    s = db.get(SoggettoAnagrafico, soggetto_id) if soggetto_id is not None else None
+    if s is None:
+        # The anagrafica was removed outside the API: keep the list readable.
+        return {"id": soggetto_id or 0, "tipo_soggetto": "", "codice_fiscale": None, "partita_iva": None,
+                "nome": None, "cognome": None, "ragione_sociale": "(anagrafica eliminata)",
+                "nome_completo": "(anagrafica eliminata)"}
     return {
         "id": s.id, "tipo_soggetto": getattr(s.tipo_soggetto, "value", s.tipo_soggetto),
         "codice_fiscale": s.codice_fiscale, "partita_iva": s.partita_iva, "nome": s.nome,

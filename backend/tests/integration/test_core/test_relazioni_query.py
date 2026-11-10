@@ -162,3 +162,14 @@ def test_record_id_nascosto_senza_permesso(db_session, dati):
     righe = rq.elenca(db_session, TENANT, permessi={"soggetto.view"}, soggetto_ids=[dati["rossi"].id],
                       tipo="proprietario")
     assert righe and all(r["record_id"] is None for r in righe)
+
+
+def test_data_impossibile_non_rompe_la_query(db_session, dati):
+    db_session.add(DirittoImmobile(unita_immobiliare_id=dati["u2"].id, proprietario_id=dati["p_rossi"].id,
+                                   tipo_diritto=TipoDiritto.USUFRUTTUARIO, data_inizio="2024-02-30",
+                                   data_fine="2024-13-01"))
+    db_session.flush()
+    righe = rq.elenca(db_session, TENANT, permessi={"*"}, soggetto_ids=[dati["rossi"].id], tipo="proprietario")
+    usufrutto = [r for r in righe if "Usufrutto" in (r["descrizione"] or "")]
+    assert len(usufrutto) == 1
+    assert usufrutto[0]["data_inizio"] is None and usufrutto[0]["data_fine"] is None

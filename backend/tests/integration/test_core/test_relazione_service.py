@@ -134,3 +134,40 @@ def test_manuale_senza_data_nessuna_scadenza(svc, db_session, rossi, condominio,
     assert rel.data_scadenza is None and rel.scadenza_id is None
     rel = svc.aggiorna(rel.id, data_scadenza=date(2027, 3, 1))
     assert db_session.get(Scadenza, rel.scadenza_id).data_scadenza == date(2027, 3, 1)
+
+
+def test_elimina_per_oggetto(svc, db_session, rossi, condominio):
+    rel = _amm(svc, rossi, condominio)
+    scadenza_id = rel.scadenza_id
+    assert svc.elimina_per_oggetto("CONDOMINIO", condominio.id) == 1
+    assert db_session.get(Scadenza, scadenza_id).stato == StatoScadenza.CANCELLATA
+    assert svc.conta_per_soggetto(rossi.id) == 0
+
+
+def test_conta_per_soggetto_come_soggetto_e_come_oggetto(svc, db_session, rossi, condominio):
+    azienda = SoggettoAnagrafico(tipo_soggetto=TipoSoggetto.PERSONA_GIURIDICA, ragione_sociale="ACME")
+    db_session.add(azienda)
+    db_session.flush()
+    _amm(svc, rossi, condominio)
+    svc.crea(rossi.id, "ruolo_azienda", entity_type="SOGGETTO_ANAGRAFICO", entity_id=azienda.id, dati={"ruolo": "Socio"})
+    assert svc.conta_per_soggetto(rossi.id) == 2
+    assert svc.conta_per_soggetto(azienda.id) == 1
+
+
+def test_ruoli_azienda_testo_libero_diversi_non_sono_duplicati(svc, db_session, rossi):
+    azienda = SoggettoAnagrafico(tipo_soggetto=TipoSoggetto.PERSONA_GIURIDICA, ragione_sociale="ACME")
+    db_session.add(azienda)
+    db_session.flush()
+    kw = dict(entity_type="SOGGETTO_ANAGRAFICO", entity_id=azienda.id)
+    svc.crea(rossi.id, "ruolo_azienda", dati={"ruolo": "Socio"}, **kw)
+    svc.crea(rossi.id, "ruolo_azienda", dati={"ruolo": "Consulente"}, **kw)
+    with pytest.raises(ValueError, match="Esiste già"):
+        svc.crea(rossi.id, "ruolo_azienda", dati={"ruolo": "Socio"}, **kw)
+
+
+def test_fk_cascade_se_l_anagrafica_sparisce(svc, db_session, rossi, condominio):
+    from sqlalchemy import text
+    rel_id = _amm(svc, rossi, condominio).id
+    db_session.execute(text("DELETE FROM anag_soggetti_anagrafici WHERE id = :id"), {"id": rossi.id})
+    db_session.expire_all()
+    assert db_session.execute(text("SELECT count(*) FROM core_relazioni WHERE id = :id"), {"id": rel_id}).scalar() == 0

@@ -85,6 +85,10 @@ def delete_condominio(condominio_id: int, db: Session = Depends(get_db), current
             detail=f"Condominio con ID {condominio_id} non trovato"
         )
 
+    # Role relations on this condominium (e.g. its administrator) go with it,
+    # and their scadenze are cancelled.
+    from app.core.platform_services.relazione_service import RelazioneService
+    RelazioneService(db, None, getattr(current_user, "id", None)).elimina_per_oggetto("CONDOMINIO", condominio_id)
     db.delete(db_condominio)
     db.commit()
     return None

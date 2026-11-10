@@ -27,8 +27,19 @@ def _has_tables(db: Session, schema: str, *tables: str) -> bool:
 
 
 def _iso_date(col):
-    """Dates stored as 'YYYY-MM-DD' strings: anything else becomes NULL."""
-    return sa.case((col.op("~")(r"^\d{4}-\d{2}-\d{2}$"), sa.cast(col, sa.Date)), else_=None)
+    """
+    Dates stored as 'YYYY-MM-DD' strings: anything else, including impossible
+    calendar dates such as 2024-02-30, becomes NULL instead of failing the
+    whole query. Nested CASEs because PostgreSQL does not short-circuit AND.
+    """
+    primo_del_mese = sa.cast(sa.func.concat(sa.func.substr(col, 1, 7), "-01"), sa.Date)
+    giorni_del_mese = sa.extract("day", primo_del_mese + sa.text("interval '1 month - 1 day'"))
+    giorno = sa.cast(sa.func.substr(col, 9, 2), sa.Integer)
+    return sa.case(
+        (col.op("~")(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$"),
+         sa.case((giorno <= giorni_del_mese, sa.cast(col, sa.Date)), else_=None)),
+        else_=None,
+    )
 
 
 def _indirizzo(u):

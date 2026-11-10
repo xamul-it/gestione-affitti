@@ -124,7 +124,13 @@ class RelazioneService:
             )
         stesso = aperte.filter(Relazione.soggetto_id == rel.soggetto_id)
         stesso = stesso.filter(Relazione.sottotipo == rel.sottotipo) if rel.sottotipo else stesso.filter(Relazione.sottotipo.is_(None))
-        if stesso.first() is not None:
+        if rel.sottotipo:
+            duplicato = stesso.first() is not None
+        else:
+            # Without a sottotipo, a free-text role (dati["ruolo"]) tells relations apart.
+            testo = (rel.dati or {}).get("ruolo")
+            duplicato = any((r.dati or {}).get("ruolo") == testo for r in stesso.all())
+        if duplicato:
             raise ValueError(f"Esiste già una relazione '{tipo.nome_display}' aperta per questa anagrafica e questo oggetto")
 
     # ------------------------------------------------------------ scadenza
@@ -216,6 +222,22 @@ class RelazioneService:
         self._sync_scadenza(tipo, rel)
         self.db.flush()
         return rel
+
+    def elimina_per_oggetto(self, entity_type: str, entity_id: int) -> int:
+        """Remove every core relation pointing to an object being deleted; cancels their scadenze."""
+        rels = self.db.query(Relazione).filter(
+            Relazione.entity_type == entity_type, Relazione.entity_id == entity_id
+        ).all()
+        for rel in rels:
+            self.elimina(rel.id)
+        return len(rels)
+
+    def conta_per_soggetto(self, soggetto_id: int) -> int:
+        """Core relations of an anagrafica, as soggetto or as object (e.g. the company of a role)."""
+        return self.db.query(Relazione).filter(
+            (Relazione.soggetto_id == soggetto_id)
+            | ((Relazione.entity_type == "SOGGETTO_ANAGRAFICO") & (Relazione.entity_id == soggetto_id))
+        ).count()
 
     def elimina(self, relazione_id: int) -> None:
         rel = self._get(relazione_id)
