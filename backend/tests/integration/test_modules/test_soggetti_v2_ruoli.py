@@ -14,6 +14,8 @@ from anagrafica_italiana.models.soggetto_anagrafico import TipoSoggetto
 from affitti_lungo.__manifest__ import manifest as affitti_manifest
 from immobili.__manifest__ import manifest as immobili_manifest
 from immobili.models import AssegnazioneConduttore, Condominio, Conduttore, Proprietario, UnitaImmobiliare
+from app.core.auth.dependencies import get_current_active_user
+from app.core.auth.models import Permission, Role, User
 from app.core.database import engine, get_db, get_tenant_schema
 from app.core.platform_services.relation_type_sync import sync_relation_types
 from app.core.platform_services.relazione_service import RelazioneService
@@ -23,6 +25,12 @@ from tests.integration.conftest import TEST_TENANT
 pytestmark = pytest.mark.integration
 
 URL = "/api/v1/anagrafica/soggetti-v2/"
+
+
+def _as(*perms, superuser=False):
+    app.dependency_overrides[get_current_active_user] = lambda: User(
+        id=1, username="t", is_superuser=superuser, is_active=True,
+        roles=[Role(name="r", permissions=[Permission(name=p) for p in perms])])
 
 
 @pytest.fixture
@@ -47,12 +55,14 @@ def ctx(db_session, unique_suffix):
     db.flush()
     app.dependency_overrides[get_db] = lambda: db
     app.dependency_overrides[get_tenant_schema] = lambda: TEST_TENANT
+    _as(superuser=True)
     try:
         with TestClient(app) as client:
             yield client, prop, ex_cond, altro
     finally:
         app.dependency_overrides.pop(get_db, None)
         app.dependency_overrides.pop(get_tenant_schema, None)
+        app.dependency_overrides.pop(get_current_active_user, None)
 
 
 def _ids(res):
@@ -100,3 +110,29 @@ def test_ruoli_senza_query_per_soggetto(ctx):
     small = _count_queries(lambda: http.get(URL, params={"limit": 3}))
     big = _count_queries(lambda: http.get(URL, params={"limit": 50}))
     assert big == small
+
+
+def test_elenco_richiede_soggetto_view(ctx):
+    http, prop, *_ = ctx
+    _as("immobile.view")
+    assert http.get(URL).status_code == 403
+    assert http.get(f"{URL}{prop.id}").status_code == 403
+    _as("soggetto.view")
+    assert http.get(URL).status_code == 200
+
+
+def test_scritture_richiedono_permesso(ctx):
+    http, prop, *_ = ctx
+    _as("soggetto.view")
+    assert http.post(URL, json={"tipo_soggetto": "PERSONA_FISICA", "nome": "X", "cognome": "Y"}).status_code == 403
+    assert http.put(f"{URL}{prop.id}", json={"note": "x"}).status_code == 403
+    assert http.delete(f"{URL}{prop.id}").status_code == 403
+
+
+def test_ruoli_senza_permesso_oggetto_non_si_vedono(ctx):
+    http, prop, ex_cond, altro = ctx
+    _as("soggetto.view", "condominio.view")
+    by_id = {s["id"]: s for s in http.get(URL, params={"limit": 5000}).json()}
+    assert [r["codice"] for r in by_id[prop.id]["ruoli"]] == ["amministratore_condominio"]
+    assert by_id[ex_cond.id]["ruoli"] == []
+    assert _ids(http.get(URL, params={"ruolo": "proprietario", "limit": 5000})) == set()

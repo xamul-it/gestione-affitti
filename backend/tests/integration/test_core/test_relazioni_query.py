@@ -116,13 +116,25 @@ def test_filtro_oggetto(db_session, dati):
     assert [r["soggetto_id"] for r in righe] == [dati["rossi"].id]
 
 
-def test_descrizione_nascosta_senza_permesso(db_session, dati):
-    righe = rq.elenca(db_session, TENANT, permessi={"soggetto.view"}, soggetto_ids=[dati["rossi"].id],
-                      tipo="proprietario")
-    assert righe and all(r["descrizione"] is None and r["entity_id"] is None for r in righe)
+def test_relazioni_senza_permesso_non_si_vedono(db_session, dati):
+    righe = rq.elenca(db_session, TENANT, permessi={"soggetto.view"}, soggetto_ids=[dati["rossi"].id])
+    assert righe == []
     righe = rq.elenca(db_session, TENANT, permessi={"soggetto.view", "immobile.view"},
-                      soggetto_ids=[dati["rossi"].id], tipo="proprietario")
-    assert all(r["descrizione"] for r in righe)
+                      soggetto_ids=[dati["rossi"].id])
+    assert {r["tipo"] for r in righe} == {"proprietario"}
+    assert all(r["descrizione"] for r in righe if r["entity_id"])
+
+
+def test_ruoli_per_soggetti_senza_permesso(db_session, dati):
+    ruoli = rq.ruoli_per_soggetti(db_session, TENANT, [dati["rossi"].id, dati["neri"].id],
+                                  permessi={"soggetto.view", "condominio.view"})
+    assert [r["codice"] for r in ruoli[dati["rossi"].id]] == ["amministratore_condominio"]
+    assert dati["neri"].id not in ruoli
+
+
+def test_soggetti_con_ruolo_senza_permesso(db_session, dati):
+    q = rq.soggetti_con_ruolo(db_session, TENANT, "proprietario", permessi={"soggetto.view"})
+    assert list(db_session.execute(q)) == []
 
 
 def test_provider_tabelle_assenti(db_session, dati, monkeypatch):
@@ -133,19 +145,19 @@ def test_provider_tabelle_assenti(db_session, dati, monkeypatch):
 
 
 def test_ruoli_per_soggetti(db_session, dati):
-    ruoli = rq.ruoli_per_soggetti(db_session, TENANT, [dati["rossi"].id, dati["neri"].id])
+    ruoli = rq.ruoli_per_soggetti(db_session, TENANT, [dati["rossi"].id, dati["neri"].id], permessi={"*"})
     rossi = {r["codice"]: r["n"] for r in ruoli[dati["rossi"].id]}
     assert rossi == {"proprietario": 1, "amministratore_condominio": 1}
     assert ruoli[dati["neri"].id] == [{"codice": "conduttore", "nome": "Conduttore", "modulo": "immobili", "n": 0}]
 
 
 def test_soggetti_con_ruolo(db_session, dati):
-    ids = {r[0] for r in db_session.execute(rq.soggetti_con_ruolo(db_session, TENANT, "proprietario"))}
+    ids = {r[0] for r in db_session.execute(rq.soggetti_con_ruolo(db_session, TENANT, "proprietario", permessi={"*"}))}
     assert {dati["rossi"].id, dati["verdi"].id} <= ids
-    ids = {r[0] for r in db_session.execute(rq.soggetti_con_ruolo(db_session, TENANT, "conduttore"))}
+    ids = {r[0] for r in db_session.execute(rq.soggetti_con_ruolo(db_session, TENANT, "conduttore", permessi={"*"}))}
     assert dati["neri"].id not in ids
     ids = {r[0] for r in db_session.execute(
-        rq.soggetti_con_ruolo(db_session, TENANT, "conduttore", solo_correnti=False))}
+        rq.soggetti_con_ruolo(db_session, TENANT, "conduttore", solo_correnti=False, permessi={"*"}))}
     assert dati["neri"].id in ids
 
 
@@ -156,12 +168,6 @@ def test_filtro_oggetto_senza_permesso_non_rivela_nulla(db_session, dati):
     righe = rq.elenca(db_session, TENANT, permessi={"soggetto.view", "immobile.view"},
                       entity_type="IMMOBILE", entity_id=dati["u1"].id)
     assert dati["rossi"].id in {r["soggetto_id"] for r in righe}
-
-
-def test_record_id_nascosto_senza_permesso(db_session, dati):
-    righe = rq.elenca(db_session, TENANT, permessi={"soggetto.view"}, soggetto_ids=[dati["rossi"].id],
-                      tipo="proprietario")
-    assert righe and all(r["record_id"] is None for r in righe)
 
 
 def test_data_impossibile_non_rompe_la_query(db_session, dati):

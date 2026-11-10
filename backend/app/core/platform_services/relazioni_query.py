@@ -132,13 +132,16 @@ def _corrente(col):
     return sa.or_(col.is_(None), col >= sa.func.current_date())
 
 
-def _filtrata(db, tenant_schema, *, tipo=None, soggetto_ids=None, entity_type=None, entity_id=None,
-              solo_correnti=False):
+def _filtrata(db, tenant_schema, *, permessi: set, tipo=None, soggetto_ids=None, entity_type=None,
+              entity_id=None, solo_correnti=False):
+    """Relations the caller may see: a type with permesso_oggetto needs that permission."""
     sel = relazioni_select(db, tenant_schema, tipo=tipo)
     if sel is None:
         return None
     u = sel.subquery("rel")
     q = sa.select(u)
+    if "*" not in permessi:
+        q = q.where(sa.or_(u.c.permesso_oggetto.is_(None), u.c.permesso_oggetto.in_(list(permessi))))
     if soggetto_ids is not None:
         q = q.where(u.c.soggetto_id.in_(list(soggetto_ids)))
     if entity_type:
@@ -153,51 +156,42 @@ def _filtrata(db, tenant_schema, *, tipo=None, soggetto_ids=None, entity_type=No
 def elenca(db: Session, tenant_schema: str, *, permessi: set, soggetto_ids: Optional[Iterable[int]] = None,
            tipo: Optional[str] = None, entity_type: Optional[str] = None, entity_id: Optional[int] = None,
            solo_correnti: bool = False) -> List[dict]:
-    """Relations as dicts; object details hidden without the type's permesso_oggetto."""
-    built = _filtrata(db, tenant_schema, tipo=tipo, soggetto_ids=soggetto_ids, entity_type=entity_type,
+    """Relations as dicts, only those of the types the caller may see."""
+    built = _filtrata(db, tenant_schema, permessi=permessi, tipo=tipo, soggetto_ids=soggetto_ids, entity_type=entity_type,
                       entity_id=entity_id, solo_correnti=solo_correnti)
     if built is None:
         return []
     q, u = built
-    if "*" not in permessi and (entity_type or entity_id is not None):
-        # Filtering by object must not reveal who is linked to an object the
-        # caller may not see: drop those relation types altogether.
-        q = q.where(sa.or_(u.c.permesso_oggetto.is_(None), u.c.permesso_oggetto.in_(list(permessi))))
     oggi = date.today()
     out = []
     for row in db.execute(q.order_by(u.c.tipo, u.c.soggetto_id, u.c.data_inizio)).mappings():
         r = dict(row)
-        perm = r.pop("permesso_oggetto")
-        if perm and "*" not in permessi and perm not in permessi:
-            r["descrizione"] = None
-            r["entity_id"] = None
-            r["record_id"] = None
+        r.pop("permesso_oggetto")
         r["corrente"] = r["data_fine"] is None or r["data_fine"] >= oggi
         out.append(r)
     return out
 
 
-def soggetti_con_ruolo(db: Session, tenant_schema: str, tipo: str, solo_correnti: bool = True) -> sa.Select:
-    """Select of the soggetto ids having a relation of `tipo` (for an IN filter)."""
-    built = _filtrata(db, tenant_schema, tipo=tipo, solo_correnti=solo_correnti)
+def soggetti_con_ruolo(db: Session, tenant_schema: str, tipo: str, *, permessi: set,
+                       solo_correnti: bool = True) -> sa.Select:
+    """Select of the soggetto ids having a visible relation of `tipo` (for an IN filter)."""
+    built = _filtrata(db, tenant_schema, permessi=permessi, tipo=tipo, solo_correnti=solo_correnti)
     if built is None:
         return sa.select(sa.cast(sa.null(), sa.Integer)).where(sa.false())
-    _, u = built
-    q = sa.select(u.c.soggetto_id).distinct()
-    if solo_correnti:
-        q = q.where(_corrente(u.c.data_fine))
-    return q
+    f = built[0].subquery("vis")
+    return sa.select(f.c.soggetto_id).distinct()
 
 
-def ruoli_per_soggetti(db: Session, tenant_schema: str, soggetto_ids: Iterable[int]) -> Dict[int, List[dict]]:
-    """{soggetto_id: [{codice, nome, modulo, n}]} with n = current relations; one query."""
+def ruoli_per_soggetti(db: Session, tenant_schema: str, soggetto_ids: Iterable[int], *,
+                       permessi: set) -> Dict[int, List[dict]]:
+    """{soggetto_id: [{codice, nome, modulo, n}]} of the visible relations, n = current ones; one query."""
     ids = list(soggetto_ids)
     if not ids:
         return {}
-    built = _filtrata(db, tenant_schema, soggetto_ids=ids)
+    built = _filtrata(db, tenant_schema, permessi=permessi, soggetto_ids=ids)
     if built is None:
         return {}
-    _, u = built
+    u = built[0].subquery("vis")
     n = sa.func.count().filter(_corrente(u.c.data_fine))
     q = (sa.select(u.c.soggetto_id, u.c.tipo, u.c.tipo_nome, u.c.modulo, n.label("n"))
          .group_by(u.c.soggetto_id, u.c.tipo, u.c.tipo_nome, u.c.modulo)

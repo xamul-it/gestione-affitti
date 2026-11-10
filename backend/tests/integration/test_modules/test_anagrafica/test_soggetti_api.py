@@ -11,6 +11,23 @@ import pytest
 from datetime import date
 
 from anagrafica_italiana.models import SoggettoAnagrafico
+from app.core.auth.dependencies import get_current_active_user
+from app.core.auth.models import Permission, Role, User
+from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def operatore_anagrafica():
+    """auth_client's JWT user is not resolvable in this session (see
+    test_notifiche_routes.py); the routes now require soggetto.* permissions,
+    so authenticate as an operator holding them. The tenant still comes
+    from the token."""
+    perms = ("soggetto.view", "soggetto.create", "soggetto.edit", "soggetto.delete")
+    app.dependency_overrides[get_current_active_user] = lambda: User(
+        id=1, username="operatore", is_superuser=False, is_active=True,
+        roles=[Role(name="registry_operator", permissions=[Permission(name=p) for p in perms])])
+    yield
+    app.dependency_overrides.pop(get_current_active_user, None)
 
 
 @pytest.mark.integration

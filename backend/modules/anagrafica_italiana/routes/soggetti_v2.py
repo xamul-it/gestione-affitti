@@ -8,6 +8,7 @@ from typing import List, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, inspect
+from app.core.auth.dependencies import require_permission
 from app.core.database import get_db, get_tenant_schema
 from ..models import SoggettoAnagrafico, TipoSoggetto
 from app.core.models import RuoloDisponibile, SoggettoRuolo
@@ -149,12 +150,14 @@ def get_all_soggetti_v2(
     ruolo_anche_cessati: bool = Query(False, description="Con ruolo: includi le relazioni cessate"),
     db: Session = Depends(get_db),
     tenant_schema=Depends(get_tenant_schema),
+    current_user=Depends(require_permission("soggetto.view")),
 ):
     """
     Soggetti anagrafici con i ruoli ricavati dalle relazioni (core_relazioni e
     tabelle dei moduli, vedi app.core.platform_services.relazioni_query).
     """
     schema = tenant_schema if isinstance(tenant_schema, str) else None
+    permessi = current_user.get_permissions()
     query = db.query(SoggettoAnagrafico)
 
     if attivi_solo:
@@ -163,11 +166,12 @@ def get_all_soggetti_v2(
         query = query.filter(SoggettoAnagrafico.attivo == attivo)
     if ruolo:
         query = query.filter(SoggettoAnagrafico.id.in_(
-            relazioni_query.soggetti_con_ruolo(db, schema, ruolo, solo_correnti=not ruolo_anche_cessati)
+            relazioni_query.soggetti_con_ruolo(db, schema, ruolo, permessi=permessi,
+                                               solo_correnti=not ruolo_anche_cessati)
         ))
 
     soggetti = query.order_by(SoggettoAnagrafico.id).offset(skip).limit(limit).all()
-    ruoli = relazioni_query.ruoli_per_soggetti(db, schema, [s.id for s in soggetti])
+    ruoli = relazioni_query.ruoli_per_soggetti(db, schema, [s.id for s in soggetti], permessi=permessi)
 
     return [
         SoggettoAnagra_ficoV2Response(
@@ -197,7 +201,7 @@ def get_all_soggetti_v2(
 
 
 @router.get("/{soggetto_id}", response_model=SoggettoAnagra_ficoV2Response)
-def get_soggetto_v2(soggetto_id: int, db: Session = Depends(get_db)):
+def get_soggetto_v2(soggetto_id: int, db: Session = Depends(get_db), _user=Depends(require_permission("soggetto.view"))):
     """
     Ottiene un soggetto specifico con tutti i suoi ruoli (sistema dinamico).
 
@@ -249,7 +253,7 @@ def get_soggetto_v2(soggetto_id: int, db: Session = Depends(get_db)):
     )
 
 @router.get("/{soggetto_id}/ruoli", response_model=List[RuoloInfo])
-def get_soggetto_ruoli_v2(soggetto_id: int, db: Session = Depends(get_db)):
+def get_soggetto_ruoli_v2(soggetto_id: int, db: Session = Depends(get_db), _user=Depends(require_permission("soggetto.view"))):
     soggetto = db.query(SoggettoAnagrafico).options(
         joinedload(SoggettoAnagrafico.ruoli_assegnati).joinedload(SoggettoRuolo.ruolo)
     ).filter(
@@ -272,7 +276,7 @@ def get_soggetto_ruoli_v2(soggetto_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/ruoli/disponibili", response_model=List[dict])
-def get_ruoli_disponibili(db: Session = Depends(get_db)):
+def get_ruoli_disponibili(db: Session = Depends(get_db), _user=Depends(require_permission("soggetto.view"))):
     """
     Ottiene tutti i ruoli disponibili nella piattaforma.
 
@@ -298,7 +302,8 @@ def get_ruoli_disponibili(db: Session = Depends(get_db)):
 @router.post("/", response_model=SoggettoAnagra_ficoV2Response, status_code=201)
 def create_soggetto_v2(
     soggetto: SoggettoAnagra_ficoV2Create,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _user=Depends(require_permission("soggetto.create")),
 ):
     if soggetto.codice_fiscale:
         existing = db.query(SoggettoAnagrafico).filter(
@@ -353,7 +358,8 @@ def create_soggetto_v2(
 def update_soggetto_v2(
     soggetto_id: int,
     soggetto_update: SoggettoAnagra_ficoV2Update,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _user=Depends(require_permission("soggetto.edit")),
 ):
     db_soggetto = db.query(SoggettoAnagrafico).filter(
         SoggettoAnagrafico.id == soggetto_id
@@ -432,6 +438,7 @@ def delete_soggetto_v2(
     soggetto_id: int,
     db: Session = Depends(get_db),
     tenant_schema: Optional[str] = Depends(get_tenant_schema),
+    _user=Depends(require_permission("soggetto.delete")),
 ):
     db_soggetto = db.query(SoggettoAnagrafico).filter(
         SoggettoAnagrafico.id == soggetto_id
