@@ -159,6 +159,10 @@ def elenca(db: Session, tenant_schema: str, *, permessi: set, soggetto_ids: Opti
     if built is None:
         return []
     q, u = built
+    if "*" not in permessi and (entity_type or entity_id is not None):
+        # Filtering by object must not reveal who is linked to an object the
+        # caller may not see: drop those relation types altogether.
+        q = q.where(sa.or_(u.c.permesso_oggetto.is_(None), u.c.permesso_oggetto.in_(list(permessi))))
     oggi = date.today()
     out = []
     for row in db.execute(q.order_by(u.c.tipo, u.c.soggetto_id, u.c.data_inizio)).mappings():
@@ -167,6 +171,7 @@ def elenca(db: Session, tenant_schema: str, *, permessi: set, soggetto_ids: Opti
         if perm and "*" not in permessi and perm not in permessi:
             r["descrizione"] = None
             r["entity_id"] = None
+            r["record_id"] = None
         r["corrente"] = r["data_fine"] is None or r["data_fine"] >= oggi
         out.append(r)
     return out

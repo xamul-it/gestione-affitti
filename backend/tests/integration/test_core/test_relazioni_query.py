@@ -147,3 +147,18 @@ def test_soggetti_con_ruolo(db_session, dati):
     ids = {r[0] for r in db_session.execute(
         rq.soggetti_con_ruolo(db_session, TENANT, "conduttore", solo_correnti=False))}
     assert dati["neri"].id in ids
+
+
+def test_filtro_oggetto_senza_permesso_non_rivela_nulla(db_session, dati):
+    righe = rq.elenca(db_session, TENANT, permessi={"soggetto.view"},
+                      entity_type="IMMOBILE", entity_id=dati["u1"].id)
+    assert righe == []
+    righe = rq.elenca(db_session, TENANT, permessi={"soggetto.view", "immobile.view"},
+                      entity_type="IMMOBILE", entity_id=dati["u1"].id)
+    assert dati["rossi"].id in {r["soggetto_id"] for r in righe}
+
+
+def test_record_id_nascosto_senza_permesso(db_session, dati):
+    righe = rq.elenca(db_session, TENANT, permessi={"soggetto.view"}, soggetto_ids=[dati["rossi"].id],
+                      tipo="proprietario")
+    assert righe and all(r["record_id"] is None for r in righe)
