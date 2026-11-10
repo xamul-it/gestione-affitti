@@ -72,3 +72,23 @@ def test_richiamata_con_token_accettata(client, job):
     res = client.post(f"/api/v1/document-parsing/callback/{job.job_uuid}?token={callback_token(job.job_uuid)}",
                       json=PAYLOAD)
     assert res.status_code == 200
+
+
+def test_richiamata_su_job_concluso_rifiutata(client, job, db_session):
+    """A leaked token can't be replayed once the job has its result."""
+    job.status = JobStatus.COMPLETED
+    db_session.flush()
+    res = client.post(f"/api/v1/document-parsing/callback/{job.job_uuid}?token={callback_token(job.job_uuid)}",
+                      json=PAYLOAD)
+    assert res.status_code == 409
+
+
+def test_token_oscurato_nel_log(db_session, job):
+    from app.core.platform.models import DocumentParsingLog
+    service = DocumentParsingService(db_session, TEST_TENANT)
+    url = service._resolve_callback_url(job)
+    service._log_parsing_event(job=job, direction="REQUEST", url="http://svc/mrz",
+                               request_payload={"callback_url": url})
+    db_session.flush()
+    log = db_session.query(DocumentParsingLog).filter_by(job_uuid=job.job_uuid).one()
+    assert callback_token(job.job_uuid) not in str(log.request_payload)

@@ -230,6 +230,11 @@ async def parsing_callback(
             detail=f"Job non trovato: {job_uuid}"
         )
 
+    # A job with its outcome takes no more callbacks: a leaked token can't be replayed.
+    if job.status not in (JobStatus.PENDING, JobStatus.QUEUED, JobStatus.PROCESSING):
+        raise HTTPException(status_code=http_status.HTTP_409_CONFLICT,
+                            detail=f"Job già concluso ({job.status.value})")
+
     # Use service to handle callback
     service = DocumentParsingService(db, job.tenant_schema)
 

@@ -46,6 +46,15 @@ def callback_token_valido(job_uuid: str, token: Optional[str]) -> bool:
     return bool(token) and hmac.compare_digest(token, callback_token(job_uuid))
 
 
+def _oscura(payload, token: str):
+    """Logged payloads are readable by admins: never store the callback token."""
+    if isinstance(payload, dict):
+        return {k: _oscura(v, token) for k, v in payload.items()}
+    if isinstance(payload, str):
+        return payload.replace(token, "***")
+    return payload
+
+
 class DocumentParsingService:
     """
     Service for asynchronous document parsing orchestration.
@@ -476,6 +485,9 @@ class DocumentParsingService:
         status_code: Optional[int] = None,
         error_text: Optional[str] = None,
     ) -> None:
+        token = callback_token(job.job_uuid)
+        request_payload = _oscura(request_payload, token)
+        url = url.replace(token, "***") if url else url
         try:
             log_entry = DocumentParsingLog(
                 job_uuid=job.job_uuid,
