@@ -54,6 +54,7 @@ function SoggettiTable({
   showFiltroRuolo = false,
   toolbarExtra,
   hideAddButton = false,
+  refreshKey = 0,
 }) {
   const [attiviSolo, setAttiviSolo] = useState(false);
   const [ancheCessati, setAncheCessati] = useState(false);
@@ -163,7 +164,7 @@ function SoggettiTable({
     <div className="soggetti-list-container">
       <DataTable
         // The table fetches on mount: remount when the server-side prefilter changes.
-        key={JSON.stringify(params)}
+        key={`${JSON.stringify(params)}:${refreshKey}`}
         config={config}
         toolbarContent={renderToolbar}
         onAdd={onAdd}

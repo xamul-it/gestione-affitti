@@ -1,0 +1,12 @@
+.ruolo-oggetti {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ruolo-oggetti--cessato {
+  color: var(--gray-600);
+}

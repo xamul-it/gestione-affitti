@@ -1,59 +1,28 @@
-import { DataTable } from '../../../../core/components';
+import RuoloSoggettiPage from '../Soggetti/RuoloSoggettiPage';
 import ProprietarioForm from './ProprietarioForm';
+import { proprietariAPI } from '../../services/immobiliAPI';
 import './Proprietari.css';
 
-const proprietariTableConfig = {
-  endpoint: '/proprietari/',
-  title: 'Gestione Proprietari',
-  searchPlaceholder: 'Cerca per note...',
-  emptyTitle: 'Nessun proprietario trovato',
-  emptyMessage: 'Non ci sono proprietari registrati. Clicca su "Nuovo Proprietario" per iniziare.',
-  addButtonLabel: 'Nuovo Proprietario',
-  columns: [
-    { field: 'soggetto_id', label: 'ID Soggetto', width: 120 },
-    { field: 'note_proprietario', label: 'Note', filterable: true, render: (value) => value || '-' },
-    {
-      field: 'created_at',
-      label: 'Registrato il',
-      render: (value) => (value ? new Date(value).toLocaleDateString('it-IT') : '-'),
-    },
-  ],
-  defaultSort: { field: 'created_at', order: 'desc' },
-  rowActions: [
-    {
-      id: 'edit',
-      label: 'Modifica',
-      action: 'edit',
-      variant: 'secondary',
-    },
-    {
-      id: 'delete',
-      label: 'Elimina',
-      action: 'delete',
-      variant: 'danger',
-      confirmMessage: 'Eliminare questo proprietario? Verranno rimossi anche i suoi diritti sulle unità immobiliari.',
-    },
-  ],
+const TESTI = {
+  azione: 'Togli dai proprietari',
+  fatto: 'Tolto dai proprietari',
+  vuoto: 'Nessun proprietario registrato. Clicca su "Nuovo Proprietario" per iniziare.',
+  conferma: (nome) => `Togliere ${nome} dai proprietari? Verranno rimossi anche i suoi diritti sulle unità immobiliari. L'anagrafica resta.`,
 };
-
-function ProprietarioFormModal({ entity, onClose }) {
-  return <ProprietarioForm proprietario={entity} onClose={onClose} />;
-}
 
 function ProprietariList() {
   return (
-    <div className="proprietari-container">
-      <DataTable
-        config={proprietariTableConfig}
-        FormComponent={ProprietarioFormModal}
-        options={{
-          selectable: false,
-          showSearch: true,
-          showPagination: true,
-          pageSize: 20,
-        }}
-      />
-    </div>
+    <RuoloSoggettiPage
+      ruolo="proprietario"
+      title="Proprietari"
+      colonnaOggetti="Immobili"
+      recordsAPI={proprietariAPI}
+      noteField="note_proprietario"
+      FormComponent={ProprietarioForm}
+      formProp="proprietario"
+      addButtonLabel="Nuovo Proprietario"
+      testi={TESTI}
+    />
   );
 }
 
