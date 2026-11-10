@@ -11,9 +11,10 @@ import hashlib
 import io
 import logging
 from types import SimpleNamespace
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional, Set
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.file_storage import file_storage
@@ -44,6 +45,7 @@ MSG_CLASSE = "Indica la classe energetica (A4…G)"
 MSG_DUPLICATO = "Documento già presente su questo immobile"
 MSG_OCR_FALLITO = "Lettura non riuscita: scegli tipo e immobile"
 SERVIZIO_OCR = "ocr_testo"
+MINUTI_MAX_LETTURA = 30  # a job with no callback after this is treated as failed
 TIPO_JOB_OCR = "immobili.ALTRO_IMMOBILE"  # placeholder: the real type is known only after reading
 CAMPI_DATI_APE = ("classe", "ep_gl_nren", "codice_identificativo", "tecnico_id", "decaduto_il")
 
@@ -190,6 +192,13 @@ def stato_analisi(db: Session, tenant_schema: str, permessi: Set[str], token: st
             return AnalisiDocumento(upload_token=token, nome_file=nome_file, esito="errore",
                                     messaggio=MSG_OCR_FALLITO, job_uuid=job_uuid)
         if job.status != JobStatus.COMPLETED:
+            # Ages are computed by the DB: created_at is its naive now().
+            scaduto = db.query(DocumentJob.id).filter(
+                DocumentJob.id == job.id,
+                DocumentJob.created_at < func.now() - timedelta(minutes=MINUTI_MAX_LETTURA)).first()
+            if scaduto:
+                return AnalisiDocumento(upload_token=token, nome_file=nome_file, esito="errore",
+                                        messaggio=MSG_OCR_FALLITO, job_uuid=job_uuid)
             return AnalisiDocumento(upload_token=token, nome_file=nome_file, esito="in_lettura", job_uuid=job_uuid)
         meta.update(_risultato_ocr(job.parsing_result))
         upload_temporanei.scrivi_meta(tenant_schema, token, meta)
@@ -247,20 +256,35 @@ def conferma(db: Session, tenant_schema: str, user_id: int, body: ConfermaDocume
     nuovi = {d.campo: letti[d.campo] for d in body.differenze
              if d.selezionato and d.campo in CAMPI_CONFRONTO and letti.get(d.campo) not in (None, "")}
 
-    documento = DocumentoService(db, tenant_schema, user_id).crea(
+    service = DocumentoService(db, tenant_schema, user_id)
+    documento = service.crea(
         entity_type=EntityType.IMMOBILE, entity_id=unita.id, tipo_codice=body.tipo_codice,
         files=[FileInput(contenuto, meta.get("nome_file") or "documento", meta.get("mime_type"))],
         data_riferimento=data_riferimento, dati=dati_doc, descrizione=descrizione,
     )
-    if nuovi:
-        registra_variazioni(db, unita, nuovi, origine="DOCUMENTO", documento_id=documento.id,
-                            data_riferimento=documento.data_riferimento, utente_id=user_id)
-        for campo, valore in nuovi.items():
-            setattr(unita, campo, valore)
-    if meta.get("job_uuid"):
-        job = db.query(DocumentJob).filter(DocumentJob.job_uuid == meta["job_uuid"]).first()
-        if job is not None:
-            chiudi(db, job.scadenza_id, StatoScadenza.COMPLETATA,
-                   f"Documento caricato sull'immobile {unita.id}", user_id)
-    db.flush()
+    try:
+        if nuovi:
+            registra_variazioni(db, unita, nuovi, origine="DOCUMENTO", documento_id=documento.id,
+                                data_riferimento=documento.data_riferimento, utente_id=user_id)
+            for campo, valore in nuovi.items():
+                setattr(unita, campo, valore)
+        if meta.get("job_uuid"):
+            job = db.query(DocumentJob).filter(DocumentJob.job_uuid == meta["job_uuid"],
+                                               DocumentJob.tenant_schema == tenant_schema).first()
+            if job is not None:
+                chiudi(db, job.scadenza_id, StatoScadenza.COMPLETATA,
+                       f"Documento caricato sull'immobile {unita.id}", user_id)
+        db.flush()
+    except Exception:
+        # The DB rolls back with the caller; the files crea() saved must go too.
+        elimina_file(db, tenant_schema, percorsi_file(documento))
+        raise
     return documento
+
+
+def percorsi_file(documento: Documento) -> list:
+    return [f.file_path for f in documento.files]
+
+
+def elimina_file(db: Session, tenant_schema: str, percorsi: list) -> None:
+    DocumentoService(db, tenant_schema, None).elimina_file(percorsi)

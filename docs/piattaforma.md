@@ -181,8 +181,11 @@ sbaglia alcuni caratteri della MRZ, quindi il risultato è sempre da rivedere.
 **Modalità OCR testo** (`parsing_service: "ocr_testo"`, stesso servizio,
 `POST /testo`): il chiamante manda il file e, nel campo `tipi`, una lista di
 specifiche `{codice, riconosci: [espressioni], campi: {nome: espressione con
-gruppo v}}`; il servizio fa l'OCR di ogni pagina e restituisce `{testo,
-pagine, tipi: [{codice, riconosciuto, campi: {nome: {valore, pagina}}}]}`.
+gruppo v}}`; il servizio fa l'OCR di ogni pagina e restituisce `{pagine, tipi:
+[{codice, riconosciuto, campi: {nome: {valore, pagina}}}]}`; il testo completo
+(`testo`) solo se richiesto con `includi_testo` (dati personali: il
+gestionale non lo chiede e non lo salva). Un lavoro senza risposta dopo 30
+minuti viene trattato come fallito.
 Il motore che applica le specifiche è identico nel backend
 (`modules/immobili/services/lettura_documenti/motore.py`) e nel servizio
 (`~/Progetti/mrz/campi.py`): vanno cambiati insieme. I valori annidati della

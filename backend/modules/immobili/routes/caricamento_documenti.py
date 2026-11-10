@@ -89,7 +89,13 @@ def conferma(
     tenant_schema = _tenant(tenant_schema)
     try:
         documento = caricamento.conferma(db, tenant_schema, current_user.id, body)
-        db.commit()
+        documento_id, percorsi = documento.id, caricamento.percorsi_file(documento)
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            caricamento.elimina_file(db, tenant_schema, percorsi)
+            raise
     except caricamento.CaricamentoError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=exc.detail)
@@ -97,4 +103,4 @@ def conferma(
         db.rollback()
         raise HTTPException(status_code=422, detail=str(exc))
     upload_temporanei.elimina(tenant_schema, body.upload_token)
-    return ConfermaRisultato(documento_id=documento.id, unita_id=body.unita_id)
+    return ConfermaRisultato(documento_id=documento_id, unita_id=body.unita_id)

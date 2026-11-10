@@ -82,3 +82,13 @@ def test_ocr_fallito_permette_scelta_manuale(client, inviati, unita, db_session)
     c = client.post(f"{BASE}/rianalizza", json={"upload_token": a["upload_token"], "tipo_codice": "AGIBILITA",
                                                 "unita_id": unita.id}).json()
     assert c["esito"] == "pronto"
+
+
+def test_lavoro_ocr_senza_risposta_scade(client, inviati, db_session):
+    """A job whose callback never arrives must not stay "in lettura" forever."""
+    from datetime import datetime, timedelta
+    a = _scansione(client)
+    inviati[0].created_at = datetime.utcnow() - timedelta(minutes=31)
+    db_session.flush()
+    b = client.get(f"{BASE}/analizza/{a['upload_token']}").json()
+    assert b["esito"] == "errore" and b["messaggio"] == "Lettura non riuscita: scegli tipo e immobile"

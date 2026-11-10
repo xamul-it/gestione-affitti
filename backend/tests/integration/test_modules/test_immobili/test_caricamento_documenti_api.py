@@ -184,3 +184,20 @@ def test_senza_permesso_403(client):
     client.utente["user"] = _utente_con(set())
     res = client.post(f"{BASE}/analizza", files={"file": ("x.pdf", _pdf(APE_ER), "application/pdf")})
     assert res.status_code == 403
+
+
+def test_conferma_fallita_dopo_il_salvataggio_non_lascia_file(client, unita, db_session, tmp_path, monkeypatch):
+    """A failure after DocumentoService.crea saved the file must not leave it orphaned in storage."""
+    import immobili.services.lettura_documenti.caricamento as car
+
+    def rotto(*a, **k):
+        raise RuntimeError("guasto")
+    monkeypatch.setattr(car, "registra_variazioni", rotto)
+    a = _analizza(client, APE_CON_CLASSE)
+    client_raise = TestClient(app, raise_server_exceptions=False)
+    res = client_raise.post(f"{BASE}/conferma", json={
+        "upload_token": a["upload_token"], "tipo_codice": "APE", "unita_id": unita.id, "dati": {},
+        "differenze": a["differenze"]})
+    assert res.status_code == 500
+    salvati = list((tmp_path / TEST_TENANT).rglob("*")) if (tmp_path / TEST_TENANT).exists() else []
+    assert [p for p in salvati if p.is_file() and "temp_uploads" not in p.parts] == []
