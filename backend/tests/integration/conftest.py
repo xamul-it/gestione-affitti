@@ -89,3 +89,19 @@ def override_get_db(db_session):
 @pytest.fixture
 def unique_suffix():
     return uuid.uuid4().hex[:8]
+
+
+@pytest.fixture(autouse=True)
+def _ripristina_registro_tipi_documento():
+    """Some tests register fake document types and then clear the global
+    registry, wiping the types the app registered at startup (e.g.
+    immobili.ALTRO_IMMOBILE) for every later test. Restore it after each test."""
+    import copy
+    from app.core.platform_services.document_type_registry import document_type_registry as reg
+    attrs = ("_types", "_by_module", "_by_category", "_by_parsing_service")
+    snapshot = {a: copy.deepcopy(getattr(reg, a)) for a in attrs}
+    yield
+    for a in attrs:
+        current = getattr(reg, a)
+        current.clear()
+        current.update(snapshot[a])
