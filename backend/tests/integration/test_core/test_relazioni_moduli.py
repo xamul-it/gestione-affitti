@@ -161,3 +161,15 @@ def test_riattivare_non_riapre_scadenze_chiuse_a_mano(ctx):
     assert rel.scadenza_id == prima
     assert db.query(Scadenza).filter_by(entity_type="CONDOMINIO", entity_id=c.id,
                                         stato=StatoScadenza.ATTIVA).count() == 0
+
+
+def test_tenant_senza_moduli_attivi_non_vede_nulla(ctx):
+    """No enabled module means nothing visible, not "no filter" (fail closed)."""
+    from app.core.platform_services.relazioni_moduli import moduli_attivi
+    db, tenant, s, *_ = ctx
+    for tm in db.query(TenantModule).filter_by(tenant_id=tenant.id):
+        tm.enabled = False
+    db.flush()
+    assert moduli_attivi(db, TEST_TENANT) == set()
+    assert _tipi_visibili(db, s.id) == set()
+    assert moduli_attivi(db, "schema_inesistente") is None

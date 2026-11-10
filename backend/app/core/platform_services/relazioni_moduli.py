@@ -25,13 +25,16 @@ from app.core.platform.models import Relazione, StatoScadenza
 
 
 def moduli_attivi(db: Session, tenant_schema: Optional[str]) -> Optional[Set[str]]:
-    """Enabled modules of the tenant; None when unknown (no filter)."""
+    """Enabled modules of the tenant; None only when there is no known tenant
+    (no filter). A known tenant with no enabled module gets an empty set."""
     if not tenant_schema:
         return None
+    tenant = db.query(Tenant).filter(Tenant.schema_name == tenant_schema).first()
+    if tenant is None:
+        return None
     rows = (db.query(TenantModule.module_id)
-            .join(Tenant, Tenant.id == TenantModule.tenant_id)
-            .filter(Tenant.schema_name == tenant_schema, TenantModule.enabled.is_(True)).all())
-    return {r[0] for r in rows} or None
+            .filter(TenantModule.tenant_id == tenant.id, TenantModule.enabled.is_(True)).all())
+    return {r[0] for r in rows}
 
 
 def verifica_modulo_attivo(db: Session, tenant_schema: Optional[str], tipo: RuoloDisponibile) -> None:
