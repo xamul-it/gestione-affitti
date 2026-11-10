@@ -4,13 +4,14 @@ API Routes per Soggetti Anagrafici - Versione 2 con sistema ruoli dinamici.
 Usa il sistema di registrazione dinamica dei ruoli invece di hardcodare
 i ruoli specifici (proprietario, affittuario, tecnico).
 """
-from typing import List, Optional
+from typing import List, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, inspect
 from app.core.database import get_db, get_tenant_schema
 from ..models import SoggettoAnagrafico, TipoSoggetto
 from app.core.models import RuoloDisponibile, SoggettoRuolo
+from app.core.platform_services import relazioni_query
 from pydantic import BaseModel
 from datetime import date
 
@@ -60,6 +61,14 @@ class RuoloInfo(BaseModel):
     record_id: Optional[int] = None
 
 
+class RuoloRelazione(BaseModel):
+    """Ruolo ricavato dalle relazioni: n = relazioni correnti (0 = solo cessate)."""
+    codice: str
+    nome: str
+    modulo: str
+    n: int
+
+
 class SoggettoAnagra_ficoV2Response(BaseModel):
     """Response con sistema ruoli dinamici"""
     id: int
@@ -81,7 +90,7 @@ class SoggettoAnagra_ficoV2Response(BaseModel):
     provincia: Optional[str] = None
     note: Optional[str] = None
     attivo: bool = True
-    ruoli: List[RuoloInfo] = []
+    ruoli: List[Union[RuoloRelazione, RuoloInfo]] = []
 
     class Config:
         from_attributes = True
@@ -136,45 +145,32 @@ def get_all_soggetti_v2(
     limit: int = 100,
     attivo: Optional[bool] = None,
     attivi_solo: Optional[bool] = None,
-    db: Session = Depends(get_db)
+    ruolo: Optional[str] = Query(None, description="Solo i soggetti con una relazione di questo tipo"),
+    ruolo_anche_cessati: bool = Query(False, description="Con ruolo: includi le relazioni cessate"),
+    db: Session = Depends(get_db),
+    tenant_schema=Depends(get_tenant_schema),
 ):
     """
-    Ottiene tutti i soggetti anagrafici con sistema ruoli dinamici.
-
-    Per ogni soggetto restituisce:
-    - Dati anagrafici completi
-    - Lista di tutti i ruoli assegnati (dinamici, da qualsiasi modulo)
-
-    Questa è la versione V2 che usa il sistema di ruoli modulare.
+    Soggetti anagrafici con i ruoli ricavati dalle relazioni (core_relazioni e
+    tabelle dei moduli, vedi app.core.platform_services.relazioni_query).
     """
-    query = db.query(SoggettoAnagrafico).options(
-        joinedload(SoggettoAnagrafico.ruoli_assegnati).joinedload(SoggettoRuolo.ruolo)
-    )
+    schema = tenant_schema if isinstance(tenant_schema, str) else None
+    query = db.query(SoggettoAnagrafico)
 
     if attivi_solo:
         attivo = True
-
     if attivo is not None:
         query = query.filter(SoggettoAnagrafico.attivo == attivo)
+    if ruolo:
+        query = query.filter(SoggettoAnagrafico.id.in_(
+            relazioni_query.soggetti_con_ruolo(db, schema, ruolo, solo_correnti=not ruolo_anche_cessati)
+        ))
 
-    soggetti = query.offset(skip).limit(limit).all()
+    soggetti = query.order_by(SoggettoAnagrafico.id).offset(skip).limit(limit).all()
+    ruoli = relazioni_query.ruoli_per_soggetti(db, schema, [s.id for s in soggetti])
 
-    # Costruisci response con ruoli dinamici
-    result = []
-    for soggetto in soggetti:
-        # Ottieni tutti i ruoli attivi
-        ruoli = [
-            RuoloInfo(
-                codice=assegnazione.ruolo.codice,
-                nome=assegnazione.ruolo.nome_display,
-                modulo=assegnazione.ruolo.modulo_id,
-                record_id=assegnazione.record_specializzazione_id
-            )
-            for assegnazione in soggetto.ruoli_assegnati
-            if assegnazione.attivo
-        ]
-
-        soggetto_dict = SoggettoAnagra_ficoV2Response(
+    return [
+        SoggettoAnagra_ficoV2Response(
             id=soggetto.id,
             tipo_soggetto=soggetto.tipo_soggetto,
             codice_fiscale=soggetto.codice_fiscale,
@@ -194,12 +190,10 @@ def get_all_soggetti_v2(
             provincia=soggetto.provincia,
             note=soggetto.note,
             attivo=soggetto.attivo,
-            ruoli=ruoli
+            ruoli=[RuoloRelazione(**r) for r in ruoli.get(soggetto.id, [])],
         )
-
-        result.append(soggetto_dict)
-
-    return result
+        for soggetto in soggetti
+    ]
 
 
 @router.get("/{soggetto_id}", response_model=SoggettoAnagra_ficoV2Response)
