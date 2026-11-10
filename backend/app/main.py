@@ -92,6 +92,7 @@ TENANT_ONLY_CORE_TABLES = {
     "core_documenti_files",
     "core_tipi_documento_overrides",
     "core_stati_documento_overrides",
+    "core_relazioni",
 }
 
 

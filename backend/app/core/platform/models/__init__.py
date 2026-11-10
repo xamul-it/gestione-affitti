@@ -19,8 +19,10 @@ from .stato_documento import StatoDocumento
 from .stato_documento_override import StatoDocumentoOverride
 from .documento import Documento, EntityType, TipoDocumentoEnum
 from .documento_file import DocumentoFile
+from .relazione import Relazione
 
 __all__ = [
+    'Relazione',
     'MenuItem',
     'Widget',
     'UserDashboard',

@@ -17,7 +17,7 @@ The service flushes but never commits: the caller owns the transaction.
 import io
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from typing import List, Optional
 
 from dateutil.relativedelta import relativedelta
@@ -29,15 +29,13 @@ from app.core.platform.models import (
     Documento,
     DocumentoFile,
     EntityType,
-    PrioritaScadenza,
-    Scadenza,
     StatoScadenza,
     TipoDocumento,
 )
 from app.core.platform.models.documento import TipoDocumentoEnum
-from app.core.platform.models.scadenza_log import ScadenzaLog
 from app.core.platform.models.tipo_documento_override import TipoDocumentoOverride
 from app.core.platform_services.document_type_sync import apply_override
+from app.core.platform_services.scadenze_collegate import apri_o_aggiorna, chiudi, utente_sistema
 
 logger = logging.getLogger(__name__)
 
@@ -126,53 +124,22 @@ class DocumentoService:
 
     def _user(self) -> int:
         if self._user_id is None:
-            # System operations (migrations, sync): attribute to the first superuser.
-            self._user_id = self.db.execute(text(
-                "SELECT id FROM public.core_users ORDER BY is_superuser DESC, id LIMIT 1"
-            )).scalar()
+            self._user_id = utente_sistema(self.db)
         return self._user_id
 
     def _sync_scadenza(self, documento: Documento, tipo: TipoDocumento) -> None:
         effettiva = self.scadenza_effettiva(documento)
         if documento.stato != CORRENTE or effettiva is None:
             return
-        scadenza = self.db.get(Scadenza, documento.scadenza_id) if documento.scadenza_id else None
-        if scadenza is not None and scadenza.stato in (StatoScadenza.ATTIVA, StatoScadenza.SCADUTA):
-            if scadenza.data_scadenza != effettiva:
-                scadenza.data_scadenza = effettiva
-                scadenza.modificato_il = datetime.utcnow()
-            return
-        scadenza = Scadenza(
-            modulo=tipo.modulo,
-            entity_type=documento.entity_type.value,
-            entity_id=documento.entity_id,
-            titolo=f"{tipo.nome} in scadenza",
-            descrizione=f"Documento n. {documento.id}",
-            data_scadenza=effettiva,
-            priorita=PrioritaScadenza.ALTA,
-            stato=StatoScadenza.ATTIVA,
-            creato_da=self._user(),
+        documento.scadenza_id = apri_o_aggiorna(
+            self.db, scadenza_id=documento.scadenza_id, modulo=tipo.modulo,
+            entity_type=documento.entity_type.value, entity_id=documento.entity_id,
+            titolo=f"{tipo.nome} in scadenza", descrizione=f"Documento n. {documento.id}",
+            data=effettiva, user_id=self._user(), nota_creazione=f"Creata dal documento {documento.id}",
         )
-        self.db.add(scadenza)
-        self.db.flush()
-        self.db.add(ScadenzaLog.log_creation(scadenza_id=scadenza.id, user_id=self._user(),
-                                             note=f"Creata dal documento {documento.id}"))
-        documento.scadenza_id = scadenza.id
 
     def _chiudi_scadenza(self, documento: Documento, stato: StatoScadenza, note: str) -> None:
-        if not documento.scadenza_id:
-            return
-        scadenza = self.db.get(Scadenza, documento.scadenza_id)
-        if scadenza is None or scadenza.stato not in (StatoScadenza.ATTIVA, StatoScadenza.SCADUTA):
-            return
-        scadenza.stato = stato
-        scadenza.modificato_il = datetime.utcnow()
-        if stato == StatoScadenza.COMPLETATA:
-            scadenza.completato_da = self._user()
-            scadenza.completato_il = datetime.utcnow()
-            self.db.add(ScadenzaLog.log_completion(scadenza_id=scadenza.id, user_id=self._user(), note=note))
-        else:
-            self.db.add(ScadenzaLog.log_cancellation(scadenza_id=scadenza.id, user_id=self._user(), note=note))
+        chiudi(self.db, documento.scadenza_id, stato, note, self._user())
 
     # --------------------------------------------------------------- history
 
