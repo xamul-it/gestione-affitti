@@ -53,6 +53,15 @@
 }
 
 .soggetto-picker__info {
-  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-small);
   color: var(--gray-600);
+}
+
+.soggetto-picker__info:empty {
+  display: none;
+}
+
+.soggetto-picker input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
 }

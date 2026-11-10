@@ -4,20 +4,8 @@
   gap: var(--space-1);
 }
 
-.soggetti-ruolo {
-  display: inline-block;
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-  background: var(--gray-200);
-  color: var(--color-ink);
-  font-size: var(--font-size-small);
-  white-space: nowrap;
-}
-
 .soggetti-ruolo--cessato {
-  background: transparent;
-  border: 1px dashed var(--gray-400);
-  color: var(--gray-600);
+  border-style: dashed;
 }
 
 .soggetti-toolbar {
@@ -25,6 +13,19 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-4);
+}
+
+.soggetti-filtro-ruolo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-small);
+  color: var(--gray-700);
+}
+
+.soggetti-toolbar select:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
 }
 
 .soggetti-toolbar select {

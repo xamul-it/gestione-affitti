@@ -1,7 +1,10 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { getSoggettiAnagrafici } from '../../services/anagraficaAPI';
 import { nomeSoggetto } from './SoggettiTable';
+import Button from '../../../../components/UI/Button';
 import './SoggettoPicker.css';
+
+const ATTESA_MS = 250;
 
 /**
  * Search an anagrafica by name or codice fiscale and pick it.
@@ -9,41 +12,51 @@ import './SoggettoPicker.css';
  */
 function SoggettoPicker({ label = 'Anagrafica', value, onSelect, placeholder = 'Cerca per nome o codice fiscale...' }) {
   const inputId = useId();
+  const labelId = useId();
+  const listId = useId();
   const [term, setTerm] = useState('');
   const [risultati, setRisultati] = useState(null);
   const [loading, setLoading] = useState(false);
+  const richiesta = useRef(0);
 
-  const cerca = async (testo) => {
-    setTerm(testo);
-    if (testo.trim().length < 2) {
+  useEffect(() => {
+    const testo = term.trim();
+    if (testo.length < 2) {
       setRisultati(null);
-      return;
+      return undefined;
     }
-    setLoading(true);
-    try {
-      const tutti = await getSoggettiAnagrafici({ limit: 1000 });
-      const t = testo.toLowerCase();
-      setRisultati(tutti.filter((s) => (
-        nomeSoggetto(s).toLowerCase().includes(t) || (s.codice_fiscale || '').toLowerCase().includes(t)
-      )).slice(0, 15));
-    } catch {
-      setRisultati([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const numero = ++richiesta.current;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const tutti = await getSoggettiAnagrafici({ limit: 1000 });
+        if (numero !== richiesta.current) return; // a newer search is running
+        const t = testo.toLowerCase();
+        setRisultati(tutti.filter((s) => (
+          nomeSoggetto(s).toLowerCase().includes(t) || (s.codice_fiscale || '').toLowerCase().includes(t)
+        )).slice(0, 15));
+      } catch {
+        if (numero === richiesta.current) setRisultati([]);
+      } finally {
+        if (numero === richiesta.current) setLoading(false);
+      }
+    }, ATTESA_MS);
+    return () => clearTimeout(timer);
+  }, [term]);
 
   if (value) {
     return (
-      <div className="soggetto-picker">
-        <span className="soggetto-picker__label">{label}</span>
+      <div className="soggetto-picker" role="group" aria-labelledby={labelId}>
+        <span id={labelId} className="soggetto-picker__label">{label}</span>
         <div className="soggetto-picker__scelto">
           <span>{nomeSoggetto(value)}</span>
-          <button type="button" className="btn btn-secondary" onClick={() => onSelect(null)}>Cambia</button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => onSelect(null)}>Cambia</Button>
         </div>
       </div>
     );
   }
+
+  const stato = loading ? 'Ricerca…' : risultati && risultati.length === 0 ? 'Nessuna anagrafica trovata' : '';
 
   return (
     <div className="soggetto-picker">
@@ -51,15 +64,18 @@ function SoggettoPicker({ label = 'Anagrafica', value, onSelect, placeholder = '
       <input
         id={inputId}
         type="text"
+        role="combobox"
+        aria-expanded={Boolean(risultati && risultati.length)}
+        aria-controls={listId}
+        aria-autocomplete="list"
         value={term}
-        onChange={(e) => cerca(e.target.value)}
+        onChange={(e) => setTerm(e.target.value)}
         placeholder={placeholder}
         autoComplete="off"
       />
-      {risultati !== null && (
-        <ul className="soggetto-picker__risultati">
-          {loading && <li className="soggetto-picker__info">Ricerca…</li>}
-          {!loading && risultati.length === 0 && <li className="soggetto-picker__info">Nessuna anagrafica trovata</li>}
+      <span className="soggetto-picker__info" aria-live="polite">{stato}</span>
+      {risultati && risultati.length > 0 && (
+        <ul id={listId} className="soggetto-picker__risultati">
           {risultati.map((s) => (
             <li key={s.id}>
               <button type="button" onClick={() => { setTerm(''); setRisultati(null); onSelect(s); }}>

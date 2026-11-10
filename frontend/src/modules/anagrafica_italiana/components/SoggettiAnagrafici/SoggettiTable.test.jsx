@@ -39,7 +39,7 @@ describe('SoggettiTable', () => {
     expect(await screen.findByText('Amministratore condominio')).toBeInTheDocument();
     expect(lastParams()).toMatchObject({ ruolo: 'proprietario' });
     expect(screen.getByText('Proprietario')).toBeInTheDocument();
-    expect(screen.getByText('Conduttore')).toHaveClass('soggetti-ruolo--cessato');
+    expect(screen.getByText('Conduttore (cessato)')).toHaveClass('soggetti-ruolo--cessato');
     expect(screen.getByRole('link', { name: /Mario Rossi/ })).toHaveAttribute('href', '/anagrafiche/persone-fisiche/1');
   });
 

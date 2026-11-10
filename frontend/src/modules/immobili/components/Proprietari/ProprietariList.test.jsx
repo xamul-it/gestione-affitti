@@ -57,7 +57,7 @@ describe('ProprietariList', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Togli dai proprietari' }));
     expect(screen.getByText(/Togliere Mario Rossi dai proprietari\?/)).toBeInTheDocument();
     expect(screen.getByText(/L'anagrafica resta\./)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Togli' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Togli dai proprietari' }).at(-1));
     await waitFor(() => expect(proprietariAPI.delete).toHaveBeenCalledWith(42));
   });
 
@@ -86,7 +86,7 @@ describe('ConduttoriList', () => {
     expect(screen.getByText(/Unità occupate:/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Togli dai conduttori' }));
     expect(screen.getByText(/Verranno rimosse anche le sue assegnazioni\./)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Togli' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Togli dai conduttori' }).at(-1));
     await waitFor(() => expect(conduttoriAPI.delete).toHaveBeenCalledWith(9));
   });
 });

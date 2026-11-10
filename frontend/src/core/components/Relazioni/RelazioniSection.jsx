@@ -1,21 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { relazioniAPI } from '../../../services/relazioniAPI';
+import { formatDate } from '../../utils/formatters';
+import { EmptyState, ErrorMessage, LoadingSpinner } from '../common';
+import Badge from '../../../components/UI/Badge';
 import './RelazioniSection.css';
 
-const formatData = (iso) => {
-  if (!iso) return '—';
-  const [y, m, d] = iso.slice(0, 10).split('-');
-  return `${d}/${m}/${y}`;
-};
+const data = (iso) => (iso ? formatDate(iso) : '—');
 
-const LINK_OGGETTO = {
+/** Route of the page showing the object of a relation, per entity type. */
+export const LINK_OGGETTO = {
   IMMOBILE: (id) => `/unita-immobiliari/${id}`,
   CONDOMINIO: () => '/condomini',
   SOGGETTO_ANAGRAFICO: (id) => `/anagrafiche/${id}`,
 };
 
-function Oggetto({ r }) {
+export function OggettoRelazione({ r }) {
   if (!r.descrizione) return '—';
   const link = r.entity_id != null && LINK_OGGETTO[r.entity_type];
   return link ? <Link to={link(r.entity_id)}>{r.descrizione}</Link> : r.descrizione;
@@ -23,9 +23,9 @@ function Oggetto({ r }) {
 
 function periodo(r) {
   if (!r.data_inizio && !r.data_fine) return '—';
-  if (!r.data_fine) return `dal ${formatData(r.data_inizio)}`;
-  if (!r.data_inizio) return `fino al ${formatData(r.data_fine)}`;
-  return `${formatData(r.data_inizio)} – ${formatData(r.data_fine)}`;
+  if (!r.data_fine) return `dal ${data(r.data_inizio)}`;
+  if (!r.data_inizio) return `fino al ${data(r.data_fine)}`;
+  return `${data(r.data_inizio)} – ${data(r.data_fine)}`;
 }
 
 /**
@@ -36,13 +36,15 @@ function RelazioniSection({ soggettoId }) {
   const [relazioni, setRelazioni] = useState(null);
   const [errore, setErrore] = useState(null);
 
-  useEffect(() => {
-    let attivo = true;
-    relazioniAPI.list({ soggetto_id: soggettoId })
-      .then((res) => attivo && setRelazioni(res.data || []))
-      .catch(() => attivo && setErrore('Impossibile caricare le relazioni'));
-    return () => { attivo = false; };
+  const carica = useCallback(() => {
+    setErrore(null);
+    setRelazioni(null);
+    return relazioniAPI.list({ soggetto_id: soggettoId })
+      .then((res) => setRelazioni(res.data || []))
+      .catch(() => setErrore('Impossibile caricare le relazioni'));
   }, [soggettoId]);
+
+  useEffect(() => { carica(); }, [carica]);
 
   const gruppi = useMemo(() => {
     const out = new Map();
@@ -53,13 +55,14 @@ function RelazioniSection({ soggettoId }) {
     return [...out.values()];
   }, [relazioni]);
 
-  if (errore) return <p className="relazioni-errore" role="alert">{errore}</p>;
-  if (relazioni === null) return <p className="relazioni-vuoto">Caricamento relazioni…</p>;
+  if (errore) return <ErrorMessage message={errore} onRetry={carica} />;
+  if (relazioni === null) return <LoadingSpinner message="Caricamento relazioni..." />;
   if (!gruppi.length) {
     return (
-      <p className="relazioni-vuoto">
-        Nessuna relazione: questa anagrafica non è ancora proprietaria, conduttrice o collegata ad altri oggetti.
-      </p>
+      <EmptyState
+        title="Nessuna relazione"
+        message="Nessuna relazione: questa anagrafica non è ancora proprietaria, conduttrice o collegata ad altri oggetti."
+      />
     );
   }
 
@@ -75,13 +78,11 @@ function RelazioniSection({ soggettoId }) {
             <tbody>
               {g.righe.map((r, i) => (
                 <tr key={`${r.relazione_id ?? r.record_id ?? 'm'}-${r.entity_id ?? 'x'}-${i}`}>
-                  <td><Oggetto r={r} /></td>
-                  <td>{periodo(r)}</td>
-                  <td>{r.data_scadenza ? formatData(r.data_scadenza) : '—'}</td>
-                  <td>
-                    <span className={`relazioni-stato relazioni-stato--${r.corrente ? 'corrente' : 'cessata'}`}>
-                      {r.corrente ? 'In corso' : 'Cessata'}
-                    </span>
+                  <td data-label="Oggetto"><OggettoRelazione r={r} /></td>
+                  <td data-label="Periodo">{periodo(r)}</td>
+                  <td data-label="Scadenza">{data(r.data_scadenza)}</td>
+                  <td data-label="Stato">
+                    <Badge variant={r.corrente ? 'success' : 'neutral'}>{r.corrente ? 'In corso' : 'Cessata'}</Badge>
                   </td>
                 </tr>
               ))}

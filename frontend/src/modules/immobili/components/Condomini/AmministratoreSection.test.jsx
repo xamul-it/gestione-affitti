@@ -37,6 +37,7 @@ describe('AmministratoreSection', () => {
       tipo: 'amministratore_condominio', entity_type: 'CONDOMINIO', entity_id: 4, solo_correnti: true,
     });
     fireEvent.click(screen.getByRole('button', { name: 'Rinnova mandato' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rinnova' }));
     await waitFor(() => expect(relazioniAPI.rinnova).toHaveBeenCalledWith(11));
   });
 

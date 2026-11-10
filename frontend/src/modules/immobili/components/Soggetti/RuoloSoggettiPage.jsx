@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { OggettoRelazione } from '../../../../core/components/Relazioni/RelazioniSection';
 import SoggettiTable, { nomeSoggetto } from '../../../anagrafica_italiana/components/SoggettiAnagrafici/SoggettiTable';
 import { ConfirmDialog } from '../../../../core/components/common';
 import { useToast } from '../../../../core/hooks';
@@ -7,6 +8,8 @@ import { relazioniAPI } from '../../../../services/relazioniAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
 import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import './RuoloSoggettiPage.css';
+
+const MAX_OGGETTI = 3;
 
 /**
  * The anagrafiche of one module role (proprietario, conduttore): the shared
@@ -28,9 +31,13 @@ function RuoloSoggettiPage({
   const [togliendo, setTogliendo] = useState(false);
 
   const carica = useCallback(async () => {
+    const avvisa = (testo) => () => {
+      toast.error(testo);
+      return { data: [] };
+    };
     const [rec, rel] = await Promise.all([
-      recordsAPI.getAll().catch(() => ({ data: [] })),
-      relazioniAPI.list({ tipo: ruolo }).catch(() => ({ data: [] })),
+      recordsAPI.getAll().catch(avvisa('Impossibile caricare le note: riprova più tardi')),
+      relazioniAPI.list({ tipo: ruolo }).catch(avvisa(`Impossibile caricare la colonna ${colonnaOggetti}`)),
     ]);
     setRecords(Object.fromEntries((rec.data || []).map((r) => [r.soggetto_id, r])));
     const perSoggetto = {};
@@ -39,7 +46,7 @@ function RuoloSoggettiPage({
       (perSoggetto[r.soggetto_id] ||= []).push(r);
     });
     setOggetti(perSoggetto);
-  }, [recordsAPI, ruolo]);
+  }, [recordsAPI, ruolo, colonnaOggetti]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { carica(); }, [carica, refreshKey]);
 
@@ -52,13 +59,17 @@ function RuoloSoggettiPage({
       render: (_, row) => {
         const lista = oggetti[row.id] || [];
         if (!lista.length) return '-';
+        const visibili = lista.slice(0, MAX_OGGETTI);
         return (
           <ul className="ruolo-oggetti">
-            {lista.map((r, i) => (
+            {visibili.map((r, i) => (
               <li key={i} className={r.corrente ? undefined : 'ruolo-oggetti--cessato'}>
-                {r.descrizione}{r.corrente ? '' : ' (cessato)'}
+                <OggettoRelazione r={r} />{r.corrente ? '' : ' (cessato)'}
               </li>
             ))}
+            {lista.length > MAX_OGGETTI && (
+              <li><Link to={`/anagrafiche/${row.id}`}>+{lista.length - MAX_OGGETTI} altri</Link></li>
+            )}
           </ul>
         );
       },
@@ -67,17 +78,18 @@ function RuoloSoggettiPage({
   ], [ruolo, colonnaOggetti, oggetti, records, noteField]);
 
   const rowActions = useMemo(() => [
-    { id: 'apri', label: 'Apri anagrafica', variant: 'secondary', icon: renderIcon('info', { size: 14 }),
+    { id: 'apri', label: 'Apri anagrafica', variant: 'secondary', icon: renderIcon('external-link', { size: 14 }),
       onClick: (row) => navigate(`/anagrafiche/${row.id}`) },
     { id: 'note', label: 'Modifica note', variant: 'secondary', icon: renderIcon('pencil', { size: 14 }),
       onClick: (row) => setForm({ record: records[row.id] || { soggetto_id: row.id } }) },
-    { id: 'togli', label: testi.azione, variant: 'danger', icon: renderIcon('trash', { size: 14 }),
+    { id: 'togli', label: testi.azione, variant: 'danger', icon: renderIcon('user-minus', { size: 14 }),
       onClick: (row) => setDaTogliere(row) },
   ], [navigate, records, testi.azione]);
 
   const conferma = async () => {
     const record = records[daTogliere.id];
     if (!record) {
+      toast.warning('Record non trovato: ricarica la pagina e riprova');
       setDaTogliere(null);
       return;
     }
@@ -117,7 +129,7 @@ function RuoloSoggettiPage({
         isOpen={Boolean(daTogliere)}
         title={testi.azione}
         message={daTogliere ? testi.conferma(nomeSoggetto(daTogliere)) : ''}
-        confirmLabel="Togli"
+        confirmLabel={testi.azione}
         cancelLabel="Annulla"
         variant="danger"
         loading={togliendo}

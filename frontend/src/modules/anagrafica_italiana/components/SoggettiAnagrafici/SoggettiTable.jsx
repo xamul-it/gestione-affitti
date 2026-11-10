@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { DataTable } from '../../../../core/components';
 import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import { relazioniAPI } from '../../../../services/relazioniAPI';
+import Badge from '../../../../components/UI/Badge';
 import './SoggettiAnagraficiList.css';
 import './SoggettiTable.css';
 
@@ -21,13 +22,9 @@ function RuoliBadges({ ruoli = [] }) {
   return (
     <span className="soggetti-ruoli">
       {ruoli.map((r) => (
-        <span
-          key={r.codice}
-          className={`soggetti-ruolo${r.n > 0 ? '' : ' soggetti-ruolo--cessato'}`}
-          title={r.n > 0 ? `${r.n} in corso` : 'Solo relazioni cessate'}
-        >
-          {r.nome}
-        </span>
+        <Badge key={r.codice} variant={r.n > 0 ? 'neutral' : 'warning'} className={r.n > 0 ? '' : 'soggetti-ruolo--cessato'}>
+          {r.nome}{r.n > 0 ? '' : ' (cessato)'}
+        </Badge>
       ))}
     </span>
   );
@@ -80,7 +77,12 @@ function SoggettiTable({
       field: 'tipo_soggetto',
       label: 'Tipo',
       render: (value) => (
-        <span className="tipo-badge" title={value === 'PERSONA_FISICA' ? 'Persona fisica' : 'Persona giuridica'}>
+        <span
+          className="tipo-badge"
+          role="img"
+          aria-label={value === 'PERSONA_FISICA' ? 'Persona fisica' : 'Persona giuridica'}
+          title={value === 'PERSONA_FISICA' ? 'Persona fisica' : 'Persona giuridica'}
+        >
           {renderIcon(value === 'PERSONA_FISICA' ? 'user' : 'building', { size: 14 })}
         </span>
       ),
@@ -131,7 +133,7 @@ function SoggettiTable({
         </label>
       )}
       {showFiltroRuolo && (
-        <span className="filter-checkbox">
+        <span className="soggetti-filtro-ruolo">
           <label htmlFor={filtroId}>Ruolo</label>
           <select id={filtroId} value={ruoloScelto} onChange={(e) => setRuoloScelto(e.target.value)}>
             <option value="">Tutti</option>

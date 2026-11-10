@@ -30,34 +30,33 @@
   font-weight: 600;
 }
 
-.relazioni-stato {
-  display: inline-block;
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-small);
-}
+/* Phone: each relation as a card, label above each value. */
+@media (max-width: 768px) {
+  .relazioni-tabella thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
 
-.relazioni-stato--corrente {
-  background: var(--gray-200);
-  color: var(--color-ink);
-}
+  .relazioni-tabella tr {
+    display: block;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--gray-200);
+  }
 
-.relazioni-stato--cessata {
-  border: 1px dashed var(--gray-400);
-  color: var(--gray-600);
-}
+  .relazioni-tabella td {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: var(--space-2);
+    padding: var(--space-1) 0;
+    border: 0;
+  }
 
-.relazioni-vuoto {
-  color: var(--gray-600);
-}
-
-.relazioni-errore {
-  color: var(--color-danger);
-}
-
-@media (max-width: 640px) {
-  .relazioni-tabella th:nth-child(3),
-  .relazioni-tabella td:nth-child(3) {
-    display: none;
+  .relazioni-tabella td::before {
+    content: attr(data-label);
+    font-size: var(--font-size-small);
+    color: var(--gray-600);
   }
 }

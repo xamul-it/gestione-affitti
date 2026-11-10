@@ -45,9 +45,13 @@ import {
   Users,
   Wrench,
   Zap,
+  ExternalLink,
+  UserMinus,
 } from 'lucide-react';
 
 const ICONS = {
+  'external-link': ExternalLink,
+  'user-minus': UserMinus,
   users: Users,
   user: User,
   building: Building,
