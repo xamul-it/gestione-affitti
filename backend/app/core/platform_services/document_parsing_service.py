@@ -12,6 +12,7 @@ Supports multi-tenant isolation and retry logic.
 """
 import hashlib
 import hmac
+import json
 import logging
 import uuid
 from typing import Optional, Dict, Any, BinaryIO
@@ -77,6 +78,11 @@ class DocumentParsingService:
         "contract_parser": {
             "timeout": 600,
             "supported_formats": ["pdf"]
+        },
+        # OCR text + field search (immobili single upload point)
+        "ocr_testo": {
+            "timeout": 600,
+            "supported_formats": ["pdf", "jpg", "png"]
         }
     }
 
@@ -251,9 +257,13 @@ class DocumentParsingService:
                 # Add callback_url and config
                 parsing_config = dict(job.parsing_config or {})
                 parsing_config.pop("callback_url", None)
+                parsing_config.pop("titolo_attivita", None)
+                # Form fields are flat: nested values (e.g. the OCR text
+                # mode's `tipi`) travel as JSON strings.
                 data = {
                     'callback_url': callback_url,
-                    **parsing_config
+                    **{k: json.dumps(v) if isinstance(v, (dict, list)) else v
+                       for k, v in parsing_config.items()}
                 }
 
                 if transport_type == "REDIS":
@@ -429,7 +439,11 @@ class DocumentParsingService:
                 priorita = PrioritaScadenza.ALTA
 
             # Determine title based on entity attachment
-            if job.entity_id is None:
+            titolo_job = (job.parsing_config or {}).get("titolo_attivita")
+            if titolo_job:
+                titolo = titolo_job
+                descrizione = "Un documento è stato letto. Completa il caricamento dalla pagina Documenti immobili."
+            elif job.entity_id is None:
                 # "Create from document" workflow
                 titolo = f"Completa anagrafica da documento: {job.original_filename}"
                 descrizione = "Un documento è stato elaborato. Rivedi i dati estratti e completa la creazione dell'anagrafica."

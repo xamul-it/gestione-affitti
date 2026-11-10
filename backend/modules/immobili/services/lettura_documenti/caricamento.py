@@ -8,14 +8,18 @@ fields the document doesn't have (e.g. the APE class drawn as a graphic) and
 the differences it selected.
 """
 import hashlib
+import io
 import logging
+from types import SimpleNamespace
 from datetime import date
 from typing import Optional, Set
 
 from sqlalchemy.orm import Session
 
 from app.core.file_storage import file_storage
-from app.core.platform.models import Documento, EntityType, TipoDocumento
+from app.core.platform.models import DocumentJob, Documento, EntityType, JobStatus, StatoScadenza, TipoDocumento
+from app.core.platform_services.document_parsing_service import DocumentParsingService
+from app.core.platform_services.scadenze_collegate import chiudi
 from app.core.platform_services.documento_service import DocumentoService, FileInput
 
 from ...models import UnitaImmobiliare
@@ -25,7 +29,7 @@ from ..variazioni_catastali import registra_variazioni
 from ..visura import VisuraFormatError
 from ..visura.text import pdf_to_text
 from .abbinamento import CAMPI_CONFRONTO, abbina_unita, differenze
-from .lettori import CLASSI_ENERGETICHE, normalizza, riconosci_tipo, spec_per_codice
+from .lettori import CLASSI_ENERGETICHE, LETTORI, normalizza, riconosci_tipo, spec_per_codice
 from .motore import applica
 
 logger = logging.getLogger(__name__)
@@ -38,7 +42,9 @@ MSG_APE_VECCHIO = "APE più vecchio di quello in vigore: verrà archiviato come 
 MSG_SCADUTO = "Caricamento scaduto o non trovato, ricarica il documento"
 MSG_CLASSE = "Indica la classe energetica (A4…G)"
 MSG_DUPLICATO = "Documento già presente su questo immobile"
-MSG_SENZA_TESTO = "Documento senza testo leggibile: scegli tipo e immobile"
+MSG_OCR_FALLITO = "Lettura non riuscita: scegli tipo e immobile"
+SERVIZIO_OCR = "ocr_testo"
+TIPO_JOB_OCR = "immobili.ALTRO_IMMOBILE"  # placeholder: the real type is known only after reading
 CAMPI_DATI_APE = ("classe", "ep_gl_nren", "codice_identificativo", "tecnico_id", "decaduto_il")
 
 
@@ -125,16 +131,71 @@ def analizza_campi(db: Session, tenant_schema: str, permessi: Set[str], *, token
                             unita_id=unita.id, differenze=differenze(unita, dati), avvisi=avvisi, **base)
 
 
-def analizza_contenuto(db: Session, tenant_schema: str, permessi: Set[str], contenuto: bytes,
+def _avvia_ocr(db: Session, tenant_schema: str, user_id: int, contenuto: bytes, nome_file: str,
+               mime_type: Optional[str]) -> DocumentJob:
+    """Send a scan to the external OCR text mode with the specs of every immobili type."""
+    upload = SimpleNamespace(file=io.BytesIO(contenuto), filename=nome_file, content_type=mime_type)
+    return DocumentParsingService(db, tenant_schema).upload_and_parse(
+        upload, TIPO_JOB_OCR, user_id=user_id, parsing_service_override=SERVIZIO_OCR,
+        parsing_config_override={
+            "modalita": "testo",
+            "tipi": [spec.to_dict() for spec in LETTORI],
+            "titolo_attivita": f"Documento immobile letto: {nome_file} — completa il caricamento",
+        })
+
+
+def analizza_contenuto(db: Session, tenant_schema: str, permessi: Set[str], user_id: int, contenuto: bytes,
                        nome_file: str, mime_type: Optional[str]) -> AnalisiDocumento:
     token = upload_temporanei.salva(tenant_schema, contenuto, nome_file, mime_type)
     testo = _testo(contenuto)
     if testo is None:
-        return AnalisiDocumento(upload_token=token, nome_file=nome_file, esito="errore", messaggio=MSG_SENZA_TESTO)
+        job = _avvia_ocr(db, tenant_schema, user_id, contenuto, nome_file, mime_type)
+        upload_temporanei.scrivi_meta(tenant_schema, token, {"nome_file": nome_file, "mime_type": mime_type,
+                                                             "job_uuid": job.job_uuid})
+        if job.status == JobStatus.FAILED:
+            return AnalisiDocumento(upload_token=token, nome_file=nome_file, esito="errore",
+                                    messaggio=MSG_OCR_FALLITO, job_uuid=job.job_uuid)
+        return AnalisiDocumento(upload_token=token, nome_file=nome_file, esito="in_lettura", job_uuid=job.job_uuid)
     r = riconosci_tipo(testo)
     tipo = r.codice if r else None
     return analizza_campi(db, tenant_schema, permessi, token=token, nome_file=nome_file, contenuto=contenuto,
                           tipo_codice=tipo, dati=normalizza(tipo, r.campi) if r else {})
+
+
+def _risultato_ocr(result: dict) -> dict:
+    """Service response -> {codice: {campo: valore}} plus the first recognised type."""
+    ocr = {}
+    tipo = None
+    for t in (result or {}).get("tipi") or []:
+        codice = t.get("codice")
+        if not codice:
+            continue
+        ocr[codice] = {k: (v or {}).get("valore") for k, v in (t.get("campi") or {}).items() if (v or {}).get("valore")}
+        if tipo is None and t.get("riconosciuto"):
+            tipo = codice
+    return {"ocr": ocr, "tipo_ocr": tipo}
+
+
+def stato_analisi(db: Session, tenant_schema: str, permessi: Set[str], token: str) -> AnalisiDocumento:
+    """Analysis of an upload read by OCR: still reading, failed, or the result as for a native-text PDF."""
+    contenuto, meta = _upload(tenant_schema, token)
+    nome_file = meta.get("nome_file") or "documento"
+    job_uuid = meta.get("job_uuid")
+    if not job_uuid:
+        return rianalizza(db, tenant_schema, permessi, token, None, None)
+    if "ocr" not in meta:
+        job = db.query(DocumentJob).filter(DocumentJob.job_uuid == job_uuid,
+                                           DocumentJob.tenant_schema == tenant_schema).first()
+        if job is None or job.status in (JobStatus.FAILED, JobStatus.TIMEOUT, JobStatus.CANCELLED):
+            return AnalisiDocumento(upload_token=token, nome_file=nome_file, esito="errore",
+                                    messaggio=MSG_OCR_FALLITO, job_uuid=job_uuid)
+        if job.status != JobStatus.COMPLETED:
+            return AnalisiDocumento(upload_token=token, nome_file=nome_file, esito="in_lettura", job_uuid=job_uuid)
+        meta.update(_risultato_ocr(job.parsing_result))
+        upload_temporanei.scrivi_meta(tenant_schema, token, meta)
+    analisi = rianalizza(db, tenant_schema, permessi, token, None, None)
+    analisi.job_uuid = job_uuid
+    return analisi
 
 
 def _upload(tenant_schema: str, token: str):
@@ -146,8 +207,8 @@ def _upload(tenant_schema: str, token: str):
 
 def dati_dal_file(tenant_schema: str, tipo_codice: str, contenuto: bytes, meta: dict) -> dict:
     """Read data for the type, from the file (native text) or from the OCR result kept in the upload."""
-    if meta.get("campi_ocr") is not None and meta.get("tipo_ocr") == tipo_codice:
-        return normalizza(tipo_codice, meta["campi_ocr"])
+    if tipo_codice in (meta.get("ocr") or {}):
+        return normalizza(tipo_codice, meta["ocr"][tipo_codice])
     return campi_letti(tipo_codice, _testo(contenuto))
 
 
@@ -196,5 +257,10 @@ def conferma(db: Session, tenant_schema: str, user_id: int, body: ConfermaDocume
                             data_riferimento=documento.data_riferimento, utente_id=user_id)
         for campo, valore in nuovi.items():
             setattr(unita, campo, valore)
+    if meta.get("job_uuid"):
+        job = db.query(DocumentJob).filter(DocumentJob.job_uuid == meta["job_uuid"]).first()
+        if job is not None:
+            chiudi(db, job.scadenza_id, StatoScadenza.COMPLETATA,
+                   f"Documento caricato sull'immobile {unita.id}", user_id)
     db.flush()
     return documento

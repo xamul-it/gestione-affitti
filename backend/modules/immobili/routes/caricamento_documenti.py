@@ -1,6 +1,7 @@
 """
 Single upload point for unit documents (/immobili/documenti).
 POST /analizza    multipart file -> AnalisiDocumento (nothing saved but the temp upload)
+GET  /analizza/{token}  analysis of a scan read by the OCR service
 POST /rianalizza  token + chosen type/unit -> AnalisiDocumento
 POST /conferma    token + confirmed choices -> document saved on the unit
 Spec: docs/superpowers/specs/2026-11-10-caricamento-unico-documenti-immobili-design.md
@@ -47,8 +48,21 @@ def analizza(
     content = file.file.read(MAX_SIZE + 1)
     if len(content) > MAX_SIZE:
         raise HTTPException(status_code=422, detail="File troppo grande (massimo 20 MB)")
-    return caricamento.analizza_contenuto(db, tenant_schema, _permessi(current_user), content,
+    return caricamento.analizza_contenuto(db, tenant_schema, _permessi(current_user), current_user.id, content,
                                           file.filename or "documento", file.content_type)
+
+
+@router.get("/analizza/{upload_token}", response_model=AnalisiDocumento)
+def stato_analisi(
+    upload_token: str,
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
+    current_user: User = Depends(require_permission(REQUIRED_PERMISSIONS)),
+):
+    try:
+        return caricamento.stato_analisi(db, _tenant(tenant_schema), _permessi(current_user), upload_token)
+    except caricamento.CaricamentoError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
 
 
 @router.post("/rianalizza", response_model=AnalisiDocumento)
