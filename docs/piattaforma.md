@@ -178,6 +178,25 @@ con lingua italiana. Attivo in collaudo dal 2026-11-10 per il tipo
 `anagrafica_italiana.*` con `parsing_service: "mrz"`. Limite noto: l'OCR
 sbaglia alcuni caratteri della MRZ, quindi il risultato è sempre da rivedere.
 
+**Modalità OCR testo** (`parsing_service: "ocr_testo"`, stesso servizio,
+`POST /testo`): il chiamante manda il file e, nel campo `tipi`, una lista di
+specifiche `{codice, riconosci: [espressioni], campi: {nome: espressione con
+gruppo v}}`; il servizio fa l'OCR di ogni pagina e restituisce `{testo,
+pagine, tipi: [{codice, riconosciuto, campi: {nome: {valore, pagina}}}]}`.
+Il motore che applica le specifiche è identico nel backend
+(`modules/immobili/services/lettura_documenti/motore.py`) e nel servizio
+(`~/Progetti/mrz/campi.py`): vanno cambiati insieme. I valori annidati della
+`parsing_config` viaggiano come JSON nel form; `titolo_attivita` nella
+configurazione personalizza il titolo dell'attività di revisione.
+
+Sicurezza del servizio (dal 2026-11-10): ascolta solo su 127.0.0.1; accetta
+solo PDF e immagini; manda le richiamate solo agli host in
+`MRZ_CALLBACK_HOSTS` (predefinito 127.0.0.1, localhost); al massimo 20
+specifiche, 40 espressioni, 500 caratteri ciascuna, 600 s per lavoro; le
+immagini di debug solo con `MRZ_DEBUG` lato server. Il servizio ha un suo
+repository git locale in `~/Progetti/mrz`; i documenti personali presenti in
+quella cartella sono esclusi da `.gitignore`.
+
 Pagina di debug per gli amministratori: `/admin/document-parsing-debug`.
 
 ## 8. Scadenze e notifiche

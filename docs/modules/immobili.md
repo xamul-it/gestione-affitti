@@ -108,17 +108,51 @@ Limiti noti: persona fisica senza CF salvata come ente; nomi tutti
 maiuscoli; sezione urbana ignorata; terreni solo contati, non importati;
 riepilogo IMU/TASI non supportato.
 
-## 5. In progettazione
+### 4.2 Caricamento unico dei documenti
 
-- **Caricamento unico dei documenti** (spec
-  `2026-11-10-caricamento-unico-documenti-immobili-design.md`, da approvare):
-  un punto dove trascinare i documenti; il sistema riconosce il tipo, abbina
-  l'unità, legge i dati (APE), segnala le differenze e propone di aggiornare
-  l'unità; scarta i documenti di altri moduli (es. ricevuta RLI); le
-  scansioni passano dall'OCR del servizio esterno.
+Spec: `2026-11-10-caricamento-unico-documenti-immobili-design.md`.
+
+- In testa alla pagina `/immobili/documenti`: si trascinano uno o più file,
+  una riga per file con il suo stato (Letto, In lettura, Scegli il tipo,
+  Scegli l'immobile, Già presente, Scartato, Errore, Visura, Caricato).
+- **Riconoscimento del tipo** dal testo con i lettori del modulo
+  (`services/lettura_documenti/lettori.py`): frasi che devono comparire tutte
+  + un'espressione per campo. Oggi: APE (formato regionale con la tabella
+  Cod. Comune/Sezione/Foglio/Particella/Subalterno), planimetria catastale,
+  visura (rimanda all'import visure), ricevuta RLI12 (scartata: "caricala dal
+  contratto, nel modulo Affitti"). Tipo non riconosciuto → lo sceglie
+  l'utente.
+- **Abbinamento dell'unità**: comune (codice catastale o nome) + foglio +
+  particella + subalterno; altrimenti l'utente sceglie, con proposte (stesso
+  foglio e particella, poi stesso indirizzo). L'abbinamento si conferma
+  sempre.
+- **Differenze**: indirizzo, piano, foglio, particella, subalterno letti
+  diversi da quelli dell'unità vengono proposti come aggiornamenti
+  selezionabili; quelli scelti vengono applicati e registrati in
+  `immo_variazioni_catastali` con origine `DOCUMENTO`.
+- **APE**: letti EPgl,nren, data di rilascio e validità; la classe, nel
+  formato Emilia-Romagna disegnata come grafico, si indica a mano ed è
+  obbligatoria. Un APE più vecchio di quello in vigore va in storico, con
+  avviso.
+- **Duplicati**: lo stesso file (stessa impronta sha256) già allegato
+  all'unità → "Già presente"; si può caricare comunque.
+- **Scansioni** (PDF senza testo, immagini): lettura asincrona con il
+  servizio esterno in modalità OCR testo (vedi `docs/piattaforma.md` §7); la
+  riga si aggiorna da sola; alla conferma l'attività "Documento immobile
+  letto" si chiude.
+- API: `/api/v1/unita-immobiliari/caricamento-documenti/` `analizza`,
+  `analizza/{token}`, `rianalizza`, `conferma`; permessi `documenti.write` +
+  `immobile.edit`. Il file resta in un upload temporaneo (24 h) ed è riletto
+  lato server alla conferma.
+- La **classe energetica** mostrata sull'unità è quella dell'APE in vigore
+  (`services/ape.py`); il campo non è più nel form dell'unità.
 
 ## 6. Limiti e attività note
 
-- Il campo `classe_energetica` dell'unità è ancora modificabile a mano nel
-  form, in doppio con l'APE: da togliere con il caricamento unico.
+- La colonna `classe_energetica` dell'unità resta nel DB ma non è più letta
+  né scritta.
+- Planimetrie scansionate: l'OCR legge poco (sono disegni), quindi di solito
+  l'immobile va scelto a mano.
+- Nuovi formati di APE (altre regioni) richiedono di aggiungere le loro
+  espressioni al lettore APE.
 - Calcolo IMU/TARI: fuori ambito per ora.
