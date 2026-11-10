@@ -1,4 +1,7 @@
+import { Trash2 } from 'lucide-react';
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { assegnazioniConduttoreAPI } from '../../services/immobiliAPI';
 import AssegnazioneConduttoreForm from './AssegnazioneConduttoreForm';
 import '../DirittiImmobile/DirittiImmobile.css';
@@ -81,9 +84,9 @@ function AssegnazioneConduttoreSection({ unitaImmobiliareId }) {
     <div className="diritti-section">
       <div className="diritti-header">
         <h3>Conduttore (occupante)</h3>
-        <button onClick={() => setShowForm(true)} className="btn btn-sm btn-primary">
+        <Button type="button" onClick={() => setShowForm(true)} size="sm">
           + Assegna Conduttore
-        </button>
+        </Button>
       </div>
 
       {showForm && (
@@ -104,7 +107,11 @@ function AssegnazioneConduttoreSection({ unitaImmobiliareId }) {
           {assegnazioni.map((a) => (
             <div key={a.id} className="diritto-card">
               <div className="diritto-info">
-                <div className="diritto-nome">Conduttore #{a.conduttore_id}</div>
+                <div className="diritto-nome">
+                  {a.soggetto_id
+                    ? <Link to={`/anagrafiche/${a.soggetto_id}`}>{a.conduttore_nome || `Soggetto #${a.soggetto_id}`}</Link>
+                    : `Conduttore #${a.conduttore_id}`}
+                </div>
                 <div className="diritto-meta">
                   {!a.data_fine ? (
                     <span className="badge badge-success">In corso</span>
@@ -118,13 +125,13 @@ function AssegnazioneConduttoreSection({ unitaImmobiliareId }) {
               </div>
               <div className="diritto-actions">
                 {!a.data_fine && (
-                  <button onClick={() => handleChiudi(a)} className="btn btn-sm btn-secondary" title="Chiudi assegnazione">
+                  <Button type="button" onClick={() => handleChiudi(a)} variant="secondary" size="sm" title="Chiudi assegnazione">
                     Chiudi
-                  </button>
+                  </Button>
                 )}
-                <button onClick={() => handleDelete(a.id)} className="btn btn-sm btn-danger" title="Elimina">
-                  🗑
-                </button>
+                <Button type="button" onClick={() => handleDelete(a.id)} variant="ghost" size="sm" aria-label="Elimina assegnazione">
+                  <Trash2 size={16} aria-hidden="true" />
+                </Button>
               </div>
             </div>
           ))}

@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import AmministratoreSection from './AmministratoreSection';
 import { useState, useEffect } from 'react';
 import { condominAPI } from '../../services/immobiliAPI';
@@ -63,7 +64,7 @@ function CondominioForm({ condominio, onClose }) {
       <div className="modal-content large">
         <div className="modal-header">
           <h2>{condominio ? 'Modifica Condominio' : 'Nuovo Condominio'}</h2>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={onClose}>×</Button>
         </div>
 
         {error && <div className="error">{error}</div>}
@@ -210,8 +211,8 @@ function CondominioForm({ condominio, onClose }) {
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={onClose}>Annulla</button>
-            <button type="submit" className="primary">Salva</button>
+            <Button variant="secondary" type="button" onClick={onClose}>Annulla</Button>
+            <Button type="submit">Salva</Button>
           </div>
         </form>
 

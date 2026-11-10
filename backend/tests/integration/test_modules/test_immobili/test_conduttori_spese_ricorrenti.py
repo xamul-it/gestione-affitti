@@ -294,3 +294,28 @@ def test_duplica_spesa_ricorrente_creates_new_period(pg_session, test_user, unit
             [originale.id if originale else None, duplicata.id if duplicata else None],
             scadenza_ids,
         )
+
+
+def test_assegnazioni_di_unita_riportano_nome_del_conduttore(pg_session, test_user, soggetto_conduttore, unita):
+    """The unit page shows who occupies it: the assignment carries the tenant's name."""
+    from immobili.routes.assegnazioni_conduttore import get_assegnazioni, get_assegnazioni_by_unita
+
+    conduttore = create_conduttore(ConduttoreCreate(soggetto_id=soggetto_conduttore.id), db=pg_session)
+    try:
+        create_assegnazione(
+            AssegnazioneConduttoreCreate(unita_immobiliare_id=unita.id, conduttore_id=conduttore.id,
+                                         data_inizio="2026-01-01"),
+            db=pg_session,
+        )
+        per_unita = get_assegnazioni_by_unita(unita.id, db=pg_session, current_user=test_user)
+        tutte = get_assegnazioni(unita_immobiliare_id=unita.id, conduttore_id=None, solo_correnti=False,
+                                 db=pg_session, current_user=test_user)
+        for righe in (per_unita, tutte):
+            assert [(r.conduttore_nome, r.soggetto_id) for r in righe] == [
+                ("Mario Conduttore", soggetto_conduttore.id)
+            ]
+    finally:
+        pg_session.rollback()
+        pg_session.query(AssegnazioneConduttore).filter_by(conduttore_id=conduttore.id).delete()
+        pg_session.query(Conduttore).filter_by(id=conduttore.id).delete()
+        pg_session.commit()

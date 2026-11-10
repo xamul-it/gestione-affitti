@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
 import { proprietariAPI } from '../../services/immobiliAPI';
 import { getSoggettiAnagrafici } from '../../../anagrafica_italiana/services/anagraficaAPI';
@@ -97,7 +98,7 @@ function ProprietarioForm({ proprietario, onClose }) {
       <div className="modal-content">
         <div className="modal-header">
           <h2>{proprietario ? 'Modifica Proprietario' : 'Nuovo Proprietario'}</h2>
-          <button className="close-btn" onClick={() => onClose()}>×</button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={() => onClose()}>×</Button>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -110,9 +111,9 @@ function ProprietarioForm({ proprietario, onClose }) {
             ) : soggettoSelezionato ? (
               <div className="soggetto-selezionato">
                 <span>{displaySoggetto(soggettoSelezionato)}</span>
-                <button type="button" onClick={() => { setSoggettoId(null); setSoggettoSelezionato(null); }}>
+                <Button variant="secondary" type="button" onClick={() => { setSoggettoId(null); setSoggettoSelezionato(null); }}>
                   Cambia
-                </button>
+                </Button>
               </div>
             ) : (
               <div style={{ position: 'relative' }}>
@@ -149,10 +150,10 @@ function ProprietarioForm({ proprietario, onClose }) {
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={() => onClose()} disabled={saving}>Annulla</button>
-            <button type="submit" className="primary" disabled={saving || !soggettoId}>
+            <Button variant="secondary" type="button" onClick={() => onClose()} disabled={saving}>Annulla</Button>
+            <Button type="submit" disabled={saving || !soggettoId}>
               {saving ? 'Salvataggio...' : 'Salva'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

@@ -14,6 +14,28 @@ from ..schemas import (
 router = APIRouter(prefix="/assegnazioni-conduttore", tags=["assegnazioni-conduttore"])
 
 
+def _con_nome(db: Session, assegnazioni):
+    """Attach soggetto_id and conduttore_nome to each assignment (one query)."""
+    from anagrafica_italiana.models import SoggettoAnagrafico
+
+    ids = {a.conduttore_id for a in assegnazioni}
+    righe = (
+        db.query(Conduttore.id, SoggettoAnagrafico)
+        .join(SoggettoAnagrafico, SoggettoAnagrafico.id == Conduttore.soggetto_id)
+        .filter(Conduttore.id.in_(ids))
+        .all()
+        if ids else []
+    )
+    per_conduttore = {cid: s for cid, s in righe}
+    for a in assegnazioni:
+        s = per_conduttore.get(a.conduttore_id)
+        a.soggetto_id = s.id if s else None
+        a.conduttore_nome = (
+            (s.ragione_sociale or " ".join(p for p in (s.nome, s.cognome) if p)) or None
+        ) if s else None
+    return assegnazioni
+
+
 @router.get("/", response_model=List[AssegnazioneConduttoreResponse])
 def get_assegnazioni(
     unita_immobiliare_id: Optional[int] = Query(None),
@@ -31,7 +53,7 @@ def get_assegnazioni(
     if solo_correnti:
         query = query.filter(AssegnazioneConduttore.data_fine.is_(None))
 
-    return query.order_by(AssegnazioneConduttore.unita_immobiliare_id, AssegnazioneConduttore.data_inizio).all()
+    return _con_nome(db, query.order_by(AssegnazioneConduttore.unita_immobiliare_id, AssegnazioneConduttore.data_inizio).all())
 
 
 @router.get("/unita-immobiliare/{unita_immobiliare_id}", response_model=List[AssegnazioneConduttoreResponse])
@@ -41,9 +63,9 @@ def get_assegnazioni_by_unita(unita_immobiliare_id: int, db: Session = Depends(g
     if not unita:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unità immobiliare non trovata")
 
-    return db.query(AssegnazioneConduttore).filter(
+    return _con_nome(db, db.query(AssegnazioneConduttore).filter(
         AssegnazioneConduttore.unita_immobiliare_id == unita_immobiliare_id
-    ).order_by(AssegnazioneConduttore.data_inizio.desc()).all()
+    ).order_by(AssegnazioneConduttore.data_inizio.desc()).all())
 
 
 @router.get("/{assegnazione_id}", response_model=AssegnazioneConduttoreResponse)
@@ -52,7 +74,7 @@ def get_assegnazione(assegnazione_id: int, db: Session = Depends(get_db), curren
     assegnazione = db.query(AssegnazioneConduttore).filter(AssegnazioneConduttore.id == assegnazione_id).first()
     if not assegnazione:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assegnazione non trovata")
-    return assegnazione
+    return _con_nome(db, [assegnazione])[0]
 
 
 @router.post("/", response_model=AssegnazioneConduttoreResponse, status_code=status.HTTP_201_CREATED)
@@ -70,7 +92,7 @@ def create_assegnazione(assegnazione: AssegnazioneConduttoreCreate, db: Session 
     db.add(db_assegnazione)
     db.commit()
     db.refresh(db_assegnazione)
-    return db_assegnazione
+    return _con_nome(db, [db_assegnazione])[0]
 
 
 @router.put("/{assegnazione_id}", response_model=AssegnazioneConduttoreResponse)
@@ -89,7 +111,7 @@ def update_assegnazione(
 
     db.commit()
     db.refresh(db_assegnazione)
-    return db_assegnazione
+    return _con_nome(db, [db_assegnazione])[0]
 
 
 @router.delete("/{assegnazione_id}", status_code=status.HTTP_204_NO_CONTENT)

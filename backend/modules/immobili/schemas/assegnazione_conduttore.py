@@ -23,6 +23,9 @@ class AssegnazioneConduttoreUpdate(BaseModel):
 
 class AssegnazioneConduttoreResponse(AssegnazioneConduttoreBase):
     id: int
+    # Who the conduttore is, so lists can show a name without one call per row.
+    soggetto_id: Optional[int] = None
+    conduttore_nome: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

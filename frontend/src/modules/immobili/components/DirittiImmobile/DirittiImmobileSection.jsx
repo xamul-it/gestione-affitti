@@ -1,3 +1,5 @@
+import { Trash2 } from 'lucide-react';
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
 import { dirittiImmobileAPI, proprietariAPI } from '../../services/immobiliAPI';
 import { getSoggettoById } from '../../../anagrafica_italiana/services/anagraficaAPI';
@@ -100,9 +102,9 @@ function DirittiImmobileSection({ immobileId }) {
     <div className="diritti-section">
       <div className="diritti-header">
         <h3>Diritti di Proprietà</h3>
-        <button onClick={() => setShowForm(true)} className="btn btn-sm btn-primary">
+        <Button type="button" onClick={() => setShowForm(true)} size="sm">
           + Aggiungi Diritto
-        </button>
+        </Button>
       </div>
 
       {showForm && (
@@ -148,13 +150,12 @@ function DirittiImmobileSection({ immobileId }) {
                   )}
                 </div>
                 <div className="diritto-actions">
-                  <button
-                    onClick={() => handleDelete(diritto.id)}
-                    className="btn btn-sm btn-danger"
-                    title="Elimina"
+                  <Button type="button"
+                    onClick={() => handleDelete(diritto.id)} variant="ghost" size="sm"
+                    aria-label="Elimina diritto"
                   >
-                    🗑
-                  </button>
+                    <Trash2 size={16} aria-hidden="true" />
+                  </Button>
                 </div>
               </div>
             );

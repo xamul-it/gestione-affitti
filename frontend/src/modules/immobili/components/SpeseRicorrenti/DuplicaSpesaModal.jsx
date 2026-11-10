@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import { useState } from 'react';
 import { speseRicorrentiAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
@@ -37,7 +38,7 @@ function DuplicaSpesaModal({ spesa, onClose }) {
       <div className="modal-content">
         <div className="modal-header">
           <h2>Duplica per Periodo Successivo</h2>
-          <button className="close-btn" onClick={() => onClose(false)}>×</button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={() => onClose(false)}>×</Button>
         </div>
 
         <p className="field-hint">
@@ -62,10 +63,10 @@ function DuplicaSpesaModal({ spesa, onClose }) {
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={() => onClose(false)} disabled={saving}>Annulla</button>
-            <button type="submit" className="primary" disabled={saving}>
+            <Button variant="secondary" type="button" onClick={() => onClose(false)} disabled={saving}>Annulla</Button>
+            <Button type="submit" disabled={saving}>
               {saving ? 'Creazione...' : 'Crea'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

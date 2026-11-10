@@ -137,7 +137,8 @@ export function useEntityCRUD(endpoint, options = {}) {
     if (abortController.current) {
       abortController.current.abort();
     }
-    abortController.current = new AbortController();
+    const controller = new AbortController();
+    abortController.current = controller;
 
     try {
       setLoading(true);
@@ -147,7 +148,7 @@ export function useEntityCRUD(endpoint, options = {}) {
 
       const response = await apiClient.current.get(endpoint, {
         params: queryParams,
-        signal: abortController.current.signal,
+        signal: controller.signal,
       });
 
       if (isMounted.current) {
@@ -177,10 +178,13 @@ export function useEntityCRUD(endpoint, options = {}) {
 
       return response.data;
     } catch (err) {
+      // Superseded by a newer request (or unmounted): nothing to report.
+      if (axios.isCancel(err)) return undefined;
       handleError(err, 'il caricamento dei dati');
       throw err;
     } finally {
-      if (isMounted.current) {
+      // Only the latest request owns the loading flag.
+      if (isMounted.current && abortController.current === controller) {
         setLoading(false);
       }
     }

@@ -1,3 +1,5 @@
+import { Check, Copy, Trash2 } from 'lucide-react';
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
 import { speseRicorrentiAPI } from '../../services/immobiliAPI';
 import SpesaRicorrenteForm from './SpesaRicorrenteForm';
@@ -98,9 +100,9 @@ function SpeseRicorrentiSection({ unitaImmobiliareId, condominioId }) {
     <div className="spese-ricorrenti-section">
       <div className="spese-ricorrenti-header">
         <h3>Spese Ricorrenti (IMU, TARI, utenze)</h3>
-        <button type="button" onClick={() => setShowForm(true)} className="btn btn-sm btn-primary">
+        <Button type="button" onClick={() => setShowForm(true)} size="sm">
           + Nuova Spesa
-        </button>
+        </Button>
       </div>
 
       {showForm && (
@@ -142,16 +144,16 @@ function SpeseRicorrentiSection({ unitaImmobiliareId, condominioId }) {
               </div>
               <div className="spesa-ricorrente-actions">
                 {!spesa.pagato && (
-                  <button onClick={() => handleSegnaPagato(spesa)} className="btn btn-sm btn-secondary" title="Segna come pagato">
-                    ✓ Pagato
-                  </button>
+                  <Button type="button" onClick={() => handleSegnaPagato(spesa)} variant="secondary" size="sm" title="Segna come pagato">
+                    <Check size={16} aria-hidden="true" /> Pagato
+                  </Button>
                 )}
-                <button onClick={() => setDuplicandoSpesa(spesa)} className="btn btn-sm btn-secondary" title="Duplica per periodo successivo">
-                  ⧉ Duplica
-                </button>
-                <button onClick={() => handleDelete(spesa)} className="btn btn-sm btn-danger" title="Elimina">
-                  🗑
-                </button>
+                <Button type="button" onClick={() => setDuplicandoSpesa(spesa)} variant="secondary" size="sm" title="Duplica per periodo successivo">
+                  <Copy size={16} aria-hidden="true" /> Duplica
+                </Button>
+                <Button type="button" onClick={() => handleDelete(spesa)} variant="ghost" size="sm" aria-label="Elimina spesa">
+                  <Trash2 size={16} aria-hidden="true" />
+                </Button>
               </div>
             </div>
           ))}

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { unitaImmobiliariAPI, proprietariAPI, condominAPI } from '../../services/immobiliAPI';
+import {
+  unitaImmobiliariAPI, proprietariAPI, condominAPI, assegnazioniConduttoreAPI,
+} from '../../services/immobiliAPI';
 import '../../../../components/UI/Button.css';
 import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import './ImmobiliStatsWidget.css';
@@ -16,7 +18,7 @@ function ImmobiliStatsWidget() {
     totale_proprietari: 0,
     totale_condomini: 0,
     immobili_liberi: 0,
-    immobili_affittati: 0,
+    immobili_occupati: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,37 +32,26 @@ function ImmobiliStatsWidget() {
       setLoading(true);
       setError(null);
 
-      // Get token
-      const token = localStorage.getItem('access_token');
-
-      // Configure axios interceptor for authentication
-      const setupAuth = (apiCall) => {
-        const originalRequest = apiCall;
-        originalRequest.defaults = originalRequest.defaults || {};
-        originalRequest.defaults.headers = originalRequest.defaults.headers || {};
-        originalRequest.defaults.headers.common = originalRequest.defaults.headers.common || {};
-        originalRequest.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        return apiCall;
-      };
-
-      // Get all data in parallel
-      const [immobiliRes, proprietariRes, condominiRes] = await Promise.all([
-        setupAuth(unitaImmobiliariAPI).getAll(),
-        setupAuth(proprietariAPI).getAll(),
-        setupAuth(condominAPI).getAll(),
+      const [immobiliRes, proprietariRes, condominiRes, assegnazioniRes] = await Promise.all([
+        unitaImmobiliariAPI.getAll(),
+        proprietariAPI.getAll(),
+        condominAPI.getAll(),
+        assegnazioniConduttoreAPI.getAll(),
       ]);
 
       const immobili = immobiliRes.data;
-      const proprietari = proprietariRes.data;
-      const condomini = condominiRes.data;
+      // A unit is occupied when it has a tenant assignment still in progress.
+      const occupate = new Set(
+        assegnazioniRes.data.filter((a) => !a.data_fine).map((a) => a.unita_immobiliare_id),
+      );
+      const occupati = immobili.filter((i) => occupate.has(i.id)).length;
 
-      // Calculate statistics
       setStats({
         totale_immobili: immobili.length,
-        totale_proprietari: proprietari.length,
-        totale_condomini: condomini.length,
-        immobili_liberi: immobili.filter(i => !i.affittato).length,
-        immobili_affittati: immobili.filter(i => i.affittato).length,
+        totale_proprietari: proprietariRes.data.length,
+        totale_condomini: condominiRes.data.length,
+        immobili_liberi: immobili.length - occupati,
+        immobili_occupati: occupati,
       });
     } catch (err) {
       console.error('Error loading immobili stats:', err);
@@ -96,14 +87,14 @@ function ImmobiliStatsWidget() {
           </span>
           Immobili
         </h3>
-        <Link to="/immobili" className="view-all-link">
+        <Link to="/unita-immobiliari" className="view-all-link">
           Vedi tutto
         </Link>
       </div>
 
       {/* Stats Grid */}
       <div className="stats-grid">
-        <Link to="/immobili" className="stat-card totale">
+        <Link to="/unita-immobiliari" className="stat-card totale">
           <span className="stat-value">{stats.totale_immobili}</span>
           <span className="stat-label">Unità Immobiliari</span>
         </Link>
@@ -134,14 +125,14 @@ function ImmobiliStatsWidget() {
         </div>
 
         <div className="stat-card stat-card--affittati">
-          <div className="stat-value">{stats.immobili_affittati}</div>
-          <div className="stat-label">Affittati</div>
+          <div className="stat-value">{stats.immobili_occupati}</div>
+          <div className="stat-label">Occupati</div>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="widget-actions">
-        <Link to="/immobili" className="ds-btn ds-btn--secondary ds-btn--md widget-action-btn">
+        <Link to="/unita-immobiliari" className="ds-btn ds-btn--secondary ds-btn--md widget-action-btn">
           {renderIcon('building', { size: 16 })}
           Gestisci Unità Immobiliari
         </Link>

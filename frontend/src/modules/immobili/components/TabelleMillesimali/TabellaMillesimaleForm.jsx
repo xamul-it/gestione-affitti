@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
 import { tabelleMillesimaliAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
@@ -90,7 +91,7 @@ function TabellaMillesimaleForm({ tabella, condomini, onClose }) {
       <div className="modal-content large">
         <div className="modal-header">
           <h2>{tabella ? 'Modifica Tabella Millesimale' : 'Nuova Tabella Millesimale'}</h2>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={onClose}>×</Button>
         </div>
 
         {error && <div className="error">{error}</div>}
@@ -243,8 +244,8 @@ function TabellaMillesimaleForm({ tabella, condomini, onClose }) {
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={onClose}>Annulla</button>
-            <button type="submit" className="primary">Salva</button>
+            <Button variant="secondary" type="button" onClick={onClose}>Annulla</Button>
+            <Button type="submit">Salva</Button>
           </div>
         </form>
       </div>

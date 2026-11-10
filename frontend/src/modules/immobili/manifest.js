@@ -23,7 +23,7 @@ export const manifest = {
   // Routes provided by this module
   routes: [
     {
-      path: '/immobili',
+      path: '/unita-immobiliari',
       component: 'UnitaImmobiliariList',
       label: 'Unità Immobiliari',
       icon: 'building',
@@ -77,7 +77,7 @@ export const manifest = {
     {
       id: 'immobili.unita',
       label: 'Unità Immobiliari',
-      path: '/immobili',
+      path: '/unita-immobiliari',
       icon: 'building',
       order: 10,
       requiredPermission: 'immobile.view',

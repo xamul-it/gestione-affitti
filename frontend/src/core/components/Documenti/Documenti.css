@@ -43,6 +43,9 @@
 }
 
 .doc-icon-btn {
+  /* padding: 0 overrides the legacy global button rule (index.css), which
+     would otherwise leave 4px for the icon inside the 44px target. */
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;

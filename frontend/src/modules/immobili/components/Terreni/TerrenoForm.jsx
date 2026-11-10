@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
 import { terreniAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
@@ -97,7 +98,7 @@ function TerrenoForm({ terreno, onClose }) {
       <div className="modal-content">
         <div className="modal-header">
           <h2>{terreno ? 'Modifica Terreno' : 'Nuovo Terreno'}</h2>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={onClose}>×</Button>
         </div>
 
         {error && <div className="error">{error}</div>}
@@ -371,10 +372,10 @@ function TerrenoForm({ terreno, onClose }) {
           </div>
 
           <div className="btn-group">
-            <button type="submit">Salva</button>
-            <button type="button" className="secondary" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Annulla
-            </button>
+            </Button>
+            <Button type="submit">Salva</Button>
           </div>
         </form>
       </div>

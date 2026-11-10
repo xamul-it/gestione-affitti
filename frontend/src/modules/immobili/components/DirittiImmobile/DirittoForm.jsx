@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
 import { dirittiImmobileAPI, proprietariAPI } from '../../services/immobiliAPI';
 import { getSoggettoById } from '../../../anagrafica_italiana/services/anagraficaAPI';
@@ -183,21 +184,19 @@ function DirittoForm({ immobileId, onClose, onComplete }) {
           </div>
 
           <div className="form-actions">
-            <button
+            <Button
               type="button"
-              onClick={onClose}
-              className="btn btn-secondary"
+              onClick={onClose} variant="secondary"
               disabled={loading}
             >
               Annulla
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="btn btn-primary"
               disabled={loading}
             >
               {loading ? 'Salvataggio...' : 'Aggiungi'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

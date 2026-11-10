@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
 import { assegnazioniConduttoreAPI, conduttoriAPI } from '../../services/immobiliAPI';
 import { getSoggettoById } from '../../../anagrafica_italiana/services/anagraficaAPI';
@@ -65,7 +66,7 @@ function AssegnazioneConduttoreForm({ unitaImmobiliareId, onClose }) {
       <div className="modal-content">
         <div className="modal-header">
           <h2>Assegna Conduttore</h2>
-          <button className="close-btn" onClick={() => onClose(false)}>×</button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={() => onClose(false)}>×</Button>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -101,10 +102,10 @@ function AssegnazioneConduttoreForm({ unitaImmobiliareId, onClose }) {
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={() => onClose(false)} disabled={saving}>Annulla</button>
-            <button type="submit" className="primary" disabled={saving}>
+            <Button variant="secondary" type="button" onClick={() => onClose(false)} disabled={saving}>Annulla</Button>
+            <Button type="submit" disabled={saving}>
               {saving ? 'Salvataggio...' : 'Assegna'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

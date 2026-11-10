@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
 import { millesimiImmobileAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
@@ -82,7 +83,7 @@ function MillesimiForm({ millesimo, tabellaId, immobili, tabella, onClose }) {
       <div className="modal-content">
         <div className="modal-header">
           <h2>{millesimo ? 'Modifica Millesimi' : 'Aggiungi Millesimi Immobile'}</h2>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={onClose}>×</Button>
         </div>
 
         {error && <div className="error">{error}</div>}
@@ -213,8 +214,8 @@ function MillesimiForm({ millesimo, tabellaId, immobili, tabella, onClose }) {
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={onClose}>Annulla</button>
-            <button type="submit" className="primary">Salva</button>
+            <Button variant="secondary" type="button" onClick={onClose}>Annulla</Button>
+            <Button type="submit">Salva</Button>
           </div>
         </form>
       </div>

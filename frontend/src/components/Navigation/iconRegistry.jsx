@@ -47,6 +47,15 @@ import {
   Zap,
   ExternalLink,
   UserMinus,
+  UserCheck,
+  TrendingUp,
+  TrendingDown,
+  Check,
+  Coins,
+  Folder,
+  Gauge,
+  LayoutDashboard,
+  Circle,
 } from 'lucide-react';
 
 const ICONS = {
@@ -100,12 +109,34 @@ const ICONS = {
   'building-columns': Landmark,
   tag: Tag,
   puzzle: Puzzle,
+  'user-check': UserCheck,
+  'trending-up': TrendingUp,
+  'trending-down': TrendingDown,
+  'file-signature': FileSignature,
+  check: Check,
+  coins: Coins,
+  euro: Euro,
+  folder: Folder,
+  'tachometer-alt': Gauge,
+  dashboard: LayoutDashboard,
 };
+
+// Icon names are kebab-case identifiers; anything else (an emoji) is shown as text.
+const ICON_NAME = /^[a-z][a-z0-9-]*$/;
+const warned = new Set();
 
 export function renderIcon(iconName, options = {}) {
   if (!iconName) return null;
   const { size = 18, className, fallbackClassName = 'nav-emoji-icon' } = options;
-  const Icon = ICONS[iconName];
+  let Icon = ICONS[iconName];
+  if (!Icon && ICON_NAME.test(iconName)) {
+    // Unknown name: a neutral icon instead of the raw name as text.
+    if (import.meta.env.DEV && !warned.has(iconName)) {
+      warned.add(iconName);
+      console.warn(`[iconRegistry] icona non registrata: "${iconName}"`);
+    }
+    Icon = Circle;
+  }
   if (Icon) {
     return <Icon size={size} strokeWidth={1.7} className={className} aria-hidden="true" />;
   }

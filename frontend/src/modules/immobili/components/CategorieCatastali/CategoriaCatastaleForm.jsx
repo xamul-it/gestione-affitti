@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
 import { categorieCatastaliAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
@@ -60,7 +61,7 @@ function CategoriaCatastaleForm({ categoria, onClose }) {
       <div className="modal-content">
         <div className="modal-header">
           <h2>{categoria ? 'Modifica Categoria Catastale' : 'Nuova Categoria Catastale'}</h2>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={onClose}>×</Button>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -155,12 +156,12 @@ function CategoriaCatastaleForm({ categoria, onClose }) {
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={onClose} className="btn btn-secondary" disabled={loading}>
+            <Button type="button" onClick={onClose} variant="secondary" disabled={loading}>
               Annulla
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
+            </Button>
+            <Button type="submit" disabled={loading}>
               {loading ? 'Salvataggio...' : 'Salva'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

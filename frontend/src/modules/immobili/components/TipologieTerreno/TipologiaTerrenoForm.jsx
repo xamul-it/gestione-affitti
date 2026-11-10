@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
 import { tipologieTerrenoAPI } from '../../services/immobiliAPI';
 import '../CategorieCatastali/CategorieCatastali.css';
@@ -62,7 +63,7 @@ function TipologiaTerrenoForm({ tipologia, onClose }) {
       <div className="modal-content">
         <div className="modal-header">
           <h2>{tipologia ? 'Modifica Tipologia Terreno' : 'Nuova Tipologia Terreno'}</h2>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={onClose}>×</Button>
         </div>
 
         {error && <div className="error">{error}</div>}
@@ -128,12 +129,12 @@ function TipologiaTerrenoForm({ tipologia, onClose }) {
           </div>
 
           <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Annulla
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
+            </Button>
+            <Button type="submit" disabled={saving}>
               {saving ? 'Salvataggio...' : 'Salva'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

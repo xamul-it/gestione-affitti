@@ -95,9 +95,7 @@ registerModuleComponent('@modules/hello_module/HelloPage', HelloPage);
 import {
   PecInboxPage,
   PecAdminPage,
-  PecSummaryWidget,
 } from './modules/gestione_pec';
-registerModuleComponent('PecSummaryWidget', PecSummaryWidget);
 
 // Affitti Brevi module components (dynamic routes)
 import {

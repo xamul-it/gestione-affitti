@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import { useState } from 'react';
 import { speseRicorrentiAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
@@ -46,7 +47,7 @@ function SpesaRicorrenteForm({ unitaImmobiliareId, condominioId, onClose }) {
       <div className="modal-content">
         <div className="modal-header">
           <h2>Nuova Spesa Ricorrente</h2>
-          <button className="close-btn" onClick={() => onClose(false)}>×</button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={() => onClose(false)}>×</Button>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -104,10 +105,10 @@ function SpesaRicorrenteForm({ unitaImmobiliareId, condominioId, onClose }) {
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={() => onClose(false)} disabled={saving}>Annulla</button>
-            <button type="submit" className="primary" disabled={saving}>
+            <Button variant="secondary" type="button" onClick={() => onClose(false)} disabled={saving}>Annulla</Button>
+            <Button type="submit" disabled={saving}>
               {saving ? 'Salvataggio...' : 'Salva'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

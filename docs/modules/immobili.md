@@ -36,14 +36,19 @@ nello stesso commit.
 
 | Area | Cosa fa | API (`/api/v1/…`) |
 |---|---|---|
-| Unità immobiliari | Anagrafica dell'unità: indirizzo, piano, interno, tipo, destinazione, dati catastali (comune, sezione, foglio, particella, subalterno, categoria, classe, consistenza, superficie, rendita), condominio. Scheda immobile `/immobili/:id`. | `unita-immobiliari` |
+| Unità immobiliari | Anagrafica dell'unità: codice, tipo, indirizzo, città, CAP, provincia, piano, locali, superficie, dati catastali (foglio, particella, subalterno, categoria, rendita), condominio (`condominio_id`, oggi non impostabile dal form). Non ci sono ancora comune catastale, sezione, classe, consistenza e interno. Lista `/unita-immobiliari`, scheda `/unita-immobiliari/:id`. | `unita-immobiliari` |
 | Terreni | Foglio, particella, qualità, classe, redditi; tipologie di terreno. | `terreni`, `tipologie-terreno` |
 | Proprietari e diritti | Proprietario (legato a un soggetto anagrafico) e diritti sull'unità con tipo diritto e quota. | `proprietari`, `diritti-immobile` |
-| Conduttori | Conduttore e assegnazioni all'unità con periodo. | `conduttori`, `assegnazioni-conduttore` |
+| Conduttori | Conduttore e assegnazioni all'unità con periodo. Le assegnazioni restituiscono anche `soggetto_id` e `conduttore_nome`, mostrati nella scheda con il link all'anagrafica. | `conduttori`, `assegnazioni-conduttore` |
 | Condomini | Condominio/complesso, tabelle millesimali e millesimi per unità; amministratore come relazione. | `condomini`, `tabelle-millesimali`, `millesimi-immobile` |
 | Spese ricorrenti | Spese periodiche dell'unità o del condominio. | `spese-ricorrenti` |
 | Categorie catastali | Catalogo (schema `public`). | `categorie-catastali` |
 | Certificati energetici | Sola lettura, ricavati dagli APE (vedi 4). | `certificati-energetici` |
+
+Dashboard del modulo (`/immobili`): widget Immobili (unità, proprietari,
+condomini; **occupate** = unità con un'assegnazione di conduttore in corso,
+libere le altre; i link portano alla lista `/unita-immobiliari`) e widget
+Certificati in scadenza.
 
 ## 3. Relazioni (ruoli)
 
@@ -148,6 +153,24 @@ Spec: `2026-11-10-caricamento-unico-documenti-immobili-design.md`.
   (`services/ape.py`); il campo non è più nel form dell'unità.
 
 ## 5. Limiti e attività note
+
+Revisione UI/UX e funzionale del 2026-11-10: corretti icone non registrate,
+link della dashboard, icone dei documenti schiacciate e pulsanti dei form
+(ora `Button` del design system), nome del conduttore nella scheda, errori
+`CanceledError` nelle liste. Restano da fare (interventi medi):
+
+- dalla pagina Conduttori/Proprietari non si collega il soggetto a un immobile
+  (si può solo dalla scheda dell'unità);
+- il form dell'unità non permette di scegliere il condominio;
+- mancano comune catastale, sezione, classe, consistenza, interno;
+- i condomini non hanno una scheda; tabelle millesimali e millesimi non sono
+  nel menu;
+- sezioni Diritti, Conduttori e Spese della scheda nello stile vecchio
+  (`window.confirm`, `alert`); il form dell'unità ripete queste sezioni;
+- pagine vecchie `/immobili/home` e `/old-home`;
+- **terreni** isolati: niente proprietari, conduttori, documenti, variazioni,
+  scheda né import da visura, e si possono solo disattivare, non eliminare
+  (spec `2026-11-10-terreni-design.md`, da approvare).
 
 - La colonna `classe_energetica` dell'unità resta nel DB ma non è più letta
   né scritta.

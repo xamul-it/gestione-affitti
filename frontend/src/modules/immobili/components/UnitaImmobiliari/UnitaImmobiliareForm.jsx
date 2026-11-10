@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
 import { unitaImmobiliariAPI, categorieCatastaliAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
@@ -173,7 +174,7 @@ function UnitaImmobiliareForm({ unitaImmobiliare, onClose, showSchedaLink = true
       <div className="modal-content">
         <div className="modal-header">
           <h2>{unitaImmobiliare ? 'Modifica Unità Immobiliare' : 'Nuova Unità Immobiliare'}</h2>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={onClose}>×</Button>
         </div>
 
         {error && <div className="error">{error}</div>}
@@ -367,10 +368,10 @@ function UnitaImmobiliareForm({ unitaImmobiliare, onClose, showSchedaLink = true
           </div>
 
           <div className="btn-group">
-            <button type="submit">Salva</button>
-            <button type="button" className="secondary" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Annulla
-            </button>
+            </Button>
+            <Button type="submit">Salva</Button>
           </div>
         </form>
 
