@@ -1,3 +1,4 @@
+import AmministratoreSection from './AmministratoreSection';
 import { useState, useEffect } from 'react';
 import { condominAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
@@ -161,51 +162,12 @@ function CondominioForm({ condominio, onClose }) {
             </div>
           </div>
 
-          <h3>Dati Amministratore</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Nome Amministratore</label>
-              <input
-                type="text"
-                name="amministratore_nome"
-                value={formData.amministratore_nome}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Telefono</label>
-              <input
-                type="text"
-                name="amministratore_telefono"
-                value={formData.amministratore_telefono}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                name="amministratore_email"
-                value={formData.amministratore_email}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Indirizzo Amministratore</label>
-              <input
-                type="text"
-                name="amministratore_indirizzo"
-                value={formData.amministratore_indirizzo}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
+          <h3>Amministratore</h3>
+          {condominio?.id ? (
+            <AmministratoreSection condominioId={condominio.id} legacy={condominio} />
+          ) : (
+            <p className="form-hint">Salva il condominio per collegare l'anagrafica dell'amministratore.</p>
+          )}
 
           <h3>Dati Bancari</h3>
           <div className="form-row">

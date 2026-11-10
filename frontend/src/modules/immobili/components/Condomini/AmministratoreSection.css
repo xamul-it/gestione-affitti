@@ -1,0 +1,53 @@
+.amministratore {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.amministratore__dati {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.amministratore__dati dt {
+  font-size: var(--font-size-small);
+  color: var(--gray-600);
+}
+
+.amministratore__dati dd {
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.amministratore__azioni,
+.amministratore__nuovo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.amministratore__nuovo .soggetto-picker {
+  flex: 1 1 260px;
+}
+
+.amministratore__data {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.amministratore__data label {
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.amministratore__info {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--gray-600);
+  font-size: var(--font-size-small);
+}
