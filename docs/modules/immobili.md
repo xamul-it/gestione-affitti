@@ -147,7 +147,7 @@ Spec: `2026-11-10-caricamento-unico-documenti-immobili-design.md`.
 - La **classe energetica** mostrata sull'unità è quella dell'APE in vigore
   (`services/ape.py`); il campo non è più nel form dell'unità.
 
-## 6. Limiti e attività note
+## 5. Limiti e attività note
 
 - La colonna `classe_energetica` dell'unità resta nel DB ma non è più letta
   né scritta.
@@ -156,3 +156,21 @@ Spec: `2026-11-10-caricamento-unico-documenti-immobili-design.md`.
 - Nuovi formati di APE (altre regioni) richiedono di aggiungere le loro
   espressioni al lettore APE.
 - Calcolo IMU/TARI: fuori ambito per ora.
+
+Problemi minori del caricamento unico (revisione finale del 2026-11-10, non
+corretti):
+
+- un `meta.json` dell'upload temporaneo rovinato dà errore 500 invece di 404;
+- il file temporaneo inviato all'OCR per le scansioni resta duplicato;
+- il token dell'upload temporaneo non è legato all'utente che l'ha creato;
+- l'abbinamento per indirizzo carica tutte le unità del tenant;
+- un lavoro OCR fallito lascia aperta la sua attività;
+- due conferme contemporanee dello stesso file possono creare un doppione
+  (il pulsante è disattivato durante il salvataggio);
+- il servizio OCR cerca i campi pagina per pagina, il backend sul testo
+  intero: un'etichetta a cavallo di due pagine si legge solo sui PDF con testo;
+- `/testo` del servizio OCR non ha autenticazione (ascolta solo su
+  127.0.0.1) e le espressioni sono limitate in numero e lunghezza, non rese
+  immuni da backtracking;
+- interfaccia: stile delle caselle da spuntare da allineare al design system;
+  la riga "Caricato" resta raggiungibile da tastiera ma non fa nulla.

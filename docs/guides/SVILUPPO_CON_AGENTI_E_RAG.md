@@ -162,7 +162,8 @@ mano in produzione.
   attivi), blocco delle API dei moduli non attivi, permessi Manager/Viewer:
   vedi `docs/piattaforma.md` §3–5.
 - Lettura MRZ dei documenti d'identità dalla scheda del soggetto (servizio
-  `mrz-api`/`mrz-worker` attivo dal 2026-11-10).
+  `mrz-api`/`mrz-worker` attivo dal 2026-11-10): dopo la messa in sicurezza
+  del servizio va rifatta una prova completa su un passaporto.
 - Import visure catastali ("Carica da documento" nelle unità immobiliari).
 - Pagine Login, Impostazioni e Gestione database (design system, toast,
   dialoghi di conferma).
@@ -170,10 +171,9 @@ mano in produzione.
   il 2026-11-09. Esempio componenti è disabilitato.
 
 **Sviluppo e dominio**
-- Caricamento unico dei documenti degli immobili: spec
-  `docs/superpowers/specs/2026-11-10-caricamento-unico-documenti-immobili-design.md`
-  in attesa di approvazione; comprende la modalità "OCR testo + ricerca campi"
-  del servizio in `~/Progetti/mrz`.
+- Caricamento unico dei documenti degli immobili: rilasciato il 2026-11-10
+  (`docs/modules/immobili.md` §4.2); da collaudare in produzione. Problemi
+  minori rimasti in `docs/modules/immobili.md` §5.
 - Documentazione viva: `docs/piattaforma.md` e `docs/modules/immobili.md`
   esistono; gli altri moduli (anagrafica, affitti lungo/brevi, PEC) si
   documentano in `docs/modules/` al primo lavoro su ciascuno.
