@@ -113,9 +113,9 @@ SQLAlchemy: ereditarietà a tabelle collegate). Conseguenze:
 
 Tabelle che passano dall'unità al bene (`bene_id` al posto di
 `unita_immobiliare_id`): diritti, assegnazioni dei conduttori, variazioni
-catastali, spese ricorrenti (il responsabile della spesa guadagna
-`USUFRUTTUARIO` e `NUDO_PROPRIETARIO`). `affitti_lungo`: nuova tabella `contratto_beni (contratto_id,
-bene_id)`; `contratti.unita_immobiliare_id` sparisce.
+catastali, spese ricorrenti (che poi lasciano il posto al registro costi e
+ricavi, `2026-11-12-costi-ricavi-design.md`). `affitti_lungo`: nuova tabella
+`contratto_beni (contratto_id, bene_id)`; `contratti.unita_immobiliare_id` sparisce.
 
 I campi comuni (indirizzo, foglio, particella…) oggi duplicati in unità e
 terreno si spostano nel bene. Il terreno guadagna la cancellazione vera
@@ -141,9 +141,9 @@ l'usufruttuario.
 | Canone dell'affitto | a chi concede il godimento: l'usufruttuario se c'è (modulo affitti) |
 
 Senza conduttore registrato il bene è condotto dai titolari stessi: non
-serve un campo apposta. La scheda mostra questo riepilogo; il responsabile
-proposto per una nuova spesa ricorrente segue la tabella e si può
-cambiare. Nessun importo d'imposta viene calcolato (vedi Non obiettivi).
+serve un campo apposta. La scheda mostra questo riepilogo; le spese seguono la
+tabella con le quote per ruolo del registro costi e ricavi
+(`2026-11-12-costi-ricavi-design.md`), che sostituisce le spese ricorrenti. Nessun importo d'imposta viene calcolato (vedi Non obiettivi).
 
 ### Collegamenti tra beni
 
@@ -251,7 +251,6 @@ Ogni fase si rilascia da sola.
    nulla (stesse pagine), è il fondamento.
 2. **Terreni come beni**: specializzazione terreno, porzioni, scheda comune
    con la parte terreno, riepilogo "chi paga cosa" (anche per le unità),
-   responsabili `USUFRUTTUARIO`/`NUDO_PROPRIETARIO` nelle spese ricorrenti,
    tipologie documentali, cancellazione, lista cliccabile, selettore unico
    dei beni, **collegamenti tra beni** (pertinenze, fabbricato su
    particella, parte di fondo).
