@@ -226,7 +226,12 @@ Pagina di debug per gli amministratori: `/admin/document-parsing-debug`.
   6. nuova fotografia dopo l'avvio e confronto.
 
   Il controllo blocca anche le cancellazioni volute (es. revoca di permessi):
-  in quel caso si verifica a mano e si riavvia il backend.
+  in quel caso si verifica a mano e si riavvia il backend. Per un
+  azzeramento deciso dall'utente si lancia
+  `PROMOTE_PERDITA_CONSENTITA="tab1 tab2 …" scripts/promote.sh`: solo quelle
+  tabelle (nomi senza schema) possono perdere righe, riportate come
+  "azzerata (consentito)"; in un terminale chiede conferma. Test del
+  confronto: `scripts/tests/test_confronta_snapshot.sh`.
 - Agenti e pipeline: `docs/guides/SVILUPPO_CON_AGENTI_E_RAG.md`.
 
 ## 10. Limiti e attività note

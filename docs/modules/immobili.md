@@ -34,14 +34,26 @@ nello stesso commit.
 
 ## 2. Entità e funzioni
 
+**Bene catastale** (`immo_beni`, dal 2026-11-12): la parte comune di unità e
+terreni — codice, comune (e codice catastale), provincia, indirizzo, CAP,
+sezione, foglio, particella, denominatore, subalterno, partita, descrizione,
+note, attivo — con `tipo_bene` `UNITA` o `TERRENO`. L'unità immobiliare è una
+specializzazione con **lo stesso id** del bene (`immo_unita_immobiliari.id`
+→ `immo_beni.id`, ereditarietà a tabelle collegate); `citta` dell'unità è il
+`comune` del bene. Diritti, assegnazioni dei conduttori, variazioni
+catastali e spese ricorrenti puntano al bene (`bene_id`); certificati
+energetici, millesimi, affitti brevi e contratti restano sull'unità. I
+documenti `IMMOBILE` usano l'id del bene. I terreni diventano beni nella fase
+2 (spec `2026-11-10-beni-catastali-design.md`).
+
 | Area | Cosa fa | API (`/api/v1/…`) |
 |---|---|---|
 | Unità immobiliari | Anagrafica dell'unità: codice, tipo, indirizzo, città, CAP, provincia, piano, locali, superficie, dati catastali (foglio, particella, subalterno, categoria, rendita), condominio (`condominio_id`, oggi non impostabile dal form). Non ci sono ancora comune catastale, sezione, classe, consistenza e interno. Lista `/unita-immobiliari`, scheda `/unita-immobiliari/:id`. | `unita-immobiliari` |
 | Terreni | Foglio, particella, qualità, classe, redditi; tipologie di terreno. | `terreni`, `tipologie-terreno` |
-| Proprietari e diritti | Proprietario (legato a un soggetto anagrafico) e diritti sull'unità con tipo diritto e quota. | `proprietari`, `diritti-immobile` |
-| Conduttori | Conduttore e assegnazioni all'unità con periodo. Le assegnazioni restituiscono anche `soggetto_id` e `conduttore_nome` (solo a chi ha `soggetto.view`, come le relazioni), mostrati nella scheda con il link all'anagrafica. | `conduttori`, `assegnazioni-conduttore` |
+| Proprietari e diritti | Proprietario (legato a un soggetto anagrafico) e diritti sul bene (`bene_id`) con tipo diritto e quota; `GET /diritti-immobile/bene/{id}`. | `proprietari`, `diritti-immobile` |
+| Conduttori | Conduttore e assegnazioni al bene (`bene_id`) con periodo; `GET /assegnazioni-conduttore/bene/{id}`. Le assegnazioni restituiscono anche `soggetto_id` e `conduttore_nome` (solo a chi ha `soggetto.view`, come le relazioni), mostrati nella scheda con il link all'anagrafica. | `conduttori`, `assegnazioni-conduttore` |
 | Condomini | Condominio/complesso, tabelle millesimali e millesimi per unità; amministratore come relazione. | `condomini`, `tabelle-millesimali`, `millesimi-immobile` |
-| Spese ricorrenti | Spese periodiche dell'unità o del condominio. | `spese-ricorrenti` |
+| Spese ricorrenti | Spese periodiche del bene (`bene_id`) o del condominio. | `spese-ricorrenti` |
 | Categorie catastali | Catalogo (schema `public`). | `categorie-catastali` |
 | Certificati energetici | Sola lettura, ricavati dagli APE (vedi 4). | `certificati-energetici` |
 
@@ -170,7 +182,15 @@ link della dashboard, icone dei documenti schiacciate e pulsanti dei form
 - pagine vecchie `/immobili/home` e `/old-home`;
 - **terreni** isolati: niente proprietari, conduttori, documenti, variazioni,
   scheda né import da visura, e si possono solo disattivare, non eliminare
-  (spec `2026-11-10-beni-catastali-design.md`, da approvare).
+  (spec `2026-11-10-beni-catastali-design.md`: fase 1 fatta, fase 2 terreni);
+- cancellando un'unità le sue spese ricorrenti spariscono ma la scadenza
+  collegata nello scadenzario resta attiva.
+
+Azzeramento del 2026-11-12 (scelta dell'utente, fase 1 dei beni): la
+migrazione `2026111201_beni` ha svuotato unità, terreni, condomini,
+proprietari, conduttori, diritti, spese, contratti e affitti brevi, e
+documenti/scadenze/relazioni di quegli oggetti; i file dei documenti sono
+rimasti nello storage. I dati si ricaricano dalle visure.
 
 - La colonna `classe_energetica` dell'unità resta nel DB ma non è più letta
   né scritta.
