@@ -20,6 +20,7 @@ from sqlalchemy import text
 
 from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
 
+from immobili.models import Bene
 from immobili.models import (
     AssegnazioneConduttore,
     CertificatoEnergetico,
@@ -79,7 +80,7 @@ def unita(pg_session):
     pg_session.commit()
     yield u
     pg_session.rollback()
-    pg_session.query(UnitaImmobiliare).filter_by(codice="TEST-CASCADE-001").delete()
+    pg_session.query(Bene).filter_by(codice="TEST-CASCADE-001").delete()  # cascades to the unit
     pg_session.commit()
 
 
@@ -131,7 +132,7 @@ def test_delete_unita_immobiliare_cascades_diritto(pg_session, unita, soggetto_p
     try:
         diritto = create_diritto(
             DirittoImmobileCreate(
-                unita_immobiliare_id=unita.id,
+                bene_id=unita.id,
                 proprietario_id=proprietario.id,
                 tipo_diritto="PROPRIETARIO",
                 quota_percentuale=100,
@@ -174,7 +175,7 @@ def test_delete_unita_immobiliare_cascades_assegnazione_conduttore(pg_session, u
     conduttore = create_conduttore(ConduttoreCreate(soggetto_id=soggetto_conduttore.id), db=pg_session)
     try:
         assegnazione = create_assegnazione(
-            AssegnazioneConduttoreCreate(unita_immobiliare_id=unita.id, conduttore_id=conduttore.id),
+            AssegnazioneConduttoreCreate(bene_id=unita.id, conduttore_id=conduttore.id),
             db=pg_session,
         )
         assegnazione_id = assegnazione.id
@@ -208,7 +209,7 @@ def test_delete_unita_immobiliare_cascades_spesa_ricorrente(pg_session, unita, t
     try:
         spesa = create_spesa_ricorrente(
             SpesaRicorrenteCreate(
-                unita_immobiliare_id=unita.id,
+                bene_id=unita.id,
                 tipo_spesa="IMU",
                 responsabile="PROPRIETARIO",
                 periodo="2026",

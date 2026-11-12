@@ -113,7 +113,7 @@ def get_variazioni_catastali(
     """Storico delle variazioni dei dati catastali dell'unità, dalla più recente."""
     return (
         db.query(VariazioneCatastale)
-        .filter(VariazioneCatastale.unita_immobiliare_id == unita_immobiliare_id)
+        .filter(VariazioneCatastale.bene_id == unita_immobiliare_id)
         .order_by(VariazioneCatastale.created_at.desc(), VariazioneCatastale.id.desc())
         .all()
     )

@@ -82,3 +82,11 @@ def test_cancellare_unita_cancella_bene_e_figli(db_session):
         assert db_session.execute(text(f"SELECT count(*) FROM {tabella} WHERE id = :id"), {"id": bene_id}).scalar() == 0
     for tabella in ("immo_diritti_immobile", "immo_assegnazioni_conduttore", "immo_spese_ricorrenti"):
         assert db_session.execute(text(f"SELECT count(*) FROM {tabella} WHERE bene_id = :id"), {"id": bene_id}).scalar() == 0
+
+
+def test_etichetta_immobile_dal_bene(db_session):
+    from app.core.platform_services.entity_label_registry import entity_label_registry
+    import immobili  # noqa: F401  (registers the IMMOBILE resolver)
+
+    u = _unita(db_session, codice="BENE-T-5", citta="Forlì")
+    assert entity_label_registry.labels(db_session, "IMMOBILE", [u.id]) == {u.id: "BENE-T-5 · Via A 1, Forlì"}

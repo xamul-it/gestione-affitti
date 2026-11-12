@@ -7,7 +7,7 @@ PREFIX: immo_ (modulo immobili)
 
 Design notes (see project memory "immobili-domain-model" for the full
 domain rules this encodes):
-- Links to EXACTLY ONE of unita_immobiliare_id / condominio_id: most
+- Links to EXACTLY ONE of bene_id / condominio_id: most
   expenses are per-unit (IMU, TARI), but a utility contract can be
   centralized at the building/complex level instead (condominio_id).
 - `responsabile` records who is primarily liable (proprietario for

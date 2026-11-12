@@ -4,7 +4,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.core.auth.dependencies import require_permission
 from app.core.auth.models import User
-from ..models import AssegnazioneConduttore, UnitaImmobiliare, Conduttore
+from ..models import AssegnazioneConduttore, Bene, Conduttore
 from ..schemas import (
     AssegnazioneConduttoreCreate,
     AssegnazioneConduttoreUpdate,
@@ -50,7 +50,7 @@ def _con_nome(db: Session, assegnazioni, user):
 
 @router.get("/", response_model=List[AssegnazioneConduttoreResponse])
 def get_assegnazioni(
-    unita_immobiliare_id: Optional[int] = Query(None),
+    bene_id: Optional[int] = Query(None),
     conduttore_id: Optional[int] = Query(None),
     solo_correnti: bool = Query(False, description="Solo assegnazioni senza data_fine (in corso)"),
     db: Session = Depends(get_db), current_user: User = Depends(require_permission("conduttore.view")),
@@ -58,25 +58,25 @@ def get_assegnazioni(
     """Recupera tutte le assegnazioni con filtri opzionali"""
     query = db.query(AssegnazioneConduttore)
 
-    if unita_immobiliare_id:
-        query = query.filter(AssegnazioneConduttore.unita_immobiliare_id == unita_immobiliare_id)
+    if bene_id:
+        query = query.filter(AssegnazioneConduttore.bene_id == bene_id)
     if conduttore_id:
         query = query.filter(AssegnazioneConduttore.conduttore_id == conduttore_id)
     if solo_correnti:
         query = query.filter(AssegnazioneConduttore.data_fine.is_(None))
 
-    return _con_nome(db, query.order_by(AssegnazioneConduttore.unita_immobiliare_id, AssegnazioneConduttore.data_inizio).all(), current_user)
+    return _con_nome(db, query.order_by(AssegnazioneConduttore.bene_id, AssegnazioneConduttore.data_inizio).all(), current_user)
 
 
-@router.get("/unita-immobiliare/{unita_immobiliare_id}", response_model=List[AssegnazioneConduttoreResponse])
-def get_assegnazioni_by_unita(unita_immobiliare_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("conduttore.view"))):
-    """Recupera tutte le assegnazioni (storiche e correnti) di un'unità immobiliare"""
-    unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.id == unita_immobiliare_id).first()
-    if not unita:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unità immobiliare non trovata")
+@router.get("/bene/{bene_id}", response_model=List[AssegnazioneConduttoreResponse])
+def get_assegnazioni_by_bene(bene_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("conduttore.view"))):
+    """Recupera tutte le assegnazioni (storiche e correnti) di un bene"""
+    bene = db.query(Bene).filter(Bene.id == bene_id).first()
+    if not bene:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bene non trovato")
 
     return _con_nome(db, db.query(AssegnazioneConduttore).filter(
-        AssegnazioneConduttore.unita_immobiliare_id == unita_immobiliare_id
+        AssegnazioneConduttore.bene_id == bene_id
     ).order_by(AssegnazioneConduttore.data_inizio.desc()).all(), current_user)
 
 
@@ -91,10 +91,10 @@ def get_assegnazione(assegnazione_id: int, db: Session = Depends(get_db), curren
 
 @router.post("/", response_model=AssegnazioneConduttoreResponse, status_code=status.HTTP_201_CREATED)
 def create_assegnazione(assegnazione: AssegnazioneConduttoreCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("conduttore.create"))):
-    """Assegna un conduttore a un'unità immobiliare per un periodo"""
-    unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.id == assegnazione.unita_immobiliare_id).first()
-    if not unita:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unità immobiliare non trovata")
+    """Assegna un conduttore a un bene per un periodo"""
+    bene = db.query(Bene).filter(Bene.id == assegnazione.bene_id).first()
+    if not bene:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bene non trovato")
 
     conduttore = db.query(Conduttore).filter(Conduttore.id == assegnazione.conduttore_id).first()
     if not conduttore:

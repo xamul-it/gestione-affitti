@@ -94,7 +94,7 @@ def test_diritto_uso_persisted(pg_session):
     pg_session.add_all([p, u])
     pg_session.flush()
     d = DirittoImmobile(
-        unita_immobiliare_id=u.id,
+        bene_id=u.id,
         proprietario_id=p.id,
         tipo_diritto=TipoDiritto.USO,
         quota_percentuale=Decimal("100"),
@@ -196,7 +196,7 @@ def test_quota_mismatch_warning(pg_session, sintetica):
     pg_session.add_all([p, unit])
     pg_session.flush()
     pg_session.add(DirittoImmobile(
-        unita_immobiliare_id=unit.id, proprietario_id=p.id,
+        bene_id=unit.id, proprietario_id=p.id,
         tipo_diritto=TipoDiritto.PROPRIETARIO, quota_percentuale=Decimal("50"),
     ))
     pg_session.flush()
@@ -567,7 +567,7 @@ def test_apply_logs_variazioni(pg_session, storage, sintetica, pdf_sintetica):
     unit = _seed_unit_019(pg_session)
     _apply(pg_session, build_proposal(pg_session, sintetica), pdf_sintetica)
     doc = pg_session.query(Documento).filter_by(entity_type=EntityType.IMMOBILE, entity_id=unit.id).one()
-    rows = pg_session.query(VariazioneCatastale).filter_by(unita_immobiliare_id=unit.id, campo="rendita_catastale").all()
+    rows = pg_session.query(VariazioneCatastale).filter_by(bene_id=unit.id, campo="rendita_catastale").all()
     assert len(rows) == 1
     v = rows[0]
     assert (v.valore_precedente, v.valore_nuovo) == ("1000.0", "1316.97")

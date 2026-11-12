@@ -14,6 +14,7 @@ from sqlalchemy import text
 
 from app.core.database import SessionLocal
 from anagrafica_italiana.models import SoggettoAnagrafico
+from immobili.models import Bene
 from immobili.models import UnitaImmobiliare
 from affitti_brevi.models import Prenotazione, Soggiorno, OspiteSoggiorno
 from affitti_brevi.services.soggiorno_service import SoggiornoService
@@ -77,7 +78,7 @@ def soggiorno(pg_session):
         pg_session.query(OspiteSoggiorno).filter_by(soggiorno_id=stay.id).delete()
         pg_session.query(Soggiorno).filter_by(id=stay.id).delete()
         pg_session.query(Prenotazione).filter_by(id=prenotazione.id).delete()
-        pg_session.query(UnitaImmobiliare).filter_by(id=unita.id).delete()
+        pg_session.query(Bene).filter_by(id=unita.id).delete()  # cascades to the unit
         pg_session.commit()
 
 

@@ -143,7 +143,7 @@ def test_conferma_salva_ape_e_aggiorna_campi_selezionati(client, unita, db_sessi
     doc = db_session.get(Documento, res.json()["documento_id"])
     assert doc.dati["classe"] == "C" and doc.dati["ep_gl_nren"] == 111.24 and doc.stato == "CORRENTE"
     assert doc.data_riferimento == date(2021, 2, 23)
-    var = db_session.query(VariazioneCatastale).filter_by(unita_immobiliare_id=unita.id).all()
+    var = db_session.query(VariazioneCatastale).filter_by(bene_id=unita.id).all()
     assert [(v.campo, v.origine, v.documento_id) for v in var] == [("indirizzo", "DOCUMENTO", doc.id)]
 
 

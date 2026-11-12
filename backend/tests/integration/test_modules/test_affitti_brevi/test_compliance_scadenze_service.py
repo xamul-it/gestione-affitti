@@ -18,6 +18,7 @@ from affitti_brevi.services.compliance_scadenze_service import (
 )
 from app.core.platform.models import Scadenza, ScadenzaDestinatario
 from app.core.platform_services import ScadenzaService
+from immobili.models import Bene
 from immobili.models import UnitaImmobiliare
 
 TENANT = "tenant_qa_test"
@@ -93,7 +94,7 @@ def soggiorno(pg_session):
     pg_session.query(Comunicazione).filter_by(soggiorno_id=s.id).delete()
     pg_session.query(Soggiorno).filter_by(id=s.id).delete()
     pg_session.query(Prenotazione).filter_by(id=prenotazione.id).delete()
-    pg_session.query(UnitaImmobiliare).filter_by(id=unita.id).delete()
+    pg_session.query(Bene).filter_by(id=unita.id).delete()  # cascades to the unit
 
     if scadenza_ids:
         pg_session.query(ScadenzaDestinatario).filter(

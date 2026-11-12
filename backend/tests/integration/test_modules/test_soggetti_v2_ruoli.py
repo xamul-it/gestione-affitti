@@ -48,7 +48,7 @@ def ctx(db_session, unique_suffix):
     cond = Condominio(codice=f"SV-{unique_suffix}", nome="Aurora", indirizzo="Via A 1", citta="Roma")
     db.add_all([u, c, cond])
     db.flush()
-    db.add(AssegnazioneConduttore(unita_immobiliare_id=u.id, conduttore_id=c.id,
+    db.add(AssegnazioneConduttore(bene_id=u.id, conduttore_id=c.id,
                                   data_inizio=date(2018, 1, 1), data_fine=date(2019, 1, 1)))
     RelazioneService(db, TEST_TENANT).crea(prop.id, "amministratore_condominio", entity_type="CONDOMINIO",
                                           entity_id=cond.id, data_inizio=date(2026, 1, 1))

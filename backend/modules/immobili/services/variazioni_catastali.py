@@ -35,7 +35,7 @@ def registra_variazioni(
         if prima == dopo:
             continue
         rows.append(VariazioneCatastale(
-            unita_immobiliare_id=unita.id, documento_id=documento_id, origine=origine, campo=campo,
+            bene_id=unita.id, documento_id=documento_id, origine=origine, campo=campo,
             valore_precedente=_text(prima), valore_nuovo=_text(dopo),
             data_riferimento=data_riferimento, utente_id=utente_id,
         ))

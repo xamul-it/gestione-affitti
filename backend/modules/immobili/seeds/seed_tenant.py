@@ -153,31 +153,41 @@ def seed_tenant_data(
 
         def _get_or_create_unita(codice: str, tipo: str, condominio_id: Optional[int]) -> int:
             unita_id = db.execute(
-                text("SELECT id FROM immo_unita_immobiliari WHERE codice = :codice"),
+                text("SELECT id FROM immo_beni WHERE codice = :codice"),
                 {"codice": codice},
             ).scalar()
             if unita_id:
                 return unita_id
-            return db.execute(
+            # The unit's id is the id of its bene (immo_beni).
+            bene_id = db.execute(
                 text(
                     """
-                    INSERT INTO immo_unita_immobiliari
-                        (codice, tipo, condominio_id, indirizzo, citta, cap, provincia, superficie_mq, locali, categoria_catastale_id)
-                    VALUES
-                        (:codice, :tipo, :condominio_id, :indirizzo, 'Milano', '20100', 'MI', :superficie, :locali, :categoria_catastale_id)
+                    INSERT INTO immo_beni (tipo_bene, codice, indirizzo, comune, cap, provincia)
+                    VALUES ('UNITA', :codice, :indirizzo, 'Milano', '20100', 'MI')
                     RETURNING id
                     """
                 ),
+                {"codice": codice, "indirizzo": f"Via Roma {codice[-1]}"},
+            ).scalar()
+            db.execute(
+                text(
+                    """
+                    INSERT INTO immo_unita_immobiliari
+                        (id, tipo, condominio_id, superficie_mq, locali, categoria_catastale_id)
+                    VALUES
+                        (:id, :tipo, :condominio_id, :superficie, :locali, :categoria_catastale_id)
+                    """
+                ),
                 {
-                    "codice": codice,
+                    "id": bene_id,
                     "tipo": tipo,
                     "condominio_id": condominio_id,
-                    "indirizzo": f"Via Roma {codice[-1]}",
                     "superficie": 85.5 if tipo == "Appartamento" else 110.0,
                     "locali": 3 if tipo == "Appartamento" else 4,
                     "categoria_catastale_id": categoria_catastale_id,
                 },
-            ).scalar()
+            )
+            return bene_id
 
         unita_ids = [
             _get_or_create_unita("UNITA-001", "Appartamento", condominio_ids[0]),
@@ -191,7 +201,7 @@ def seed_tenant_data(
                 text(
                     """
                     SELECT id FROM immo_diritti_immobile
-                    WHERE unita_immobiliare_id = :unita_id AND proprietario_id = :proprietario_id
+                    WHERE bene_id = :unita_id AND proprietario_id = :proprietario_id
                     """
                 ),
                 {"unita_id": unita_id, "proprietario_id": proprietario_id},
@@ -202,7 +212,7 @@ def seed_tenant_data(
                 text(
                     """
                     INSERT INTO immo_diritti_immobile
-                        (unita_immobiliare_id, proprietario_id, tipo_diritto, quota_percentuale, data_inizio)
+                        (bene_id, proprietario_id, tipo_diritto, quota_percentuale, data_inizio)
                     VALUES
                         (:unita_id, :proprietario_id, 'PROPRIETARIO', :quota, '2025-01-01')
                     """

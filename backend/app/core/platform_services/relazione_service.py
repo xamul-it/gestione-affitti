@@ -24,7 +24,7 @@ from app.core.platform_services.scadenze_collegate import apri_o_aggiorna, chiud
 # Tables holding the objects a relation can point to.
 TABELLE_OGGETTI = {
     "CONDOMINIO": "immo_condomini",
-    "IMMOBILE": "immo_unita_immobiliari",
+    "IMMOBILE": "immo_beni",
     "SOGGETTO_ANAGRAFICO": "anag_soggetti_anagrafici",
 }
 

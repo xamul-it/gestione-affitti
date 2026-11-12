@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 from sqlalchemy.orm import Session
 
-from .models import AssegnazioneConduttore, Conduttore, DirittoImmobile, Proprietario, UnitaImmobiliare
+from .models import AssegnazioneConduttore, Conduttore, DirittoImmobile, Proprietario, Bene
 
 _DIRITTI = {
     "PROPRIETARIO": "Proprietà", "COMPROPRIETARIO": "Comproprietà", "USUFRUTTUARIO": "Usufrutto",
@@ -43,13 +43,13 @@ def _iso_date(col):
 
 
 def _indirizzo(u):
-    return sa.func.concat_ws(", ", u.indirizzo, u.citta)
+    return sa.func.concat_ws(", ", u.indirizzo, u.comune)
 
 
 def proprietari(db: Session, tenant_schema: str) -> Optional[sa.Select]:
-    if not _has_tables(db, tenant_schema, "immo_proprietari", "immo_diritti_immobile", "immo_unita_immobiliari"):
+    if not _has_tables(db, tenant_schema, "immo_proprietari", "immo_diritti_immobile", "immo_beni"):
         return None
-    p, d, u = Proprietario.__table__.c, DirittoImmobile.__table__.c, UnitaImmobiliare.__table__.c
+    p, d, u = Proprietario.__table__.c, DirittoImmobile.__table__.c, Bene.__table__.c
     tipo = sa.case(*[(sa.cast(d.tipo_diritto, sa.String) == k, v) for k, v in _DIRITTI.items()], else_=None)
     quota = sa.case(
         (d.quota_percentuale.isnot(None),
@@ -64,7 +64,7 @@ def proprietari(db: Session, tenant_schema: str) -> Optional[sa.Select]:
         sa.select(
             p.soggetto_id.label("soggetto_id"),
             sa.case((d.id.isnot(None), "IMMOBILE"), else_=None).label("entity_type"),
-            d.unita_immobiliare_id.label("entity_id"),
+            d.bene_id.label("entity_id"),
             descrizione.label("descrizione"),
             _iso_date(d.data_inizio).label("data_inizio"),
             _iso_date(d.data_fine).label("data_fine"),
@@ -73,21 +73,21 @@ def proprietari(db: Session, tenant_schema: str) -> Optional[sa.Select]:
         .select_from(
             Proprietario.__table__
             .outerjoin(DirittoImmobile.__table__, d.proprietario_id == p.id)
-            .outerjoin(UnitaImmobiliare.__table__, u.id == d.unita_immobiliare_id)
+            .outerjoin(Bene.__table__, u.id == d.bene_id)
         )
         .where(p.soggetto_id.isnot(None))
     )
 
 
 def conduttori(db: Session, tenant_schema: str) -> Optional[sa.Select]:
-    if not _has_tables(db, tenant_schema, "immo_conduttori", "immo_assegnazioni_conduttore", "immo_unita_immobiliari"):
+    if not _has_tables(db, tenant_schema, "immo_conduttori", "immo_assegnazioni_conduttore", "immo_beni"):
         return None
-    c, a, u = Conduttore.__table__.c, AssegnazioneConduttore.__table__.c, UnitaImmobiliare.__table__.c
+    c, a, u = Conduttore.__table__.c, AssegnazioneConduttore.__table__.c, Bene.__table__.c
     return (
         sa.select(
             c.soggetto_id.label("soggetto_id"),
             sa.case((a.id.isnot(None), "IMMOBILE"), else_=None).label("entity_type"),
-            a.unita_immobiliare_id.label("entity_id"),
+            a.bene_id.label("entity_id"),
             sa.case((a.id.isnot(None), _indirizzo(u)), else_=None).label("descrizione"),
             a.data_inizio.label("data_inizio"),
             a.data_fine.label("data_fine"),
@@ -96,7 +96,7 @@ def conduttori(db: Session, tenant_schema: str) -> Optional[sa.Select]:
         .select_from(
             Conduttore.__table__
             .outerjoin(AssegnazioneConduttore.__table__, a.conduttore_id == c.id)
-            .outerjoin(UnitaImmobiliare.__table__, u.id == a.unita_immobiliare_id)
+            .outerjoin(Bene.__table__, u.id == a.bene_id)
         )
         .where(c.soggetto_id.isnot(None))
     )

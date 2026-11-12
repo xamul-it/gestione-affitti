@@ -318,10 +318,10 @@ def post_sync(db: Session, tenant_schema: str) -> dict:
 
 
 def _immobile_labels(db, ids):
-    from .models import UnitaImmobiliare
-    rows = db.query(UnitaImmobiliare.id, UnitaImmobiliare.codice, UnitaImmobiliare.indirizzo, UnitaImmobiliare.citta) \
-        .filter(UnitaImmobiliare.id.in_(ids)).all()
-    return {r.id: f"{r.codice} · {r.indirizzo}, {r.citta}" for r in rows}
+    from .models import Bene
+    rows = db.query(Bene.id, Bene.codice, Bene.indirizzo, Bene.comune) \
+        .filter(Bene.id.in_(ids)).all()
+    return {r.id: f"{r.codice} · {r.indirizzo}, {r.comune}" for r in rows}
 
 
 def _register_entity_labels():

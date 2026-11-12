@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 
 class AssegnazioneConduttoreBase(BaseModel):
-    unita_immobiliare_id: int
+    bene_id: int
     conduttore_id: int
     data_inizio: Optional[date] = None
     data_fine: Optional[date] = Field(None, description="NULL = tuttora in corso")

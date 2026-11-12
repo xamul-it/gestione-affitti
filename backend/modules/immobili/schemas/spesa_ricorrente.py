@@ -15,7 +15,7 @@ class SpesaRicorrenteBase(BaseModel):
 
 
 class SpesaRicorrenteCreate(SpesaRicorrenteBase):
-    unita_immobiliare_id: Optional[int] = None
+    bene_id: Optional[int] = None
     condominio_id: Optional[int] = None
 
     # Notify recipients of the auto-created reminder (see route), same
@@ -24,9 +24,9 @@ class SpesaRicorrenteCreate(SpesaRicorrenteBase):
 
     @model_validator(mode="after")
     def _exactly_one_target(self):
-        if bool(self.unita_immobiliare_id) == bool(self.condominio_id):
+        if bool(self.bene_id) == bool(self.condominio_id):
             raise ValueError(
-                "Specificare esattamente uno tra unita_immobiliare_id e condominio_id"
+                "Specificare esattamente uno tra bene_id e condominio_id"
             )
         return self
 
@@ -55,7 +55,7 @@ class DuplicaSpesaRequest(BaseModel):
 
 class SpesaRicorrenteResponse(SpesaRicorrenteBase):
     id: int
-    unita_immobiliare_id: Optional[int] = None
+    bene_id: Optional[int] = None
     condominio_id: Optional[int] = None
     pagato: bool
     data_pagamento: Optional[date] = None

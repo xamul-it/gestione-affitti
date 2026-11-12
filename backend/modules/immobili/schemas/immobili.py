@@ -128,7 +128,7 @@ ImmobileResponse = UnitaImmobiliareResponse
 
 class VariazioneCatastaleResponse(BaseModel):
     id: int
-    unita_immobiliare_id: int
+    bene_id: int
     documento_id: Optional[int] = None
     origine: str
     campo: str

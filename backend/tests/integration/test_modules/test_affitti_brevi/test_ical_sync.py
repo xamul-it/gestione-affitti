@@ -39,6 +39,7 @@ from sqlalchemy import text
 from affitti_brevi.models import Canale, CalendarioCanale, Prenotazione
 from affitti_brevi.routes.canali import get_canali
 from affitti_brevi.services.ical_sync_service import ICalSyncService
+from immobili.models import Bene
 from immobili.models import UnitaImmobiliare
 
 TENANT = "tenant_qa_test"
@@ -86,7 +87,7 @@ def unita(pg_session):
     unita_id = u.id
     yield u
     pg_session.query(Prenotazione).filter_by(unita_immobiliare_id=unita_id).delete()
-    pg_session.query(UnitaImmobiliare).filter_by(id=unita_id).delete()
+    pg_session.query(Bene).filter_by(id=unita_id).delete()  # cascades to the unit
     pg_session.commit()
 
 

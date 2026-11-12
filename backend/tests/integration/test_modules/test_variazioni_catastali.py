@@ -26,7 +26,7 @@ def unit(db_session):
 
 def test_put_logs_manual_change(db_session, unit):
     update_unita_immobiliare(unit.id, UnitaImmobiliareUpdate(rendita_catastale=600.0, note="x"), db=db_session, current_user=USER)
-    rows = db_session.query(VariazioneCatastale).filter_by(unita_immobiliare_id=unit.id).all()
+    rows = db_session.query(VariazioneCatastale).filter_by(bene_id=unit.id).all()
     assert [(r.campo, r.valore_precedente, r.valore_nuovo, r.origine, r.documento_id, r.utente_id) for r in rows] == [
         ("rendita_catastale", "500.0", "600.0", "MANUALE", None, 7)
     ]
@@ -34,7 +34,7 @@ def test_put_logs_manual_change(db_session, unit):
 
 def test_put_no_change_no_rows(db_session, unit):
     update_unita_immobiliare(unit.id, UnitaImmobiliareUpdate(rendita_catastale=500.0, piano="1"), db=db_session, current_user=USER)
-    assert db_session.query(VariazioneCatastale).filter_by(unita_immobiliare_id=unit.id).count() == 0
+    assert db_session.query(VariazioneCatastale).filter_by(bene_id=unit.id).count() == 0
 
 
 def test_get_variazioni_newest_first(db_session, unit):

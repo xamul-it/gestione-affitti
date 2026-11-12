@@ -236,7 +236,7 @@ def _diritti_esistenti(db: Session, unita_id: int) -> List[Tuple[DirittoImmobile
     return (
         db.query(DirittoImmobile, Proprietario.soggetto_id)
         .join(Proprietario, DirittoImmobile.proprietario_id == Proprietario.id)
-        .filter(DirittoImmobile.unita_immobiliare_id == unita_id)
+        .filter(DirittoImmobile.bene_id == unita_id)
         .all()
     )
 
@@ -631,7 +631,7 @@ def apply_proposal(
                     continue
                 proprietario = _proprietario_for(db, soggetto_id, proprietari)
                 db.add(DirittoImmobile(
-                    unita_immobiliare_id=unit.id,
+                    bene_id=unit.id,
                     proprietario_id=proprietario.id,
                     tipo_diritto=d.tipo_diritto,
                     quota_percentuale=Decimal(str(d.quota_percentuale)) if d.quota_percentuale is not None else None,

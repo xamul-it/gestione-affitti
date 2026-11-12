@@ -57,17 +57,17 @@ def dati(db_session, unique_suffix):
     db.add_all([p_rossi, p_verdi])
     db.flush()
     db.add_all([
-        DirittoImmobile(unita_immobiliare_id=u1.id, proprietario_id=p_rossi.id,
+        DirittoImmobile(bene_id=u1.id, proprietario_id=p_rossi.id,
                         tipo_diritto=TipoDiritto.COMPROPRIETARIO, quota_percentuale=Decimal("50.00"),
                         data_inizio=""),
-        DirittoImmobile(unita_immobiliare_id=u2.id, proprietario_id=p_rossi.id,
+        DirittoImmobile(bene_id=u2.id, proprietario_id=p_rossi.id,
                         tipo_diritto=TipoDiritto.PROPRIETARIO, quota_percentuale=Decimal("100.00"),
                         data_inizio="2015-03-01", data_fine="2020-01-01"),
     ])
     c_neri = Conduttore(soggetto_id=neri.id)
     db.add(c_neri)
     db.flush()
-    db.add(AssegnazioneConduttore(unita_immobiliare_id=u1.id, conduttore_id=c_neri.id,
+    db.add(AssegnazioneConduttore(bene_id=u1.id, conduttore_id=c_neri.id,
                                   data_inizio=date(2019, 1, 1), data_fine=date(2021, 12, 31)))
     cond = Condominio(codice=f"RQ-{unique_suffix}", nome="Condominio Aurora", indirizzo="Via Po 2", citta="Milano")
     db.add(cond)
@@ -171,7 +171,7 @@ def test_filtro_oggetto_senza_permesso_non_rivela_nulla(db_session, dati):
 
 
 def test_data_impossibile_non_rompe_la_query(db_session, dati):
-    db_session.add(DirittoImmobile(unita_immobiliare_id=dati["u2"].id, proprietario_id=dati["p_rossi"].id,
+    db_session.add(DirittoImmobile(bene_id=dati["u2"].id, proprietario_id=dati["p_rossi"].id,
                                    tipo_diritto=TipoDiritto.USUFRUTTUARIO, data_inizio="2024-02-30",
                                    data_fine="2024-13-01"))
     db_session.flush()

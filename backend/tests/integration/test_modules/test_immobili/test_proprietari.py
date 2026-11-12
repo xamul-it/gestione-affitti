@@ -13,6 +13,7 @@ from sqlalchemy import text
 
 from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
 
+from immobili.models import Bene
 from immobili.models import DirittoImmobile, Proprietario, UnitaImmobiliare
 from immobili.routes.proprietari import (
     create_proprietario,
@@ -75,7 +76,7 @@ def unita(pg_session):
     try:
         yield u
     finally:
-        pg_session.query(UnitaImmobiliare).filter_by(id=u.id).delete()
+        pg_session.query(Bene).filter_by(id=u.id).delete()  # cascades to the unit
         pg_session.commit()
 
 
@@ -165,7 +166,7 @@ def test_delete_proprietario_cascades_diritti(pg_session, soggetto_proprietario,
         )
         diritto = create_diritto(
             DirittoImmobileCreate(
-                unita_immobiliare_id=unita.id,
+                bene_id=unita.id,
                 proprietario_id=proprietario.id,
                 tipo_diritto="PROPRIETARIO",
                 quota_percentuale=100,

@@ -20,7 +20,7 @@ from app.core.platform.models import PrioritaScadenza
 from app.core.platform_services import ScadenzaService
 from app.core.schemas import ScadenzaCreate
 
-from ..models import Condominio, SpesaRicorrenteImmobile, UnitaImmobiliare
+from ..models import Bene, Condominio, SpesaRicorrenteImmobile
 from ..schemas import (
     DuplicaSpesaRequest,
     SegnaPagatoRequest,
@@ -39,7 +39,7 @@ def _titolo(spesa: SpesaRicorrenteImmobile, target_label: str) -> str:
 
 @router.get("/", response_model=List[SpesaRicorrenteResponse])
 def get_spese_ricorrenti(
-    unita_immobiliare_id: Optional[int] = Query(None),
+    bene_id: Optional[int] = Query(None),
     condominio_id: Optional[int] = Query(None),
     pagato: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
@@ -47,8 +47,8 @@ def get_spese_ricorrenti(
 ):
     """Recupera le spese ricorrenti con filtri opzionali"""
     query = db.query(SpesaRicorrenteImmobile)
-    if unita_immobiliare_id:
-        query = query.filter(SpesaRicorrenteImmobile.unita_immobiliare_id == unita_immobiliare_id)
+    if bene_id:
+        query = query.filter(SpesaRicorrenteImmobile.bene_id == bene_id)
     if condominio_id:
         query = query.filter(SpesaRicorrenteImmobile.condominio_id == condominio_id)
     if pagato is not None:
@@ -76,15 +76,15 @@ def create_spesa_ricorrente(
     current_user: User = Depends(require_permission("spese_ricorrenti_immobile.write")),
 ):
     """
-    Crea una nuova spesa/scadenza ricorrente per un'unità immobiliare o un
+    Crea una nuova spesa/scadenza ricorrente per un bene (unità o terreno) o un
     condominio, e un promemoria collegato nello scadenzario di piattaforma.
     """
     target_label: str
-    if spesa.unita_immobiliare_id:
-        unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.id == spesa.unita_immobiliare_id).first()
-        if not unita:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unità immobiliare non trovata")
-        target_label = unita.codice
+    if spesa.bene_id:
+        bene = db.query(Bene).filter(Bene.id == spesa.bene_id).first()
+        if not bene:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bene non trovato")
+        target_label = bene.codice
     else:
         condominio = db.query(Condominio).filter(Condominio.id == spesa.condominio_id).first()
         if not condominio:
@@ -186,13 +186,13 @@ def duplica_spesa_ricorrente(
     if not originale:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spesa ricorrente non trovata")
 
-    if originale.unita_immobiliare_id:
-        target_label = originale.unita_immobiliare.codice
+    if originale.bene_id:
+        target_label = originale.bene.codice
     else:
         target_label = originale.condominio.nome
 
     nuova = SpesaRicorrenteImmobile(
-        unita_immobiliare_id=originale.unita_immobiliare_id,
+        bene_id=originale.bene_id,
         condominio_id=originale.condominio_id,
         tipo_spesa=originale.tipo_spesa,
         responsabile=originale.responsabile,

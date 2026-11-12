@@ -6,7 +6,7 @@ from ..models import TipoDiritto
 
 
 class DirittoImmobileBase(BaseModel):
-    unita_immobiliare_id: int
+    bene_id: int
     proprietario_id: int
     tipo_diritto: TipoDiritto
     quota_percentuale: Optional[Decimal] = Field(None, ge=0, le=100)
