@@ -5,39 +5,31 @@ SCHEMA: TENANT
 PREFIX: immo_ (modulo immobili)
 """
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Boolean, ARRAY
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, synonym
 from sqlalchemy.sql import func
-from app.core.database import Base
+from .bene import Bene
 
 
-class UnitaImmobiliare(Base):
+class UnitaImmobiliare(Bene):
     """
     Real estate property unit.
 
     Represents a single property unit (apartment, house, office, garage, etc.)
-    that can be part of a condominium or stand-alone.
+    that can be part of a condominium or stand-alone. Its id is the id of
+    its Bene (immo_beni), which holds code, address and cadastral
+    identification; `citta` is the bene's `comune`.
     """
     __tablename__ = "immo_unita_immobiliari"
     __table_args__ = {"extend_existing": True}
 
-    id = Column(Integer, primary_key=True, index=True)
-    codice = Column(String(50), unique=True, index=True, nullable=False)
+    id = Column(Integer, ForeignKey("immo_beni.id", ondelete="CASCADE"), primary_key=True)
     tipo = Column(String(50), nullable=False)  # Appartamento, Casa, Ufficio, Box, Negozio, etc.
     condominio_id = Column(Integer, ForeignKey("immo_condomini.id"), nullable=True)  # Opzionale per unità non condominiali
-    indirizzo = Column(String(255), nullable=False)
-    citta = Column(String(100), nullable=False)
-    cap = Column(String(10))
-    provincia = Column(String(2))
     superficie_mq = Column(Float)
     locali = Column(Integer)
     piano = Column(String(20))
     classe_energetica = Column(String(10))
     rendita_catastale = Column(Float)
-    foglio = Column(String(20))
-    particella = Column(String(20))
-    subalterno = Column(String(20))
-    descrizione = Column(Text)
-    note = Column(Text)
 
     # FK to public.immo_categorie_catastali (domain data)
     categoria_catastale_id = Column(
@@ -49,28 +41,18 @@ class UnitaImmobiliare(Base):
     codice_auto_generated = Column(Boolean, default=False)  # Track if codice was auto-generated
     indirizzo_parsed_warnings = Column(ARRAY(Text), nullable=True)  # Address parsing warnings
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # created_at / updated_at live on the Bene.
+    __mapper_args__ = {"polymorphic_identity": "UNITA"}
+
+    citta = synonym("comune")
 
     # Relationships
     condominio = relationship("Condominio", back_populates="unita")
     contratti = relationship("Contratto", back_populates="unita_immobiliare")
     spese = relationship("Spesa", back_populates="unita_immobiliare")
-    # immo_certificati_energetici and immo_diritti_immobile have no real FK
-    # constraint in the DB (their ondelete="CASCADE" above is decorative),
-    # so cascade must be ORM-managed here rather than relying on passive_deletes.
+    # immo_certificati_energetici has no real FK constraint in the DB, so
+    # cascade must be ORM-managed here. Rights, tenant assignments, cadastral
+    # changes and recurring costs belong to the Bene (see bene.py).
     certificati_energetici = relationship("CertificatoEnergetico", back_populates="unita_immobiliare", cascade="all, delete-orphan")
-    diritti = relationship("DirittoImmobile", back_populates="unita_immobiliare", cascade="all, delete-orphan")
-    # immo_assegnazioni_conduttore and immo_spese_ricorrenti DO have a real
-    # ON DELETE CASCADE constraint, so trust the DB instead of doing N extra
-    # DELETEs — without passive_deletes, SQLAlchemy still tries to null out
-    # these non-nullable child FKs in Python and crashes.
-    assegnazioni_conduttore = relationship("AssegnazioneConduttore", back_populates="unita_immobiliare", passive_deletes=True)
-    spese_ricorrenti = relationship(
-        "SpesaRicorrenteImmobile",
-        back_populates="unita_immobiliare",
-        foreign_keys="SpesaRicorrenteImmobile.unita_immobiliare_id",
-        passive_deletes=True,
-    )
     millesimi = relationship("MillesimiUnita", back_populates="unita_immobiliare", cascade="all, delete-orphan")
     categoria_catastale = relationship("CategoriaCatastale", foreign_keys=[categoria_catastale_id])

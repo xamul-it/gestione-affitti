@@ -53,8 +53,8 @@ class SpesaRicorrenteImmobile(Base):
     __tablename__ = "immo_spese_ricorrenti"
     __table_args__ = (
         CheckConstraint(
-            "(unita_immobiliare_id IS NOT NULL) != (condominio_id IS NOT NULL)",
-            name="ck_spesa_ricorrente_unita_xor_condominio",
+            "(bene_id IS NOT NULL) != (condominio_id IS NOT NULL)",
+            name="ck_spesa_ricorrente_bene_xor_condominio",
         ),
         {"extend_existing": True},
     )
@@ -62,8 +62,8 @@ class SpesaRicorrenteImmobile(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     # Exactly one of these two is set (see CheckConstraint above).
-    unita_immobiliare_id = Column(
-        Integer, ForeignKey("immo_unita_immobiliari.id", ondelete="CASCADE"), nullable=True, index=True
+    bene_id = Column(
+        Integer, ForeignKey("immo_beni.id", ondelete="CASCADE"), nullable=True, index=True
     )
     condominio_id = Column(
         Integer, ForeignKey("immo_condomini.id", ondelete="CASCADE"), nullable=True, index=True
@@ -87,13 +87,13 @@ class SpesaRicorrenteImmobile(Base):
         Integer, ForeignKey("core_scadenze.id", ondelete="SET NULL"), nullable=True
     )
 
-    unita_immobiliare = relationship(
-        "UnitaImmobiliare", back_populates="spese_ricorrenti", foreign_keys=[unita_immobiliare_id]
+    bene = relationship(
+        "Bene", back_populates="spese_ricorrenti", foreign_keys=[bene_id]
     )
     condominio = relationship(
         "Condominio", back_populates="spese_ricorrenti", foreign_keys=[condominio_id]
     )
 
     def __repr__(self):
-        target = f"unita={self.unita_immobiliare_id}" if self.unita_immobiliare_id else f"condominio={self.condominio_id}"
+        target = f"bene={self.bene_id}" if self.bene_id else f"condominio={self.condominio_id}"
         return f"<SpesaRicorrenteImmobile {self.tipo_spesa}/{self.periodo}/{self.rata} {target} pagato={self.pagato}>"

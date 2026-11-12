@@ -41,7 +41,7 @@ def _conta(db, sql, **params):
 def test_struttura_beni(db_session):
     assert "tipo_bene" in _colonne(db_session, "immo_beni")
     unita = _colonne(db_session, "immo_unita_immobiliari")
-    assert not unita & {"indirizzo", "citta", "codice"}
+    assert not unita & {"indirizzo", "citta", "codice", "created_at"}
     for tabella in (
         "immo_diritti_immobile", "immo_assegnazioni_conduttore",
         "immo_variazioni_catastali", "immo_spese_ricorrenti",

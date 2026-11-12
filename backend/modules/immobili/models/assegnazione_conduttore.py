@@ -18,14 +18,14 @@ from app.core.database import Base
 
 
 class AssegnazioneConduttore(Base):
-    """Per-unit occupancy assignment for a Conduttore."""
+    """Per-bene occupancy assignment for a Conduttore."""
     __tablename__ = "immo_assegnazioni_conduttore"
     __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    unita_immobiliare_id = Column(
+    bene_id = Column(
         Integer,
-        ForeignKey("immo_unita_immobiliari.id", ondelete="CASCADE"),
+        ForeignKey("immo_beni.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -42,11 +42,11 @@ class AssegnazioneConduttore(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    unita_immobiliare = relationship("UnitaImmobiliare", back_populates="assegnazioni_conduttore")
+    bene = relationship("Bene", back_populates="assegnazioni_conduttore")
     conduttore = relationship("Conduttore", back_populates="assegnazioni")
 
     def __repr__(self):
         return (
-            f"<AssegnazioneConduttore unita={self.unita_immobiliare_id} "
+            f"<AssegnazioneConduttore bene={self.bene_id} "
             f"conduttore={self.conduttore_id} dal={self.data_inizio} al={self.data_fine}>"
         )

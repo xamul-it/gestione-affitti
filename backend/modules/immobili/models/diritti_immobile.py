@@ -33,7 +33,7 @@ class DirittoImmobile(Base):
     __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    unita_immobiliare_id = Column(Integer, ForeignKey("immo_unita_immobiliari.id", ondelete="CASCADE"), nullable=False, index=True)
+    bene_id = Column(Integer, ForeignKey("immo_beni.id", ondelete="CASCADE"), nullable=False, index=True)
     proprietario_id = Column(Integer, ForeignKey("immo_proprietari.id", ondelete="CASCADE"), nullable=False, index=True)
     tipo_diritto = Column(SQLEnum(TipoDiritto), nullable=False)
     quota_percentuale = Column(Numeric(5, 2), nullable=True)  # es. 50.00 per 50%
@@ -44,5 +44,5 @@ class DirittoImmobile(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    unita_immobiliare = relationship("UnitaImmobiliare", back_populates="diritti")
+    bene = relationship("Bene", back_populates="diritti")
     proprietario = relationship("Proprietario", back_populates="diritti_immobile")

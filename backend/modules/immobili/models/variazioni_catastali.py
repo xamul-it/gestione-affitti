@@ -4,6 +4,7 @@ visura import (origine VISURA, linked to the visura document) and by manual
 edits (origine MANUALE). Spec 2026-11-09 tipologie documentali, section 4.
 """
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.core.database import Base
@@ -14,8 +15,8 @@ class VariazioneCatastale(Base):
     __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    unita_immobiliare_id = Column(
-        Integer, ForeignKey("immo_unita_immobiliari.id", ondelete="CASCADE"), nullable=False, index=True
+    bene_id = Column(
+        Integer, ForeignKey("immo_beni.id", ondelete="CASCADE"), nullable=False, index=True
     )
     documento_id = Column(Integer, nullable=True)  # core_documenti.id (core chain: no FK)
     origine = Column(String(20), nullable=False)  # VISURA | MANUALE
@@ -25,3 +26,5 @@ class VariazioneCatastale(Base):
     data_riferimento = Column(Date, nullable=False)
     utente_id = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    bene = relationship("Bene", back_populates="variazioni_catastali")

@@ -65,6 +65,7 @@ TABELLE_FIGLIE = (
 COLONNE_SPOSTATE = (
     "codice", "indirizzo", "citta", "cap", "provincia",
     "foglio", "particella", "subalterno", "descrizione", "note",
+    "created_at", "updated_at",
 )
 
 
