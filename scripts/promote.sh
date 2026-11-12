@@ -7,7 +7,8 @@
 # (gestione_affitti_prod), e lo fa sempre dopo averne fatto un backup
 # verificato. Migra la catena core e quelle dei moduli su tutti gli schema,
 # applica i dati di base pubblici dei moduli, e confronta il numero di righe
-# di ogni tabella prima e dopo: se qualcosa diminuisce si ferma.
+# di ogni tabella prima e dopo: se qualcosa diminuisce si ferma, salvo le
+# tabelle elencate in PROMOTE_PERDITA_CONSENTITA (azzeramento voluto).
 #
 # Uso: scripts/promote.sh [ref-da-promuovere]   (default: master)
 
@@ -35,6 +36,16 @@ source "$PROD_ENV_FILE"
 : "${PGPASSWORD:?PGPASSWORD non impostato in $PROD_ENV_FILE}"
 : "${PROD_DB:?PROD_DB non impostato in $PROD_ENV_FILE}"
 export PGPASSWORD
+
+# Azzeramento voluto (es. ripartenza dei dati decisa dall'utente): le tabelle
+# elencate (nomi senza schema, separati da spazio) possono perdere righe.
+if [ -n "${PROMOTE_PERDITA_CONSENTITA:-}" ]; then
+    echo "==> Perdita di righe consentita per: $PROMOTE_PERDITA_CONSENTITA"
+    if [ -t 0 ]; then
+        read -r -p "    Confermi l'azzeramento di queste tabelle in produzione? [s/N] " risposta
+        [ "$risposta" = "s" ] || { echo "Annullato."; exit 1; }
+    fi
+fi
 
 echo "==> Promuovo '$TARGET_REF' su stable"
 
@@ -151,24 +162,10 @@ python scripts/sync_modules.py
 trap - ERR
 
 # confronta PRIMA DOPO: errore se una tabella sparisce o perde righe; le
-# versioni alembic e le tabelle/righe nuove sono solo riportate.
+# versioni alembic e le tabelle/righe nuove sono solo riportate. Le tabelle in
+# PROMOTE_PERDITA_CONSENTITA possono perdere righe (azzeramento voluto).
 confronta() {
-    awk '
-    NR == FNR { before[$1] = $2; next }
-    { after[$1] = $2 }
-    END {
-        bad = 0
-        for (t in before) {
-            if (!(t in after)) { print "  PERSA tabella " t " (" before[t] ")"; bad = 1; continue }
-            if (before[t] ~ /^rows=/) {
-                b = substr(before[t], 6) + 0; a = substr(after[t], 6) + 0
-                if (a < b) { print "  RIGHE PERSE " t ": " b " -> " a; bad = 1 }
-                else if (a > b) print "  righe aggiunte " t ": " b " -> " a
-            } else if (before[t] != after[t]) print "  migrata " t ": " substr(before[t], 9) " -> " substr(after[t], 9)
-        }
-        for (t in after) if (!(t in before)) print "  nuova tabella " t
-        exit bad
-    }' "$1" "$2" | sort
+    awk -v consentite="${PROMOTE_PERDITA_CONSENTITA:-}" -f "$STABLE_DIR/scripts/sql/confronta_snapshot.awk" "$1" "$2" | sort
     return "${PIPESTATUS[0]}"
 }
 
