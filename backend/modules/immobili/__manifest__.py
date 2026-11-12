@@ -116,6 +116,7 @@ manifest = {
         # Tenant data
         "immo_tipologie_terreno_overrides",
         "immo_terreni",
+        "immo_beni",
         "immo_unita_immobiliari",
         "immo_condomini",
         "immo_proprietari",
@@ -135,6 +136,7 @@ manifest = {
     # Tenant schema tables (created during tenant install)
     "tenant_tables": [
         "immo_condomini",
+        "immo_beni",
         "immo_unita_immobiliari",
         "immo_proprietari",
         "immo_diritti_immobile",

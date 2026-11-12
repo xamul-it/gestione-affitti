@@ -16,6 +16,7 @@ Tabelle PUBLIC (create durante register):
 Tabelle TENANT (create durante install):
 - immo_tipologie_terreno_overrides
 - immo_terreni
+- immo_beni (bene catastale comune; unità con lo stesso id)
 - immo_unita_immobiliari
 - immo_condomini
 - immo_proprietari

@@ -21,7 +21,8 @@ alembic_version_<codice>) viene installato con l'installatore dell'app,
 TenantModuleService.install_module_for_tenant, senza dati di esempio:
 "abilitato" deve voler dire che le sue funzioni ci sono.
 
-Non cancella mai dati.
+Di suo non cancella dati; lo fa solo una migrazione di modulo che lo dichiara
+(es. immobili 2026111201_beni, azzeramento deciso dall'utente).
 
 Uso (dalla cartella backend, con il venv attivo):
     python scripts/sync_modules.py            # esegue
