@@ -104,8 +104,7 @@ class ImportExportService:
         # Determine fields
         if not fields:
             # Get all column names
-            mapper = inspect(model)
-            fields = [column.key for column in mapper.columns]
+            fields = [nome for nome, _ in self._colonne_esposte(model)]
 
         # Create CSV
         output = io.StringIO()
@@ -160,8 +159,7 @@ class ImportExportService:
         results = query.all()
 
         if not fields:
-            mapper = inspect(model)
-            fields = [column.key for column in mapper.columns]
+            fields = [nome for nome, _ in self._colonne_esposte(model)]
 
         data = []
         for item in results:
@@ -290,11 +288,7 @@ class ImportExportService:
         """
         # Determine fields
         if not fields:
-            mapper = inspect(model)
-            fields = [
-                column.key for column in mapper.columns
-                if column.key != 'id'  # Exclude ID field
-            ]
+            fields = [nome for nome, _ in self._colonne_esposte(model) if nome != 'id']
 
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=fields)
@@ -303,9 +297,9 @@ class ImportExportService:
         # Add sample row if requested
         if include_sample_data:
             sample_row = {}
-            mapper = inspect(model)
+            colonne = dict(self._colonne_esposte(model))
             for field in fields:
-                column = mapper.columns.get(field)
+                column = colonne.get(field)
                 if column is not None:
                     # Generate sample based on type
                     sample_row[field] = self._generate_sample_value(column)
@@ -486,15 +480,14 @@ class ImportExportService:
             List of field dictionaries with metadata
         """
         fields = []
-        mapper = inspect(model)
 
-        for column in mapper.columns:
-            if column.key == 'id':  # Skip ID field
+        for nome, column in self._colonne_esposte(model):
+            if nome == 'id':  # Skip ID field
                 continue
 
             field_info = {
-                "name": column.key,
-                "label": column.key.replace('_', ' ').title(),
+                "name": nome,
+                "label": nome.replace('_', ' ').title(),
                 "type": self._get_field_type(column.type),
                 "required": not column.nullable,
                 "description": column.comment or ""
@@ -502,6 +495,29 @@ class ImportExportService:
             fields.append(field_info)
 
         return fields
+
+    @staticmethod
+    def _colonne_esposte(model: Type[Any]) -> List[tuple]:
+        """(name, column) pairs a user sees for a model.
+
+        With joined-table inheritance (e.g. UnitaImmobiliare is a Bene) the
+        mapper also lists the parent's columns: the polymorphic discriminator
+        is internal and left out, and a column exposed under a synonym (the
+        unit's `citta` is the bene's `comune`) takes the synonym's name.
+        """
+        mapper = inspect(model)
+        discriminatore = mapper.polymorphic_on
+        alias = {prop.name: nome for nome, prop in mapper.synonyms.items()}
+        coppie, visti = [], set()
+        for column in mapper.columns:
+            if discriminatore is not None and column is discriminatore:
+                continue
+            nome = alias.get(column.key, column.key)
+            if nome in visti:
+                continue
+            visti.add(nome)
+            coppie.append((nome, column))
+        return coppie
 
     def _get_field_type(self, column_type) -> str:
         """Convert SQLAlchemy column type to simple string"""

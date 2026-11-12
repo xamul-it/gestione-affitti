@@ -58,6 +58,9 @@ EXCLUDED_TABLES = {
     "immo_conduttori",
     "immo_assegnazioni_conduttore",
     "immo_spese_ricorrenti",
+    # Created with unita_immobiliare_id by 2026110901 and moved to bene_id
+    # by 2026111201: sweeping today's model (bene_id) would break 2026110901.
+    "immo_variazioni_catastali",
 }
 
 
@@ -104,6 +107,7 @@ def _ensure_fk_targets(target_metadata: MetaData, schema: str) -> None:
 def _order_tenant_tables(tables: list[Table]) -> list[Table]:
     ordered_names = [
         "immo_condomini",
+        "immo_beni",  # the unit's id is the bene's id (2026111201_beni)
         "immo_unita_immobiliari",
         "immo_proprietari",
         "immo_diritti_immobile",

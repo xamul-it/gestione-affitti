@@ -50,7 +50,13 @@ TABELLE_AZZERATE = (
     "ab_calendari_canali",
 )
 
-ENTITY_TYPES_AZZERATI = ("immobile", "condominio", "spesa_ricorrente", "contratto", "comunicazione")
+# Every core_* entity_type whose objects live in TABELLE_AZZERATE: their ids
+# restart from 1, so leftovers would attach to the next new object.
+# AFFITTUARIO, TECNICO and SOGGETTO_ANAGRAFICO stay (their tables are kept).
+ENTITY_TYPES_AZZERATI = (
+    "immobile", "condominio", "spesa_ricorrente", "contratto", "comunicazione",
+    "proprietario", "spesa", "incasso", "certificato_energetico",
+)
 
 TABELLE_CORE = ("core_relazioni", "core_documenti", "core_scadenze")
 
@@ -187,7 +193,10 @@ def upgrade():
     conn = op.get_bind()
     if not _esiste(conn, "immo_unita_immobiliari"):
         return
-    azzera(conn)
+    # Reset only the old layout (code still on the unit): never a schema
+    # already moved to immo_beni, nor a new tenant created empty.
+    if _colonna_esiste(conn, "immo_unita_immobiliari", "codice"):
+        azzera(conn)
     ristruttura(conn)
 
 
