@@ -1,6 +1,6 @@
 # Beni catastali: unità immobiliari e terreni allo stesso livello — design
 
-Data: 2026-11-10, aggiornata il 2026-11-12 · Stato: approvata dall'utente il 2026-11-12.
+Data: 2026-11-10, aggiornata il 2026-11-12 (collegamenti tra beni) · Stato: approvata dall'utente il 2026-11-12.
 Strada B (bene comune) scelta dall'utente il 2026-11-10.
 
 ## Perché
@@ -50,6 +50,11 @@ Regole di dominio: rapporto dell'agente esperto sull'Archivio Fiscale del
    corrispondenza con art. 30 DPR 380/2001 da verificare), atto di
    provenienza, contratto di affitto agrario, tipo di frazionamento / tipo
    mappale, altro.
+9. **Collegamenti tra beni** (richiesta dell'utente del 2026-11-12): un
+   bene può essere legato a un altro, con un tipo e un periodo. Primo uso:
+   le **pertinenze** (box, cantina, soffitta di un'abitazione); poi il
+   fabbricato rurale sulla particella "ente urbano" e le particelle che
+   formano un fondo.
 
 ## Non obiettivi (per ora)
 
@@ -65,9 +70,12 @@ Regole di dominio: rapporto dell'agente esperto sull'Archivio Fiscale del
 - **Affitti brevi**: riguardano solo alloggi, restano legati alle unità.
 - **Millesimi e spese condominiali** (`affitti_lungo.spese`,
   `ripartizione_spesa`): restano sulle unità.
-- Collegamento ente urbano ↔ unità ("Particelle corrispondenti al catasto
-  terreni" nelle visure analitiche, es. un fabbricato rurale D/10 sulla
-  particella che al catasto terreni è "ente urbano"): fase successiva.
+- Collegamento **automatico** ente urbano ↔ unità dall'import delle visure
+  ("Particelle corrispondenti al catasto terreni"): il collegamento si crea
+  a mano in fase 2; l'import lo proporrà nella fase 4.
+- Complessi senza amministratore (palazzine): si gestiscono come condominio,
+  nessuna entità nuova. La scelta del condominio nel form dell'unità e la
+  scheda del condominio sono un lavoro a parte (immobili.md §5).
 - Tipo di conduzione e qualifica del conduttore agricolo (coltivatore
   diretto, IAP): servono solo ai calcoli fiscali, quindi più avanti.
 
@@ -137,6 +145,34 @@ serve un campo apposta. La scheda mostra questo riepilogo; il responsabile
 proposto per una nuova spesa ricorrente segue la tabella e si può
 cambiare. Nessun importo d'imposta viene calcolato (vedi Non obiettivi).
 
+### Collegamenti tra beni
+
+```
+immo_beni_collegamenti (id, bene_id, bene_collegato_id, tipo, data_inizio,
+                        data_fine, note, timestamp)
+```
+
+`bene_id` è il bene principale (es. l'abitazione), `bene_collegato_id` quello
+che gli è legato (es. il box); entrambi con `ON DELETE CASCADE`. Un bene non
+si collega a sé stesso, e la stessa coppia ha un solo collegamento aperto
+per tipo. Tipi:
+
+| Tipo | Principale → collegato | Controlli |
+|---|---|---|
+| `PERTINENZA` | abitazione (unità di categoria A, tranne A/10) → unità C/2, C/6 o C/7 | una pertinenza appartiene a una sola abitazione per volta; **avviso**, senza bloccare, se un'abitazione ha più di una pertinenza della stessa categoria (per l'IMU dell'abitazione principale ne conta una per categoria: L. 160/2019, c. 741) |
+| `FABBRICATO_SU_PARTICELLA` | terreno (particella "ente urbano" o area di corte) → unità costruita sopra | nessuno |
+| `PARTE_DI_FONDO` | terreno principale del fondo → altre particelle dello stesso fondo | nessuno |
+
+Il tipo è un elenco che si può estendere. Il collegamento non sposta né
+copia diritti o conduttori: ogni bene tiene i suoi, e la scheda segnala se
+una pertinenza ha titolari diversi dalla sua abitazione. Dove serve, si usa:
+
+- **scheda**: sezione "Beni collegati" in entrambe le direzioni (il box
+  mostra "pertinenza di…", l'appartamento elenca le sue pertinenze);
+- **contratti** (fase 3): scegliendo un'abitazione si propongono le sue
+  pertinenze aperte da aggiungere al contratto;
+- **liste**: l'unità mostra un'icona se è pertinenza o ne ha.
+
 ### API
 
 - `/api/v1/beni/` lista e dettaglio comuni (filtro per tipo, ricerca per
@@ -144,6 +180,8 @@ cambiare. Nessun importo d'imposta viene calcolato (vedi Non obiettivi).
 - `/unita-immobiliari` e `/terreni` restano per creare e modificare i dati
   specifici; leggono e scrivono anche la parte comune.
 - Diritti, assegnazioni, variazioni, spese: parametro `bene_id`.
+- `/api/v1/beni/{id}/collegamenti` elenco (in entrambe le direzioni),
+  creazione, modifica, chiusura con data di fine, cancellazione.
 
 ### Interfaccia
 
@@ -215,10 +253,13 @@ Ogni fase si rilascia da sola.
    con la parte terreno, riepilogo "chi paga cosa" (anche per le unità),
    responsabili `USUFRUTTUARIO`/`NUDO_PROPRIETARIO` nelle spese ricorrenti,
    tipologie documentali, cancellazione, lista cliccabile, selettore unico
-   dei beni.
-3. **Contratti con più beni** in `affitti_lungo` (anche terreni).
+   dei beni, **collegamenti tra beni** (pertinenze, fabbricato su
+   particella, parte di fondo).
+3. **Contratti con più beni** in `affitti_lungo` (anche terreni), con la
+   proposta delle pertinenze dell'abitazione scelta.
 4. **Import visure dei terreni** e caricamento unico dei documenti anche
-   per i terreni (campioni disponibili).
+   per i terreni (campioni disponibili), con la proposta del collegamento
+   fabbricato ↔ particella dalle visure analitiche.
 
 ## Domande ancora aperte
 
@@ -231,5 +272,7 @@ regola valdostana da anticipare.
 
 Elenco comuni esenti IMU (Circ. MEF 9/1993) per Bologna, Forlì,
 Pré-Saint-Didier, Castiglione della Pescaia; esenzione IRPEF CD/IAP dal 2023 e maggiorazione
-ridotta per CD/IAP; IMU su enfiteusi e superficie (L. 160/2019); forma,
+ridotta per CD/IAP; IMU su enfiteusi e superficie (L. 160/2019); regola
+"una pertinenza per categoria" anche per agevolazioni prima casa e
+cedolare secca (qui solo come avviso IMU); forma,
 disdetta e art. 45 della L. 203/1982; regole regionali sulle zone montane.
