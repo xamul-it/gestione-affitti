@@ -170,7 +170,7 @@ link della dashboard, icone dei documenti schiacciate e pulsanti dei form
 - pagine vecchie `/immobili/home` e `/old-home`;
 - **terreni** isolati: niente proprietari, conduttori, documenti, variazioni,
   scheda né import da visura, e si possono solo disattivare, non eliminare
-  (spec `2026-11-10-terreni-design.md`, da approvare).
+  (spec `2026-11-10-beni-catastali-design.md`, da approvare).
 
 - La colonna `classe_energetica` dell'unità resta nel DB ma non è più letta
   né scritta.
