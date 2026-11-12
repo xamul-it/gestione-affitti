@@ -19,9 +19,9 @@ describe('ImmobiliStatsWidget', () => {
     proprietariAPI.getAll.mockResolvedValue({ data: [{ id: 1 }] });
     condominAPI.getAll.mockResolvedValue({ data: [] });
     assegnazioniConduttoreAPI.getAll.mockResolvedValue({ data: [
-      { id: 10, unita_immobiliare_id: 1, data_fine: null },
-      { id: 11, unita_immobiliare_id: 1, data_fine: null },
-      { id: 12, unita_immobiliare_id: 2, data_fine: '2025-01-01' },
+      { id: 10, bene_id: 1, data_fine: null },
+      { id: 11, bene_id: 1, data_fine: null },
+      { id: 12, bene_id: 2, data_fine: '2025-01-01' },
     ] });
 
     render(<MemoryRouter><ImmobiliStatsWidget /></MemoryRouter>);

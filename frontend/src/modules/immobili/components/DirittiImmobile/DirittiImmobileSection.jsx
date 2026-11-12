@@ -34,7 +34,7 @@ function DirittiImmobileSection({ immobileId }) {
   const fetchDiritti = async () => {
     try {
       setLoading(true);
-      const response = await dirittiImmobileAPI.getByImmobile(immobileId);
+      const response = await dirittiImmobileAPI.getByBene(immobileId);
       setDiritti(response.data);
 
       // Carica i dati dei proprietari, risolvendo il nome tramite il soggetto anagrafico collegato

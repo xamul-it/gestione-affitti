@@ -36,7 +36,7 @@ function AssegnazioneConduttoreSection({ unitaImmobiliareId }) {
   const fetchAssegnazioni = async () => {
     try {
       setLoading(true);
-      const response = await assegnazioniConduttoreAPI.getByUnita(unitaImmobiliareId);
+      const response = await assegnazioniConduttoreAPI.getByBene(unitaImmobiliareId);
       setAssegnazioni(response.data);
       setError(null);
     } catch (err) {

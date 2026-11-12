@@ -42,7 +42,7 @@ function ImmobiliStatsWidget() {
       const immobili = immobiliRes.data;
       // A unit is occupied when it has a tenant assignment still in progress.
       const occupate = new Set(
-        assegnazioniRes.data.filter((a) => !a.data_fine).map((a) => a.unita_immobiliare_id),
+        assegnazioniRes.data.filter((a) => !a.data_fine).map((a) => a.bene_id),
       );
       const occupati = immobili.filter((i) => occupate.has(i.id)).length;
 

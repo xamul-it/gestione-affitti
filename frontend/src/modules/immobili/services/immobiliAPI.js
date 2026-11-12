@@ -74,11 +74,11 @@ export const proprietariAPI = {
 
 // Diritti Immobile API
 export const dirittiImmobileAPI = {
-  getAll: (immobileId = null, proprietarioId = null) => api.get('/diritti-immobile/', {
-    params: { unita_immobiliare_id: immobileId, proprietario_id: proprietarioId }
+  getAll: (beneId = null, proprietarioId = null) => api.get('/diritti-immobile/', {
+    params: { bene_id: beneId, proprietario_id: proprietarioId }
   }),
   getById: (id) => api.get(`/diritti-immobile/${id}`),
-  getByImmobile: (immobileId) => api.get(`/diritti-immobile/unita-immobiliare/${immobileId}`),
+  getByBene: (beneId) => api.get(`/diritti-immobile/bene/${beneId}`),
   getByProprietario: (proprietarioId) => api.get(`/diritti-immobile/proprietario/${proprietarioId}`),
   create: (data) => api.post('/diritti-immobile/', data),
   update: (id, data) => api.put(`/diritti-immobile/${id}`, data),
@@ -178,10 +178,10 @@ export const conduttoriAPI = {
 
 // Assegnazioni Conduttore API
 export const assegnazioniConduttoreAPI = {
-  getAll: (unitaImmobiliareId = null, conduttoreId = null) => api.get('/assegnazioni-conduttore/', {
-    params: { unita_immobiliare_id: unitaImmobiliareId, conduttore_id: conduttoreId }
+  getAll: (beneId = null, conduttoreId = null) => api.get('/assegnazioni-conduttore/', {
+    params: { bene_id: beneId, conduttore_id: conduttoreId }
   }),
-  getByUnita: (unitaImmobiliareId) => api.get(`/assegnazioni-conduttore/unita-immobiliare/${unitaImmobiliareId}`),
+  getByBene: (beneId) => api.get(`/assegnazioni-conduttore/bene/${beneId}`),
   create: (data) => api.post('/assegnazioni-conduttore/', data),
   update: (id, data) => api.put(`/assegnazioni-conduttore/${id}`, data),
   delete: (id) => api.delete(`/assegnazioni-conduttore/${id}`),
@@ -189,8 +189,8 @@ export const assegnazioniConduttoreAPI = {
 
 // Spese Ricorrenti API (IMU, TARI, utenze)
 export const speseRicorrentiAPI = {
-  getAll: (unitaImmobiliareId = null, condominioId = null, pagato = null) => api.get('/spese-ricorrenti/', {
-    params: { unita_immobiliare_id: unitaImmobiliareId, condominio_id: condominioId, pagato }
+  getAll: (beneId = null, condominioId = null, pagato = null) => api.get('/spese-ricorrenti/', {
+    params: { bene_id: beneId, condominio_id: condominioId, pagato }
   }),
   getById: (id) => api.get(`/spese-ricorrenti/${id}`),
   create: (data) => api.post('/spese-ricorrenti/', data),

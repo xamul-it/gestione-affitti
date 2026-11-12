@@ -24,7 +24,7 @@ function SpesaRicorrenteForm({ unitaImmobiliareId, condominioId, onClose }) {
     setError(null);
     try {
       await speseRicorrentiAPI.create({
-        unita_immobiliare_id: unitaImmobiliareId || undefined,
+        bene_id: unitaImmobiliareId || undefined,
         condominio_id: condominioId || undefined,
         tipo_spesa: tipoSpesa === 'ALTRO' && tipoSpesaLibero ? tipoSpesaLibero : tipoSpesa,
         responsabile,

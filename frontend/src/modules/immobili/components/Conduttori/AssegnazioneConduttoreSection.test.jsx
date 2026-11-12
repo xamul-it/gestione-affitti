@@ -5,13 +5,13 @@ import AssegnazioneConduttoreSection from './AssegnazioneConduttoreSection';
 import { assegnazioniConduttoreAPI } from '../../services/immobiliAPI';
 
 vi.mock('../../services/immobiliAPI', () => ({
-  assegnazioniConduttoreAPI: { getByUnita: vi.fn() },
+  assegnazioniConduttoreAPI: { getByBene: vi.fn() },
   conduttoriAPI: { getAll: vi.fn() },
 }));
 
 describe('AssegnazioneConduttoreSection', () => {
   it("shows the tenant's name linked to the anagrafica, not the record id", async () => {
-    assegnazioniConduttoreAPI.getByUnita.mockResolvedValue({ data: [
+    assegnazioniConduttoreAPI.getByBene.mockResolvedValue({ data: [
       { id: 905, conduttore_id: 979, soggetto_id: 9501, conduttore_nome: 'Lucia Inquilina',
         data_inizio: '2026-01-01', data_fine: null },
     ] });

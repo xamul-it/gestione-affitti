@@ -47,7 +47,7 @@ function AssegnazioneConduttoreForm({ unitaImmobiliareId, onClose }) {
     setError(null);
     try {
       await assegnazioniConduttoreAPI.create({
-        unita_immobiliare_id: unitaImmobiliareId,
+        bene_id: unitaImmobiliareId,
         conduttore_id: parseInt(conduttoreId, 10),
         data_inizio: dataInizio || undefined,
         data_fine: dataFine || undefined,
