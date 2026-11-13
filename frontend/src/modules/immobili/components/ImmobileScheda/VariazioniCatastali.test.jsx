@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import VariazioniCatastali from './VariazioniCatastali';
-import { unitaImmobiliariAPI, categorieCatastaliAPI } from '../../services/immobiliAPI';
+import { beniAPI, categorieCatastaliAPI } from '../../services/immobiliAPI';
 
 vi.mock('../../services/immobiliAPI', () => ({
-  unitaImmobiliariAPI: { getVariazioniCatastali: vi.fn() },
+  beniAPI: { getVariazioni: vi.fn() },
   categorieCatastaliAPI: { getAll: vi.fn() },
 }));
 
@@ -15,7 +15,7 @@ describe('VariazioniCatastali', () => {
   });
 
   it('lists changes with readable labels and values', async () => {
-    unitaImmobiliariAPI.getVariazioniCatastali.mockResolvedValue({ data: [
+    beniAPI.getVariazioni.mockResolvedValue({ data: [
       { id: 2, campo: 'rendita_catastale', valore_precedente: '500.0', valore_nuovo: '600.0', origine: 'VISURA',
         documento_id: 9, data_riferimento: '2024-04-04', created_at: '2026-11-09T10:00:00Z' },
       { id: 1, campo: 'categoria_catastale_id', valore_precedente: '3', valore_nuovo: '4', origine: 'MANUALE',
@@ -29,11 +29,11 @@ describe('VariazioniCatastali', () => {
     expect(screen.getByText('A/2')).toBeInTheDocument();
     expect(screen.getByText('Da visura')).toBeInTheDocument();
     expect(screen.getByText('Modifica manuale')).toBeInTheDocument();
-    expect(unitaImmobiliariAPI.getVariazioniCatastali).toHaveBeenCalledWith(5);
+    expect(beniAPI.getVariazioni).toHaveBeenCalledWith(5);
   });
 
   it('shows the empty state', async () => {
-    unitaImmobiliariAPI.getVariazioniCatastali.mockResolvedValue({ data: [] });
+    beniAPI.getVariazioni.mockResolvedValue({ data: [] });
     render(<VariazioniCatastali unitaId={5} />);
     expect(await screen.findByText('Nessuna variazione registrata')).toBeInTheDocument();
   });

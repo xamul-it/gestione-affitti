@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { unitaImmobiliariAPI, categorieCatastaliAPI } from '../../services/immobiliAPI';
+import { beniAPI, categorieCatastaliAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
 import { LoadingSpinner } from '../../../../core/components/common/LoadingSpinner';
 import { Badge } from '../../../../components/UI';
@@ -28,7 +28,7 @@ export default function VariazioniCatastali({ unitaId }) {
   useEffect(() => {
     let attivo = true;
     setLoading(true);
-    unitaImmobiliariAPI.getVariazioniCatastali(unitaId)
+    beniAPI.getVariazioni(unitaId)
       .then((r) => { if (attivo) { setRighe(r.data || []); setError(null); } })
       .catch((err) => { if (attivo) setError(formatApiError(err)); })
       .finally(() => { if (attivo) setLoading(false); });

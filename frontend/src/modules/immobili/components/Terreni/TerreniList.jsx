@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { DataTable } from '../../../../core/components';
 import { terreniAPI } from '../../services/immobiliAPI';
+import { haAreCa } from '../../utils/superficie';
 import TerrenoForm from './TerrenoForm';
 import './Terreni.css';
 
@@ -21,8 +23,14 @@ const terreniTableConfig = {
   emptyMessage: 'Non ci sono terreni registrati. Clicca su "Nuovo Terreno" per iniziare.',
   addButtonLabel: 'Nuovo Terreno',
   columns: [
-    { field: 'codice', label: 'Codice', sortable: true, filterable: true },
-    { field: 'nome', label: 'Nome', sortable: true, filterable: true },
+    {
+      field: 'codice',
+      label: 'Codice',
+      sortable: true,
+      filterable: true,
+      render: (value, row) => <Link to={`/beni/${row.id}`} className="table-link">{value}</Link>,
+    },
+    { field: 'nome', label: 'Nome', sortable: true, filterable: true, render: (value) => value || '-' },
     {
       field: 'tipologia',
       label: 'Tipologia',
@@ -40,13 +48,9 @@ const terreniTableConfig = {
     { field: 'comune', label: 'Comune', sortable: true, filterable: true },
     { field: 'provincia', label: 'Provincia', sortable: true, filterable: true },
     {
-      field: 'superficie',
+      field: 'superficie_mq',
       label: 'Superficie',
-      render: (value, row) => {
-        if (!value) return '-';
-        const unita = row.unita_misura_superficie || 'mq';
-        return `${value.toLocaleString('it-IT')} ${unita}`;
-      },
+      render: (value) => haAreCa(value),
     },
     {
       field: 'foglio',
@@ -63,7 +67,7 @@ const terreniTableConfig = {
       ),
     },
   ],
-  defaultSort: { field: 'nome', order: 'asc' },
+  defaultSort: { field: 'codice', order: 'asc' },
   rowActions: [
     {
       id: 'edit',
@@ -77,18 +81,19 @@ const terreniTableConfig = {
       variant: (row) => (row.attivo ? 'danger' : 'success'),
       onClick: async (row, table) => {
         try {
-          if (row.attivo) {
-            const confirm = window.confirm('Sei sicuro di voler disattivare questo terreno?');
-            if (!confirm) return;
-            await terreniAPI.delete(row.id);
-          } else {
-            await terreniAPI.restore(row.id);
-          }
+          await terreniAPI.update(row.id, { attivo: !row.attivo });
           table.refresh();
         } catch (err) {
           console.error('Errore aggiornamento terreno:', err);
         }
       },
+    },
+    {
+      // DataTable asks for confirmation (ConfirmDialog) and calls DELETE /terreni/{id}.
+      id: 'delete',
+      label: 'Elimina',
+      action: 'delete',
+      variant: 'danger',
     },
   ],
 };

@@ -59,8 +59,14 @@ export const unitaImmobiliariAPI = {
   create: (data) => api.post('/unita-immobiliari/', data),
   update: (id, data) => api.put(`/unita-immobiliari/${id}`, data),
   delete: (id) => api.delete(`/unita-immobiliari/${id}`),
+};
+
+// Beni API: units and land parcels together (listing, detail, cadastral changes)
+export const beniAPI = {
+  getAll: (params = {}) => api.get('/beni/', { params }),
+  getById: (id) => api.get(`/beni/${id}`),
   // Catastal changes log (from visure and manual edits), newest first.
-  getVariazioniCatastali: (id) => api.get(`/unita-immobiliari/${id}/variazioni-catastali`),
+  getVariazioni: (id) => api.get(`/beni/${id}/variazioni-catastali`),
 };
 
 // Proprietari API
@@ -201,6 +207,7 @@ export const speseRicorrentiAPI = {
 };
 
 export default {
+  beniAPI,
   unitaImmobiliariAPI,
   visuraImportAPI,
   proprietariAPI,

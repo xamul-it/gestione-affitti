@@ -129,3 +129,77 @@ button.success {
 button.success:hover {
   background-color: #218838;
 }
+
+/* Wider modal: the portions table has seven columns */
+.modal-content.modal-content--wide {
+  max-width: 1100px;
+}
+
+.form-group__label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+/* Portions editor */
+.porzioni-editor__scroll {
+  overflow-x: auto;
+}
+
+.porzioni-editor__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-small, 13px);
+}
+
+.porzioni-editor__table th {
+  text-align: left;
+  font-weight: 600;
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+
+.porzioni-editor__table td {
+  padding: 2px 4px;
+}
+
+.porzioni-editor__table input {
+  width: 100%;
+  min-width: 70px;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.porzioni-editor__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.porzioni-editor__totale {
+  font-weight: 600;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.terreni-container .table-link {
+  color: var(--color-brand, #DC110B);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.terreni-container .table-link:hover {
+  text-decoration: underline;
+}

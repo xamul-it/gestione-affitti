@@ -1,381 +1,184 @@
 import { Button } from '../../../../components/UI';
 import { useState, useEffect } from 'react';
-import { terreniAPI } from '../../services/immobiliAPI';
+import { terreniAPI, tipologieTerrenoAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
+import PorzioniEditor, { PORZIONE_VUOTA } from './PorzioniEditor';
 
-const TIPOLOGIE_TERRENO = [
-  { value: 'AGR', label: 'Agricolo', description: 'Terreno agricolo o coltivabile' },
-  { value: 'EDI', label: 'Edificabile', description: 'Terreno edificabile per costruzioni' },
-  { value: 'BOS', label: 'Bosco/Forestale', description: 'Terreno boschivo, forestale' },
-  { value: 'IND', label: 'Industriale', description: 'Terreno destinato ad uso industriale/artigianale' },
-  { value: 'ALT', label: 'Altro', description: 'Qualsiasi altra tipologia di terreno' },
+// Fields sent to the API; everything else in the loaded parcel (id,
+// tipo_bene, totals, timestamps, tipologia object) is computed by the server.
+const CAMPI = [
+  'codice', 'nome', 'descrizione', 'tipologia_id', 'indirizzo', 'comune', 'cap', 'provincia', 'nazione',
+  'sezione_catastale', 'foglio', 'particella', 'subalterno', 'note', 'attivo',
+  'edificabile', 'esente_imu_montano', 'servitu',
 ];
+const CAMPI_PORZIONE = Object.keys(PORZIONE_VUOTA);
+
+const VUOTO = {
+  codice: '', nome: '', descrizione: '', tipologia_id: '', indirizzo: '', comune: '', cap: '',
+  provincia: '', nazione: 'Italia', sezione_catastale: '', foglio: '', particella: '', subalterno: '',
+  note: '', attivo: true, edificabile: false, esente_imu_montano: false, servitu: '',
+};
+
+const nulloSeVuoto = (v) => (v === '' || v === undefined ? null : v);
+
+function datiDaInviare(form, porzioni) {
+  const dati = {};
+  for (const campo of CAMPI) {
+    const v = form[campo];
+    dati[campo] = typeof v === 'boolean' ? v : nulloSeVuoto(v);
+  }
+  if (dati.tipologia_id !== null) dati.tipologia_id = Number(dati.tipologia_id);
+  dati.nazione = dati.nazione || 'Italia';
+  dati.porzioni = porzioni.map((p) => {
+    const porzione = {};
+    for (const campo of CAMPI_PORZIONE) porzione[campo] = nulloSeVuoto(p[campo]);
+    return porzione;
+  });
+  return dati;
+}
+
+function Campo({ id, label, required, children }) {
+  return (
+    <div className="form-group">
+      <label htmlFor={id}>{label}{required ? ' *' : ''}</label>
+      {children}
+    </div>
+  );
+}
 
 function TerrenoForm({ terreno, onClose }) {
-  const [formData, setFormData] = useState({
-    codice: '',
-    nome: '',
-    descrizione: '',
-    tipologia: 'AGR',
-    indirizzo: '',
-    comune: '',
-    cap: '',
-    provincia: '',
-    nazione: 'Italia',
-    superficie: '',
-    unita_misura_superficie: 'mq',
-    sezione_catastale: '',
-    foglio: '',
-    particella: '',
-    subalterno: '',
-    qualita_coltura: '',
-    classe_catastale: '',
-    reddito_dominicale: '',
-    reddito_agrario: '',
-    note: '',
-    attivo: true,
-  });
+  const [form, setForm] = useState(VUOTO);
+  const [porzioni, setPorzioni] = useState([{ ...PORZIONE_VUOTA }]);
+  const [tipologie, setTipologie] = useState([]);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
+  const [salvataggio, setSalvataggio] = useState(false);
 
   useEffect(() => {
-    if (terreno) {
-      setFormData({
-        ...terreno,
-        superficie: terreno.superficie || '',
-        reddito_dominicale: terreno.reddito_dominicale || '',
-        reddito_agrario: terreno.reddito_agrario || '',
-      });
+    tipologieTerrenoAPI.getAll(true)
+      .then((res) => setTipologie(res.data || []))
+      .catch(() => setTipologie([]));
+  }, []);
+
+  useEffect(() => {
+    if (!terreno) return;
+    const caricato = { ...VUOTO };
+    for (const campo of CAMPI) {
+      if (terreno[campo] !== null && terreno[campo] !== undefined) caricato[campo] = terreno[campo];
+    }
+    setForm(caricato);
+    if (terreno.porzioni?.length) {
+      setPorzioni(terreno.porzioni.map((p) => {
+        const riga = {};
+        for (const campo of CAMPI_PORZIONE) riga[campo] = p[campo] ?? '';
+        return riga;
+      }));
     }
   }, [terreno]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+    setSalvataggio(true);
     try {
-      // Clean data: convert empty strings to null for optional/numeric fields
-      const cleanedData = {
-        ...formData,
-        superficie: formData.superficie === '' ? null : parseFloat(formData.superficie),
-        reddito_dominicale: formData.reddito_dominicale === '' ? null : formData.reddito_dominicale,
-        reddito_agrario: formData.reddito_agrario === '' ? null : formData.reddito_agrario,
-        descrizione: formData.descrizione || null,
-        indirizzo: formData.indirizzo || null,
-        cap: formData.cap || null,
-        sezione_catastale: formData.sezione_catastale || null,
-        foglio: formData.foglio || null,
-        particella: formData.particella || null,
-        subalterno: formData.subalterno || null,
-        qualita_coltura: formData.qualita_coltura || null,
-        classe_catastale: formData.classe_catastale || null,
-        note: formData.note || null,
-      };
-
+      const dati = datiDaInviare(form, porzioni);
       if (terreno) {
-        await terreniAPI.update(terreno.id, cleanedData);
+        await terreniAPI.update(terreno.id, dati);
       } else {
-        await terreniAPI.create(cleanedData);
+        await terreniAPI.create(dati);
       }
-      setSuccess(true);
-      setTimeout(() => {
-        onClose();
-      }, 1500);
+      onClose();
     } catch (err) {
       setError(formatApiError(err));
-      console.error(err);
+    } finally {
+      setSalvataggio(false);
     }
   };
 
+  const testo = (name, label, props = {}) => (
+    <Campo id={`terreno-${name}`} label={label} required={props.required}>
+      <input id={`terreno-${name}`} type="text" name={name} value={form[name] ?? ''} onChange={handleChange} {...props} />
+    </Campo>
+  );
+
+  const spunta = (name, label) => (
+    <label className="checkbox-label">
+      <input type="checkbox" name={name} checked={!!form[name]} onChange={handleChange} />
+      {label}
+    </label>
+  );
+
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content modal-content--wide">
         <div className="modal-header">
-          <h2>{terreno ? 'Modifica Terreno' : 'Nuovo Terreno'}</h2>
+          <h2>{terreno ? 'Modifica terreno' : 'Nuovo terreno'}</h2>
           <Button type="button" variant="ghost" size="sm" aria-label="Chiudi" onClick={onClose}>×</Button>
         </div>
 
-        {error && <div className="error">{error}</div>}
-        {success && <div className="success">Operazione completata con successo!</div>}
+        {error && <div className="error" role="alert">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          {/* Sezione Identificazione */}
           <h3 className="section-title">Identificazione</h3>
           <div className="form-row">
-            <div className="form-group">
-              <label>Codice *</label>
-              <input
-                type="text"
-                name="codice"
-                value={formData.codice}
-                onChange={handleChange}
-                placeholder="es. TER-001"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Nome *</label>
-              <input
-                type="text"
-                name="nome"
-                value={formData.nome}
-                onChange={handleChange}
-                placeholder="Nome descrittivo del terreno"
-                required
-              />
-            </div>
+            {testo('codice', 'Codice', { required: true, maxLength: 50, placeholder: 'es. TER-001' })}
+            {testo('nome', 'Nome', { maxLength: 255, placeholder: 'Nome descrittivo (facoltativo)' })}
           </div>
-
           <div className="form-row">
-            <div className="form-group">
-              <label>Tipologia *</label>
-              <select
-                name="tipologia"
-                value={formData.tipologia}
-                onChange={handleChange}
-                required
-              >
-                {TIPOLOGIE_TERRENO.map((tipo) => (
-                  <option key={tipo.value} value={tipo.value}>
-                    {tipo.label} - {tipo.description}
-                  </option>
-                ))}
+            <Campo id="terreno-tipologia_id" label="Tipologia">
+              <select id="terreno-tipologia_id" name="tipologia_id" value={form.tipologia_id ?? ''} onChange={handleChange}>
+                <option value="">—</option>
+                {tipologie.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
               </select>
-            </div>
-
+            </Campo>
             <div className="form-group">
-              <label>Stato</label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="attivo"
-                  checked={formData.attivo}
-                  onChange={handleChange}
-                />
-                Attivo
-              </label>
+              <span className="form-group__label">Stato</span>
+              {spunta('attivo', 'Attivo')}
             </div>
           </div>
+          <Campo id="terreno-descrizione" label="Descrizione">
+            <textarea id="terreno-descrizione" name="descrizione" value={form.descrizione ?? ''} onChange={handleChange} rows="2" />
+          </Campo>
 
-          <div className="form-group">
-            <label>Descrizione</label>
-            <textarea
-              name="descrizione"
-              value={formData.descrizione}
-              onChange={handleChange}
-              rows="2"
-              placeholder="Descrizione estesa del terreno"
-            />
-          </div>
-
-          {/* Sezione Ubicazione */}
           <h3 className="section-title">Ubicazione</h3>
-          <div className="form-group">
-            <label>Indirizzo / Località</label>
-            <input
-              type="text"
-              name="indirizzo"
-              value={formData.indirizzo}
-              onChange={handleChange}
-              placeholder="es. Località Le Vigne, snc"
-            />
-          </div>
-
+          {testo('indirizzo', 'Indirizzo / località', { maxLength: 255, placeholder: 'es. Località Le Vigne' })}
           <div className="form-row">
-            <div className="form-group">
-              <label>Comune *</label>
-              <input
-                type="text"
-                name="comune"
-                value={formData.comune}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>CAP</label>
-              <input
-                type="text"
-                name="cap"
-                value={formData.cap}
-                onChange={handleChange}
-                maxLength="5"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Provincia *</label>
-              <input
-                type="text"
-                name="provincia"
-                value={formData.provincia}
-                onChange={handleChange}
-                maxLength="2"
-                placeholder="es. TO"
-                required
-              />
-            </div>
+            {testo('comune', 'Comune', { required: true, maxLength: 100 })}
+            {testo('cap', 'CAP', { maxLength: 10 })}
+            {testo('provincia', 'Provincia', { required: true, maxLength: 2, placeholder: 'es. FC' })}
+            {testo('nazione', 'Nazione', { maxLength: 100 })}
           </div>
 
-          <div className="form-group">
-            <label>Nazione</label>
-            <input
-              type="text"
-              name="nazione"
-              value={formData.nazione}
-              onChange={handleChange}
-            />
-          </div>
-
-          {/* Sezione Caratteristiche Fisiche */}
-          <h3 className="section-title">Caratteristiche Fisiche</h3>
+          <h3 className="section-title">Dati catastali</h3>
           <div className="form-row">
-            <div className="form-group">
-              <label>Superficie *</label>
-              <input
-                type="number"
-                name="superficie"
-                value={formData.superficie}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Unità di misura</label>
-              <select
-                name="unita_misura_superficie"
-                value={formData.unita_misura_superficie}
-                onChange={handleChange}
-              >
-                <option value="mq">mq (metri quadri)</option>
-                <option value="ha">ha (ettari)</option>
-              </select>
-            </div>
+            {testo('sezione_catastale', 'Sezione', { maxLength: 20 })}
+            {testo('foglio', 'Foglio', { maxLength: 20 })}
+            {testo('particella', 'Particella', { maxLength: 20 })}
+            {testo('subalterno', 'Subalterno', { maxLength: 20 })}
           </div>
 
-          {/* Sezione Dati Catastali */}
-          <h3 className="section-title">Dati Catastali</h3>
+          <h3 className="section-title">Porzioni</h3>
+          <PorzioniEditor value={porzioni} onChange={setPorzioni} />
+
+          <h3 className="section-title">Uso e vincoli</h3>
           <div className="form-row">
-            <div className="form-group">
-              <label>Sezione Catastale</label>
-              <input
-                type="text"
-                name="sezione_catastale"
-                value={formData.sezione_catastale}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Foglio</label>
-              <input
-                type="text"
-                name="foglio"
-                value={formData.foglio}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Particella</label>
-              <input
-                type="text"
-                name="particella"
-                value={formData.particella}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Subalterno</label>
-              <input
-                type="text"
-                name="subalterno"
-                value={formData.subalterno}
-                onChange={handleChange}
-              />
-            </div>
+            {spunta('edificabile', 'Edificabile')}
+            {spunta('esente_imu_montano', 'Esente IMU (terreno montano)')}
           </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Qualità Coltura</label>
-              <input
-                type="text"
-                name="qualita_coltura"
-                value={formData.qualita_coltura}
-                onChange={handleChange}
-                placeholder="es. Seminativo, Vigneto, Uliveto"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Classe Catastale</label>
-              <input
-                type="text"
-                name="classe_catastale"
-                value={formData.classe_catastale}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          {/* Sezione Valori Fiscali */}
-          <h3 className="section-title">Valori Fiscali</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Reddito Dominicale (€)</label>
-              <input
-                type="number"
-                name="reddito_dominicale"
-                value={formData.reddito_dominicale}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Reddito Agrario (€)</label>
-              <input
-                type="number"
-                name="reddito_agrario"
-                value={formData.reddito_agrario}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-              />
-            </div>
-          </div>
-
-          {/* Note */}
-          <div className="form-group">
-            <label>Note</label>
-            <textarea
-              name="note"
-              value={formData.note}
-              onChange={handleChange}
-              rows="3"
-              placeholder="Annotazioni aggiuntive sul terreno"
-            />
-          </div>
+          <Campo id="terreno-servitu" label="Servitù">
+            <textarea id="terreno-servitu" name="servitu" value={form.servitu ?? ''} onChange={handleChange} rows="2" />
+          </Campo>
+          <Campo id="terreno-note" label="Note">
+            <textarea id="terreno-note" name="note" value={form.note ?? ''} onChange={handleChange} rows="3" />
+          </Campo>
 
           <div className="btn-group">
-            <Button type="button" variant="secondary" onClick={onClose}>
-              Annulla
-            </Button>
-            <Button type="submit">Salva</Button>
+            <Button type="button" variant="secondary" onClick={onClose}>Annulla</Button>
+            <Button type="submit" disabled={salvataggio}>Salva</Button>
           </div>
         </form>
       </div>
