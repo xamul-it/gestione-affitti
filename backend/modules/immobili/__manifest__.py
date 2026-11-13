@@ -116,6 +116,7 @@ manifest = {
         # Tenant data
         "immo_tipologie_terreno_overrides",
         "immo_terreni",
+        "immo_terreni_porzioni",
         "immo_beni",
         "immo_unita_immobiliari",
         "immo_condomini",
@@ -145,6 +146,7 @@ manifest = {
         "immo_millesimi_unita",
         "immo_tipologie_terreno_overrides",
         "immo_terreni",
+        "immo_terreni_porzioni",
         "immo_tipo_immobile_categoria_map",
         "immo_conduttori",
         "immo_assegnazioni_conduttore",

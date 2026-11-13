@@ -61,6 +61,8 @@ EXCLUDED_TABLES = {
     # Created with unita_immobiliare_id by 2026110901 and moved to bene_id
     # by 2026111201: sweeping today's model (bene_id) would break 2026110901.
     "immo_variazioni_catastali",
+    # Created by 2026111301_terreni_beni, after immo_terreni has its new layout.
+    "immo_terreni_porzioni",
 }
 
 

@@ -55,6 +55,7 @@ class TenantModuleService:
             "immo_millesimi_unita",
             "immo_tipologie_terreno_overrides",
             "immo_terreni",
+            "immo_terreni_porzioni",
             "immo_tipo_immobile_categoria_map",
         ],
         "affitti_lungo": [

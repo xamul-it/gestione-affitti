@@ -104,6 +104,7 @@ CATENA_TENANT = (
     "2026110901_variazioni_catastali",
     "2026110902_ape_migrato",
     "2026111201_beni",
+    "2026111301_terreni_beni",
 )
 
 
@@ -161,6 +162,9 @@ def test_installazione_su_tenant_nuovo(db_session):
                     "immo_variazioni_catastali", "immo_spese_ricorrenti"):
         assert "bene_id" in colonne(tabella), tabella
         assert "unita_immobiliare_id" not in colonne(tabella), tabella
+    terreni = colonne("immo_terreni")
+    assert "superficie_mq" in terreni and "comune" not in terreni
+    assert "qualita" in colonne("immo_terreni_porzioni")
 
 
 def test_azzera_toglie_documenti_di_tutti_gli_oggetti_svuotati(db_session, migrazione):
