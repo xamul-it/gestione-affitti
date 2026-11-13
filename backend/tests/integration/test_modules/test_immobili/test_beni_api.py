@@ -12,7 +12,11 @@ from immobili.routes.beni import get_bene, get_beni, get_variazioni_catastali
 
 pytestmark = pytest.mark.integration
 
-UTENTE = SimpleNamespace(id=1)
+UTENTE = SimpleNamespace(id=1, is_superuser=True, get_permissions=lambda: set())
+
+
+def _utente(*permessi):
+    return SimpleNamespace(id=2, is_superuser=False, get_permissions=lambda: set(permessi))
 
 
 @pytest.fixture
@@ -59,3 +63,30 @@ def test_bene_inesistente_404(db_session):
 def test_variazioni_del_terreno(db_session, beni):
     _, t = beni
     assert get_variazioni_catastali(t.id, db=db_session, current_user=UTENTE) == []
+
+
+def test_senza_terreno_view_i_terreni_non_si_vedono(db_session, beni):
+    u, t = beni
+    utente = _utente("immobile.view")
+    assert _codici(get_beni(tipo_bene=None, q="BAPI", attivo=None, db=db_session, current_user=utente)) == {"BAPI-U"}
+    assert get_beni(tipo_bene="TERRENO", q="BAPI", attivo=None, db=db_session, current_user=utente) == []
+    for chiamata in (get_bene, get_variazioni_catastali):
+        with pytest.raises(HTTPException) as e:
+            chiamata(t.id, db=db_session, current_user=utente)
+        assert e.value.status_code == 404
+    assert get_bene(u.id, db=db_session, current_user=utente).codice == "BAPI-U"
+
+
+def test_con_solo_terreno_view_si_vedono_solo_i_terreni(db_session, beni):
+    u, _ = beni
+    utente = _utente("terreno.view")
+    assert _codici(get_beni(tipo_bene=None, q="BAPI", attivo=None, db=db_session, current_user=utente)) == {"BAPI-T"}
+    with pytest.raises(HTTPException) as e:
+        get_bene(u.id, db=db_session, current_user=utente)
+    assert e.value.status_code == 404
+
+
+def test_senza_permessi_sui_beni_403(db_session, beni):
+    with pytest.raises(HTTPException) as e:
+        get_beni(tipo_bene=None, q=None, attivo=None, db=db_session, current_user=_utente("soggetto.view"))
+    assert e.value.status_code == 403

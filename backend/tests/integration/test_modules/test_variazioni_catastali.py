@@ -13,7 +13,7 @@ from immobili.schemas import UnitaImmobiliareUpdate
 
 pytestmark = pytest.mark.integration
 
-USER = SimpleNamespace(id=7)
+USER = SimpleNamespace(id=7, is_superuser=True, get_permissions=lambda: set())
 
 
 @pytest.fixture

@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.core.auth.dependencies import require_permission
+from app.core.auth.dependencies import get_current_active_user
 from app.core.auth.models import User
 from app.core.database import get_db
 
@@ -22,6 +22,31 @@ router = APIRouter(prefix="/beni", tags=["Beni"])
 
 _FOGLIO_PARTICELLA = re.compile(r"^\s*0*(\w+)\s*/\s*0*(\w+)\s*$")
 
+# Units are seen with immobile.view, land parcels with terreno.view.
+_PERMESSO_PER_TIPO = {"UNITA": "immobile.view", "TERRENO": "terreno.view"}
+
+
+def _tipi_visibili(utente) -> set:
+    if getattr(utente, "is_superuser", False):
+        return set(_PERMESSO_PER_TIPO)
+    permessi = utente.get_permissions()
+    return {tipo for tipo, permesso in _PERMESSO_PER_TIPO.items() if permesso in permessi}
+
+
+def _tipi_o_403(utente) -> set:
+    tipi = _tipi_visibili(utente)
+    if not tipi:
+        raise HTTPException(status_code=403, detail="Permessi insufficienti")
+    return tipi
+
+
+def _bene_visibile(db: Session, bene_id: int, utente) -> Bene:
+    tipi = _tipi_o_403(utente)
+    bene = db.get(Bene, bene_id)
+    if not bene or bene.tipo_bene not in tipi:
+        raise HTTPException(status_code=404, detail="Bene non trovato")
+    return bene
+
 
 @router.get("/", response_model=List[BeneResponse])
 def get_beni(
@@ -29,11 +54,14 @@ def get_beni(
     q: Optional[str] = Query(None, description="Codice, indirizzo, comune o foglio/particella (es. 40/154)"),
     attivo: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("immobile.view")),
+    current_user: User = Depends(get_current_active_user),
 ):
-    query = db.query(Bene)
+    tipi = _tipi_o_403(current_user)
     if tipo_bene:
-        query = query.filter(Bene.tipo_bene == tipo_bene)
+        tipi = tipi & {tipo_bene}
+    if not tipi:
+        return []
+    query = db.query(Bene).filter(Bene.tipo_bene.in_(tipi))
     if attivo is not None:
         query = query.filter(Bene.attivo.is_(attivo))
     if q and q.strip():
@@ -57,21 +85,19 @@ def get_beni(
 def get_bene(
     bene_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("immobile.view")),
+    current_user: User = Depends(get_current_active_user),
 ):
-    bene = db.get(Bene, bene_id)
-    if not bene:
-        raise HTTPException(status_code=404, detail="Bene non trovato")
-    return bene
+    return _bene_visibile(db, bene_id, current_user)
 
 
 @router.get("/{bene_id}/variazioni-catastali", response_model=List[VariazioneCatastaleResponse])
 def get_variazioni_catastali(
     bene_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("immobile.view")),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Storico delle variazioni dei dati catastali del bene, dalla più recente."""
+    _bene_visibile(db, bene_id, current_user)
     return (
         db.query(VariazioneCatastale)
         .filter(VariazioneCatastale.bene_id == bene_id)
