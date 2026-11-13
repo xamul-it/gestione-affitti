@@ -110,7 +110,7 @@ export default function DocumentiImmobiliPage() {
                 const badge = statoScadenza(d, tipiByCodice[d.tipo_codice]);
                 return (
                   <tr key={d.id} className={d.stato === 'SOSTITUITO' ? 'is-sostituito' : ''}>
-                    <td data-label="Immobile"><Link to={`/unita-immobiliari/${d.entity_id}`}>{d.entity_label || `Immobile #${d.entity_id}`}</Link></td>
+                    <td data-label="Immobile"><Link to={`/beni/${d.entity_id}`}>{d.entity_label || `Immobile #${d.entity_id}`}</Link></td>
                     <td data-label="Tipologia">
                       {d.tipo_nome || 'Altro documento'}
                       {d.sottotipo ? ` · ${d.sottotipo.charAt(0)}${d.sottotipo.slice(1).toLowerCase()}` : ''}

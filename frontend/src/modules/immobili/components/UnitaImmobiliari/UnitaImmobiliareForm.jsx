@@ -381,7 +381,7 @@ function UnitaImmobiliareForm({ unitaImmobiliare, onClose, showSchedaLink = true
         {showSchedaLink && unitaImmobiliare?.id && (
           <p className="unita-form-documenti-link">
             Documenti, storico e variazioni catastali sono nella{' '}
-            <Link to={`/unita-immobiliari/${unitaImmobiliare.id}`} onClick={onClose}>scheda dell&apos;immobile</Link>.
+            <Link to={`/beni/${unitaImmobiliare.id}`} onClick={onClose}>scheda dell&apos;immobile</Link>.
           </p>
         )}
       </div>

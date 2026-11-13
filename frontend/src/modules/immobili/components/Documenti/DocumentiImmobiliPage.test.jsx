@@ -38,7 +38,7 @@ describe('DocumentiImmobiliPage', () => {
       expect.objectContaining({ entity_type: 'IMMOBILE', modulo: 'immobili', tipo_codice: 'APE', includi_sostituiti: false }),
     ));
     const link = await screen.findByRole('link', { name: /MI-0002/ });
-    expect(link).toHaveAttribute('href', '/unita-immobiliari/2');
+    expect(link).toHaveAttribute('href', '/beni/2');
   });
 
   it('shows superseded documents on request', async () => {

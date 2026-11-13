@@ -53,7 +53,7 @@ export { default as SpeseRicorrentiSection } from './components/SpeseRicorrenti/
 export { default as DocumentiImmobiliPage } from './components/Documenti/DocumentiImmobiliPage';
 
 // Scheda immobile
-export { default as ImmobileScheda } from './components/ImmobileScheda/ImmobileScheda';
+export { default as BeneScheda, RedirectABene } from './components/BeneScheda/BeneScheda';
 
 // DirittiImmobile
 export { default as DirittiImmobileSection } from './components/DirittiImmobile/DirittiImmobileSection';

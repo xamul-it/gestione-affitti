@@ -24,7 +24,7 @@ describe('RelazioniSection', () => {
     ] });
     render(<MemoryRouter><RelazioniSection soggettoId={3} /></MemoryRouter>);
     expect(await screen.findByRole('heading', { name: 'Proprietario' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Via Roma 1/ })).toHaveAttribute('href', '/unita-immobiliari/12');
+    expect(screen.getByRole('link', { name: /Via Roma 1/ })).toHaveAttribute('href', '/beni/12');
     expect(screen.getByRole('link', { name: 'Condominio Aurora' })).toHaveAttribute('href', '/condomini');
     expect(screen.getByText('15/01/2027')).toBeInTheDocument();
     expect(relazioniAPI.list).toHaveBeenCalledWith({ soggetto_id: 3 });

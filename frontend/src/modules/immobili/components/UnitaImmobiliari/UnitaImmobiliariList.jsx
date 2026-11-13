@@ -39,7 +39,7 @@ const unitaTableConfig = {
     {
       id: 'view',
       label: 'Dettagli',
-      to: '/unita-immobiliari/:id',
+      to: '/beni/:id',
       variant: 'primary',
     },
     {

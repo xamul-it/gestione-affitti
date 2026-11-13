@@ -27,7 +27,8 @@ import {
   MillesimiImmobileList,
   CategorieCatastaliList,
   TipologieTerrenoList,
-  ImmobileScheda
+  BeneScheda,
+  RedirectABene
 } from './modules/immobili';
 
 import { TenantSelector } from './components/Tenant/TenantSelector';
@@ -238,7 +239,9 @@ function App() {
                 <Route path="/immobili" element={<ProtectedRoute><ImmobiliDashboard /></ProtectedRoute>} />
                 <Route path="/immobili/home" element={<ProtectedRoute><ImmobiliHome /></ProtectedRoute>} />
                 <Route path="/unita-immobiliari" element={<ProtectedRoute><UnitaImmobiliariList /></ProtectedRoute>} />
-                <Route path="/unita-immobiliari/:id" element={<ProtectedRoute><ImmobileScheda /></ProtectedRoute>} />
+                <Route path="/beni/:id" element={<ProtectedRoute><BeneScheda /></ProtectedRoute>} />
+                <Route path="/unita-immobiliari/:id" element={<RedirectABene />} />
+                <Route path="/terreni/:id" element={<RedirectABene />} />
                 <Route path="/terreni" element={<ProtectedRoute><TerreniList /></ProtectedRoute>} />
                 <Route path="/affittuari" element={<ProtectedRoute><AffittuariList /></ProtectedRoute>} />
                 <Route path="/affittuari/:id" element={<ProtectedRoute><AffittuarioDetail /></ProtectedRoute>} />

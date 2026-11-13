@@ -10,7 +10,7 @@ const data = (iso) => (iso ? formatDate(iso) : '—');
 
 /** Route of the page showing the object of a relation, per entity type. */
 export const LINK_OGGETTO = {
-  IMMOBILE: (id) => `/unita-immobiliari/${id}`,
+  IMMOBILE: (id) => `/beni/${id}`,
   CONDOMINIO: () => '/condomini',
   SOGGETTO_ANAGRAFICO: (id) => `/anagrafiche/${id}`,
 };

@@ -19,7 +19,7 @@ const CAMPI = {
 };
 
 /** Catastal changes of a unit (from imported visure and manual edits), newest first. */
-export default function VariazioniCatastali({ unitaId }) {
+export default function VariazioniCatastali({ beneId }) {
   const [righe, setRighe] = useState([]);
   const [categorie, setCategorie] = useState({});
   const [loading, setLoading] = useState(true);
@@ -28,7 +28,7 @@ export default function VariazioniCatastali({ unitaId }) {
   useEffect(() => {
     let attivo = true;
     setLoading(true);
-    beniAPI.getVariazioni(unitaId)
+    beniAPI.getVariazioni(beneId)
       .then((r) => { if (attivo) { setRighe(r.data || []); setError(null); } })
       .catch((err) => { if (attivo) setError(formatApiError(err)); })
       .finally(() => { if (attivo) setLoading(false); });
@@ -36,7 +36,7 @@ export default function VariazioniCatastali({ unitaId }) {
       .then((r) => { if (attivo) setCategorie(Object.fromEntries((r.data || []).map((c) => [String(c.id), c.codice]))); })
       .catch(() => {});
     return () => { attivo = false; };
-  }, [unitaId]);
+  }, [beneId]);
 
   const valore = (campo, v) => {
     if (v === null || v === undefined || v === '') return '—';

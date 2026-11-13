@@ -21,7 +21,7 @@ describe('VariazioniCatastali', () => {
       { id: 1, campo: 'categoria_catastale_id', valore_precedente: '3', valore_nuovo: '4', origine: 'MANUALE',
         documento_id: null, data_riferimento: '2026-11-01', created_at: '2026-11-01T10:00:00Z' },
     ] });
-    render(<VariazioniCatastali unitaId={5} />);
+    render(<VariazioniCatastali beneId={5} />);
     expect(await screen.findByText('Rendita catastale')).toBeInTheDocument();
     expect(screen.getByText('€ 500,00')).toBeInTheDocument();
     expect(screen.getByText('€ 600,00')).toBeInTheDocument();
@@ -34,7 +34,7 @@ describe('VariazioniCatastali', () => {
 
   it('shows the empty state', async () => {
     beniAPI.getVariazioni.mockResolvedValue({ data: [] });
-    render(<VariazioniCatastali unitaId={5} />);
+    render(<VariazioniCatastali beneId={5} />);
     expect(await screen.findByText('Nessuna variazione registrata')).toBeInTheDocument();
   });
 });

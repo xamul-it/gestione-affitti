@@ -112,7 +112,7 @@ function ImmobiliHome() {
             {recentUnita.map((unita) => (
               <Link
                 key={unita.id}
-                to={`/unita-immobiliari/${unita.id}`}
+                to={`/beni/${unita.id}`}
                 className="recent-item"
               >
                 <div className="recent-icon">🏠</div>

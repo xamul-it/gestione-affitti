@@ -354,7 +354,7 @@ function OverviewSection({ contratto, immobile, affittuario, incassi, documenti,
           <div className="entity-card">
             <div className="entity-icon">🏠</div>
             <div className="entity-info">
-              <Link to={`/unita-immobiliari/${immobile.id}`} className="entity-link">
+              <Link to={`/beni/${immobile.id}`} className="entity-link">
                 <h4>{immobile.indirizzo}</h4>
               </Link>
               <p>{immobile.citta} ({immobile.cap})</p>
@@ -522,7 +522,7 @@ function PartiesSection({ immobile, affittuario }) {
           <div className="party-card">
             <div className="party-header">
               <div className="entity-icon">🏠</div>
-              <Link to={`/unita-immobiliari/${immobile.id}`} className="entity-link">
+              <Link to={`/beni/${immobile.id}`} className="entity-link">
                 <h4>{immobile.indirizzo}</h4>
               </Link>
             </div>
