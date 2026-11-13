@@ -34,6 +34,7 @@ from .tipologia_terreno_override import TipologiaTerrenoOverride
 
 # Land parcels - tenant data
 from .terreno import Terreno
+from .terreno_porzione import TerrenoPorzione
 from .variazioni_catastali import VariazioneCatastale
 
 __all__ = [
@@ -61,6 +62,7 @@ __all__ = [
     "TIPI_NOTI",
     # Land parcels
     "Terreno",
+    "TerrenoPorzione",
     "TipologiaTerreno",
     "TipologiaTerrenoOverride",
 ]

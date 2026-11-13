@@ -1,80 +1,70 @@
 """
-Terreno (Land) model for managing undeveloped land parcels.
+Terreno - land parcel of the Catasto Terreni, specialisation of Bene.
+
+Its id is the id of its Bene (immo_beni), which holds code, address and
+cadastral identification; `sezione_catastale` is the bene's `sezione`.
+Quality, class, surface and incomes live in its portions
+(immo_terreni_porzioni); `superficie_mq` is their sum, kept by the server.
 
 SCHEMA: TENANT
 PREFIX: immo_ (modulo immobili)
 """
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean, Numeric, ForeignKey
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from app.core.database import Base
+from decimal import Decimal
+
+from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship, synonym
+
+from .bene import Bene
 
 
-class Terreno(Base):
-    """
-    Model for land parcels (non-built real estate).
-
-    Manages undeveloped land with cadastral data, ownership associations,
-    and classification according to Italian cadastral system.
-
-    This table is created in tenant schemas (tenant-specific data).
-    The tipologia references public.immo_tipologie_terreno (shared domain data).
-    """
+class Terreno(Bene):
+    """Land parcel: one or more portions with quality, class and incomes."""
     __tablename__ = "immo_terreni"
     __table_args__ = {"extend_existing": True}
 
-    # Primary key
-    id = Column(Integer, primary_key=True, index=True)
-
-    # Identification
-    codice = Column(String(50), unique=True, index=True, nullable=False)  # es. TER-001
-    nome = Column(String(255), nullable=False)  # Nome descrittivo
-    descrizione = Column(Text, nullable=True)  # Descrizione estesa
-
-    # Classification - FK to public.immo_tipologie_terreno
+    id = Column(Integer, ForeignKey("immo_beni.id", ondelete="CASCADE"), primary_key=True)
+    nome = Column(String(255), nullable=True)
     tipologia_id = Column(
         Integer,
         ForeignKey("public.immo_tipologie_terreno.id", ondelete="SET NULL"),
         nullable=True,
-        index=True
+        index=True,
+    )
+    nazione = Column(String(100), nullable=True, default="Italia", server_default="Italia")
+    superficie_mq = Column(Float, nullable=True)
+    edificabile = Column(Boolean, nullable=False, default=False, server_default="false")
+    esente_imu_montano = Column(Boolean, nullable=False, default=False, server_default="false")
+    servitu = Column(Text, nullable=True)
+
+    __mapper_args__ = {"polymorphic_identity": "TERRENO"}
+
+    sezione_catastale = synonym("sezione")
+
+    tipologia = relationship("TipologiaTerreno", foreign_keys=[tipologia_id])
+    porzioni = relationship(
+        "TerrenoPorzione",
+        back_populates="terreno",
+        order_by="TerrenoPorzione.porzione",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
-    # Location
-    indirizzo = Column(String(255), nullable=True)  # Località/indirizzo (può essere generico)
-    comune = Column(String(100), nullable=False)
-    cap = Column(String(10), nullable=True)
-    provincia = Column(String(2), nullable=False)
-    nazione = Column(String(100), nullable=True, default="Italia")
+    def ricalcola_superficie(self) -> None:
+        self.superficie_mq = sum(p.superficie_mq or 0 for p in self.porzioni)
 
-    # Physical characteristics
-    superficie = Column(Float, nullable=False)  # Superficie in mq o ettari
-    unita_misura_superficie = Column(String(10), nullable=True, default="mq")  # "mq" o "ha"
+    def _totale(self, campo):
+        valori = [getattr(p, campo) for p in self.porzioni if getattr(p, campo) is not None]
+        if not valori:
+            return None
+        return sum((Decimal(str(v)) for v in valori), Decimal("0"))
 
-    # Cadastral data (Dati Catastali)
-    sezione_catastale = Column(String(20), nullable=True)  # Sezione amministrativa catastale
-    foglio = Column(String(20), nullable=True)  # Numero di foglio catastale
-    particella = Column(String(20), nullable=True)  # Numero di particella/mappale
-    subalterno = Column(String(20), nullable=True)  # Subalterno (raro per terreni)
-    qualita_coltura = Column(String(100), nullable=True)  # Qualità colturale per terreni agricoli
-    classe_catastale = Column(String(10), nullable=True)  # Classe catastale
+    @property
+    def reddito_dominicale_totale(self):
+        return self._totale("reddito_dominicale")
 
-    # Fiscal values (Valori fiscali)
-    reddito_dominicale = Column(Numeric(12, 2), nullable=True)  # Reddito dominicale
-    reddito_agrario = Column(Numeric(12, 2), nullable=True)  # Reddito agrario
-
-    # Notes
-    note = Column(Text, nullable=True)
-
-    # Status
-    attivo = Column(Boolean, default=True, index=True)
-
-    # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-    # Relationships
-    tipologia = relationship("TipologiaTerreno", foreign_keys=[tipologia_id])
+    @property
+    def reddito_agrario_totale(self):
+        return self._totale("reddito_agrario")
 
     def __repr__(self):
-        tipologia_info = self.tipologia.codice if self.tipologia else "N/A"
-        return f"<Terreno(codice='{self.codice}', nome='{self.nome}', tipologia={tipologia_info})>"
+        return f"<Terreno(codice='{self.codice}', foglio={self.foglio}, particella={self.particella})>"
