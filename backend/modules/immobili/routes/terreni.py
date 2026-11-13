@@ -5,19 +5,58 @@ Provides CRUD operations for managing land parcels.
 """
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.database import get_db
 from app.core.auth.dependencies import require_permission
 from app.core.auth.models import User
-from ..models import Terreno, TipologiaTerreno
+from ..models import Terreno, TerrenoPorzione, TipologiaTerreno
 from ..schemas.terreno import (
     TerrenoResponse,
     TerrenoCreate,
     TerrenoUpdate,
 )
+from ..services.codici_beni import verifica_codice_libero
 
 router = APIRouter(prefix="/terreni", tags=["Terreni"])
+
+
+def _query(db: Session):
+    return db.query(Terreno).options(joinedload(Terreno.tipologia), selectinload(Terreno.porzioni))
+
+
+def _carica(db: Session, terreno_id: int) -> Terreno:
+    terreno = _query(db).filter(Terreno.id == terreno_id).first()
+    if not terreno:
+        raise HTTPException(status_code=404, detail="Terreno non trovato")
+    return terreno
+
+
+def _verifica_tipologia(db: Session, tipologia_id: Optional[int]) -> None:
+    if tipologia_id is None:
+        return
+    tipologia = db.query(TipologiaTerreno).filter(
+        TipologiaTerreno.id == tipologia_id,
+        TipologiaTerreno.attiva == True,  # noqa: E712
+    ).first()
+    if not tipologia:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipologia terreno con ID {tipologia_id} non trovata o non attiva",
+        )
+
+
+_BOOLEANI = ("edificabile", "esente_imu_montano", "attivo")
+
+
+def _senza_booleani_nulli(dati: dict) -> dict:
+    """null on a NOT NULL flag means "leave as it is / default"."""
+    return {k: v for k, v in dati.items() if not (k in _BOOLEANI and v is None)}
+
+
+def _imposta_porzioni(terreno: Terreno, porzioni) -> None:
+    terreno.porzioni = [TerrenoPorzione(**p.model_dump()) for p in porzioni]
+    terreno.ricalcola_superficie()
 
 
 @router.get("/", response_model=List[TerrenoResponse])
@@ -47,7 +86,7 @@ def get_terreni(
     Returns:
         List of terreni with tipologia relationship loaded
     """
-    query = db.query(Terreno).options(joinedload(Terreno.tipologia))
+    query = db.query(Terreno).options(joinedload(Terreno.tipologia), selectinload(Terreno.porzioni))
 
     if attivi_solo:
         query = query.filter(Terreno.attivo == True)
@@ -86,9 +125,7 @@ def get_terreno(terreno_id: int, db: Session = Depends(get_db), current_user: Us
     Raises:
         HTTPException: 404 if terreno not found
     """
-    terreno = db.query(Terreno).options(
-        joinedload(Terreno.tipologia)
-    ).filter(Terreno.id == terreno_id).first()
+    terreno = _query(db).filter(Terreno.id == terreno_id).first()
     if not terreno:
         raise HTTPException(status_code=404, detail="Terreno non trovato")
     return terreno
@@ -109,9 +146,7 @@ def get_terreno_by_codice(codice: str, db: Session = Depends(get_db), current_us
     Raises:
         HTTPException: 404 if terreno not found
     """
-    terreno = db.query(Terreno).options(
-        joinedload(Terreno.tipologia)
-    ).filter(Terreno.codice == codice.upper()).first()
+    terreno = _query(db).filter(Terreno.codice == codice.upper()).first()
     if not terreno:
         raise HTTPException(status_code=404, detail=f"Terreno con codice '{codice}' non trovato")
     return terreno
@@ -122,52 +157,17 @@ def create_terreno(
     terreno: TerrenoCreate,
     db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.create")),
 ):
-    """
-    Create a new terreno.
+    """Create a land parcel (a bene of type TERRENO) with its portions."""
+    verifica_codice_libero(db, terreno.codice)
+    _verifica_tipologia(db, terreno.tipologia_id)
 
-    Args:
-        terreno: Terreno data to create
-        db: Database session
-
-    Returns:
-        Created terreno
-
-    Raises:
-        HTTPException: 400 if codice already exists or tipologia not found
-    """
-    # Check if codice already exists
-    existing = db.query(Terreno).filter(
-        Terreno.codice == terreno.codice.upper()
-    ).first()
-    if existing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Terreno con codice '{terreno.codice}' già esistente"
-        )
-
-    # Validate tipologia_id if provided
-    if terreno.tipologia_id:
-        tipologia = db.query(TipologiaTerreno).filter(
-            TipologiaTerreno.id == terreno.tipologia_id,
-            TipologiaTerreno.attiva == True
-        ).first()
-        if not tipologia:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Tipologia terreno con ID {terreno.tipologia_id} non trovata o non attiva"
-            )
-
-    db_terreno = Terreno(**terreno.model_dump())
+    dati = _senza_booleani_nulli(terreno.model_dump(exclude={"porzioni"}))
+    db_terreno = Terreno(**dati)
+    _imposta_porzioni(db_terreno, terreno.porzioni)
     db.add(db_terreno)
     db.commit()
-    db.refresh(db_terreno)
-
-    # Reload with relationship
-    db_terreno = db.query(Terreno).options(
-        joinedload(Terreno.tipologia)
-    ).filter(Terreno.id == db_terreno.id).first()
-
-    return db_terreno
+    db.expire_all()
+    return _carica(db, db_terreno.id)
 
 
 @router.put("/{terreno_id}", response_model=TerrenoResponse)
@@ -176,110 +176,39 @@ def update_terreno(
     terreno: TerrenoUpdate,
     db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.edit")),
 ):
-    """
-    Update an existing terreno.
+    """Update a land parcel; `porzioni`, when sent, replaces the existing ones.
+    Deactivate / reactivate with `attivo`."""
+    db_terreno = _carica(db, terreno_id)
+    update_data = _senza_booleani_nulli(terreno.model_dump(exclude_unset=True, exclude={"porzioni"}))
+    verifica_codice_libero(db, update_data.get("codice"), escludi_id=terreno_id)
+    _verifica_tipologia(db, update_data.get("tipologia_id"))
 
-    Args:
-        terreno_id: ID of the terreno to update
-        terreno: Updated terreno data
-        db: Database session
-
-    Returns:
-        Updated terreno
-
-    Raises:
-        HTTPException: 404 if terreno not found, 400 if codice conflicts or tipologia not found
-    """
-    db_terreno = db.query(Terreno).filter(Terreno.id == terreno_id).first()
-    if not db_terreno:
-        raise HTTPException(status_code=404, detail="Terreno non trovato")
-
-    # Check if new codice conflicts with existing
-    if terreno.codice:
-        existing = db.query(Terreno).filter(
-            Terreno.codice == terreno.codice.upper(),
-            Terreno.id != terreno_id
-        ).first()
-        if existing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Terreno con codice '{terreno.codice}' già esistente"
-            )
-
-    # Validate tipologia_id if provided
-    update_data = terreno.model_dump(exclude_unset=True)
-    if "tipologia_id" in update_data and update_data["tipologia_id"] is not None:
-        tipologia = db.query(TipologiaTerreno).filter(
-            TipologiaTerreno.id == update_data["tipologia_id"],
-            TipologiaTerreno.attiva == True
-        ).first()
-        if not tipologia:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Tipologia terreno con ID {update_data['tipologia_id']} non trovata o non attiva"
-            )
-
-    # Update fields
     for field, value in update_data.items():
         setattr(db_terreno, field, value)
+    if terreno.porzioni is not None:
+        _imposta_porzioni(db_terreno, terreno.porzioni)
 
     db.commit()
-
-    # Reload with relationship
-    db_terreno = db.query(Terreno).options(
-        joinedload(Terreno.tipologia)
-    ).filter(Terreno.id == terreno_id).first()
-
-    return db_terreno
+    db.expire_all()
+    return _carica(db, terreno_id)
 
 
 @router.delete("/{terreno_id}", status_code=204)
 def delete_terreno(terreno_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.delete"))):
-    """
-    Delete (soft delete) a terreno.
-
-    Args:
-        terreno_id: ID of the terreno to delete
-        db: Database session
-
-    Raises:
-        HTTPException: 404 if terreno not found
-    """
-    db_terreno = db.query(Terreno).filter(Terreno.id == terreno_id).first()
-    if not db_terreno:
-        raise HTTPException(status_code=404, detail="Terreno non trovato")
-
-    # Soft delete
-    db_terreno.attivo = False
+    """Delete the land parcel for good: bene, portions, rights, tenant
+    assignments, recurring costs and cadastral changes (ON DELETE CASCADE).
+    To hide it without deleting, set `attivo` to false."""
+    db_terreno = _carica(db, terreno_id)
+    db.delete(db_terreno)
     db.commit()
     return None
 
 
 @router.post("/{terreno_id}/restore", response_model=TerrenoResponse)
 def restore_terreno(terreno_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("terreno.edit"))):
-    """
-    Restore a soft-deleted terreno.
-
-    Args:
-        terreno_id: ID of the terreno to restore
-        db: Database session
-
-    Returns:
-        Restored terreno
-
-    Raises:
-        HTTPException: 404 if terreno not found
-    """
-    db_terreno = db.query(Terreno).filter(Terreno.id == terreno_id).first()
-    if not db_terreno:
-        raise HTTPException(status_code=404, detail="Terreno non trovato")
-
+    """Reactivate a deactivated land parcel."""
+    db_terreno = _carica(db, terreno_id)
     db_terreno.attivo = True
     db.commit()
-
-    # Reload with relationship
-    db_terreno = db.query(Terreno).options(
-        joinedload(Terreno.tipologia)
-    ).filter(Terreno.id == terreno_id).first()
-
-    return db_terreno
+    db.expire_all()
+    return _carica(db, terreno_id)

@@ -1,13 +1,14 @@
 """
 Catastal changes log for manual edits of a unit (PUT /unita-immobiliari/{id})
-and its listing (GET /unita-immobiliari/{id}/variazioni-catastali).
+and its listing (GET /beni/{id}/variazioni-catastali).
 """
 from types import SimpleNamespace
 
 import pytest
 
 from immobili.models import UnitaImmobiliare, VariazioneCatastale
-from immobili.routes.immobili import get_variazioni_catastali, update_unita_immobiliare
+from immobili.routes.beni import get_variazioni_catastali
+from immobili.routes.immobili import update_unita_immobiliare
 from immobili.schemas import UnitaImmobiliareUpdate
 
 pytestmark = pytest.mark.integration
@@ -48,4 +49,4 @@ def test_variazioni_requires_authentication():
     from fastapi.testclient import TestClient
     from app.main import app
     with TestClient(app) as http:
-        assert http.get("/api/v1/unita-immobiliari/1/variazioni-catastali").status_code in (401, 403)
+        assert http.get("/api/v1/beni/1/variazioni-catastali").status_code in (401, 403)

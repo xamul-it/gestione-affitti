@@ -23,3 +23,13 @@ def test_modello_di_import_unita_ha_citta_con_esempio():
     colonne = intestazione.split(",")
     assert "citta" in colonne and "tipo_bene" not in colonne and "comune" not in colonne
     assert esempio.split(",")[colonne.index("citta")] != ""
+
+
+def test_campi_terreno_usano_sezione_catastale_e_non_il_discriminatore():
+    from immobili.models import Terreno
+
+    nomi = [f["name"] for f in ImportExportService(MagicMock()).get_entity_fields(Terreno)]
+    assert "sezione_catastale" in nomi and "comune" in nomi and "superficie_mq" in nomi
+    assert "sezione" not in nomi
+    assert "tipo_bene" not in nomi
+    assert len(nomi) == len(set(nomi))

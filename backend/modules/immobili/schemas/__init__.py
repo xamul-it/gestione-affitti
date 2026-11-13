@@ -19,7 +19,10 @@ from .terreno import (
     TerrenoCreate,
     TerrenoUpdate,
     TerrenoResponse,
+    TerrenoPorzioneIn,
+    TerrenoPorzioneOut,
 )
+from .bene import BeneResponse
 from .immobili import (
     UnitaImmobiliareBase,
     UnitaImmobiliareCreate,
@@ -104,6 +107,9 @@ __all__ = [
     "TerrenoCreate",
     "TerrenoUpdate",
     "TerrenoResponse",
+    "TerrenoPorzioneIn",
+    "TerrenoPorzioneOut",
+    "BeneResponse",
     # Unità Immobiliari (new naming)
     "UnitaImmobiliareBase", "UnitaImmobiliareCreate", "UnitaImmobiliareUpdate", "UnitaImmobiliareResponse",
     # Backward compatibility

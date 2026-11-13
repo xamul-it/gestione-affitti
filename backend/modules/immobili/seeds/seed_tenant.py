@@ -20,6 +20,33 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def seed_terreni_demo(db: Session, tipologia_id: Optional[int]) -> int:
+    """Two demo land parcels (bene + terreno + one portion) if the tenant has none."""
+    if db.execute(text("SELECT COUNT(*) FROM immo_terreni")).scalar():
+        return 0
+    creati = 0
+    for codice, nome, qualita, superficie in (
+        ("TER-001", "Terreno Agricolo", "SEMINATIVO", 1500),
+        ("TER-002", "Area Edificabile", "ENTE URBANO", 800),
+    ):
+        if db.execute(text("SELECT 1 FROM immo_beni WHERE codice = :c"), {"c": codice}).first():
+            continue
+        bene_id = db.execute(text(
+            "INSERT INTO immo_beni (tipo_bene, codice, comune, provincia) "
+            "VALUES ('TERRENO', :codice, 'Milano', 'MI') RETURNING id"
+        ), {"codice": codice}).scalar()
+        db.execute(text(
+            "INSERT INTO immo_terreni (id, nome, tipologia_id, superficie_mq) "
+            "VALUES (:id, :nome, :tipologia_id, :superficie)"
+        ), {"id": bene_id, "nome": nome, "tipologia_id": tipologia_id, "superficie": superficie})
+        db.execute(text(
+            "INSERT INTO immo_terreni_porzioni (terreno_id, qualita, superficie_mq) "
+            "VALUES (:id, :qualita, :superficie)"
+        ), {"id": bene_id, "qualita": qualita, "superficie": superficie})
+        creati += 1
+    return creati
+
+
 def seed_tenant_data(
     db: Session,
     tenant_id: Optional[int] = None,
@@ -258,22 +285,9 @@ def seed_tenant_data(
         tipologia_terreno_id = db.execute(
             text("SELECT id FROM public.immo_tipologie_terreno ORDER BY id LIMIT 1")
         ).scalar()
-        if tipologia_terreno_id:
-            terreno_count = db.execute(text("SELECT COUNT(*) FROM immo_terreni")).scalar() or 0
-            if terreno_count == 0:
-                db.execute(
-                    text(
-                        """
-                        INSERT INTO immo_terreni
-                            (codice, nome, comune, provincia, superficie, tipologia_id, attivo)
-                        VALUES
-                            ('TER-001', 'Terreno Agricolo', 'Milano', 'MI', 1500, :tipologia_id, TRUE),
-                            ('TER-002', 'Area Edificabile', 'Milano', 'MI', 800, :tipologia_id, TRUE)
-                        """
-                    ),
-                    {"tipologia_id": tipologia_terreno_id},
-                )
-                results["immo_terreni"] = 2
+        creati = seed_terreni_demo(db, tipologia_terreno_id)
+        if creati:
+            results["immo_terreni"] = creati
 
         def _get_or_create_tabella(condominio_id: int, codice: str, nome: str, tipo: str, perc_millesimi: float, perc_consumo: float, perc_occupanti: float) -> int:
             tabella_id = db.execute(

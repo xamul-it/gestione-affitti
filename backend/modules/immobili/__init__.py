@@ -43,6 +43,7 @@ def get_routers():
     from .routes import (
         categorie_catastali_router,
         terreni_router,
+        beni_router,
         tipologie_terreno_router,
         visura_import_router,
         caricamento_documenti_router,
@@ -60,6 +61,7 @@ def get_routers():
     return [
         categorie_catastali_router,
         terreni_router,
+        beni_router,
         tipologie_terreno_router,
         visura_import_router,
         caricamento_documenti_router,
@@ -321,7 +323,11 @@ def _immobile_labels(db, ids):
     from .models import Bene
     rows = db.query(Bene.id, Bene.codice, Bene.indirizzo, Bene.comune) \
         .filter(Bene.id.in_(ids)).all()
-    return {r.id: f"{r.codice} · {r.indirizzo}, {r.comune}" for r in rows}
+    etichette = {}
+    for r in rows:
+        luogo = ", ".join(p for p in (r.indirizzo, r.comune) if p)
+        etichette[r.id] = f"{r.codice} · {luogo}" if luogo else r.codice
+    return etichette
 
 
 def _register_entity_labels():

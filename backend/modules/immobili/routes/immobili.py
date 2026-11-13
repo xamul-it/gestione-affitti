@@ -6,11 +6,12 @@ from app.core.auth.models import User
 from app.core.database import get_db
 from datetime import date
 
-from ..models import UnitaImmobiliare, VariazioneCatastale
+from ..models import UnitaImmobiliare
 from ..schemas.immobili import (
-    UnitaImmobiliareCreate, UnitaImmobiliareUpdate, UnitaImmobiliareResponse, VariazioneCatastaleResponse,
+    UnitaImmobiliareCreate, UnitaImmobiliareUpdate, UnitaImmobiliareResponse,
 )
 from ..services.ape import classi_da_ape
+from ..services.codici_beni import verifica_codice_libero
 from ..services.variazioni_catastali import registra_variazioni
 
 router = APIRouter(prefix="/unita-immobiliari", tags=["Unità Immobiliari"])
@@ -62,12 +63,7 @@ def create_unita_immobiliare(
     current_user: User = Depends(require_permission("immobile.create")),
 ):
     """Crea una nuova unità immobiliare"""
-    db_unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.codice == unita_immobiliare.codice).first()
-    if db_unita:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unità immobiliare con codice {unita_immobiliare.codice} già esistente"
-        )
+    verifica_codice_libero(db, unita_immobiliare.codice)
 
     new_unita = UnitaImmobiliare(**unita_immobiliare.model_dump())
     db.add(new_unita)
@@ -92,6 +88,7 @@ def update_unita_immobiliare(
         )
 
     update_data = unita_immobiliare.model_dump(exclude_unset=True)
+    verifica_codice_libero(db, update_data.get("codice"), escludi_id=unita_immobiliare_id)
     registra_variazioni(
         db, db_unita, update_data,
         origine="MANUALE", documento_id=None, data_riferimento=date.today(), utente_id=current_user.id,
@@ -102,21 +99,6 @@ def update_unita_immobiliare(
     db.commit()
     db.refresh(db_unita)
     return _risposte(db, [db_unita])[0]
-
-
-@router.get("/{unita_immobiliare_id}/variazioni-catastali", response_model=List[VariazioneCatastaleResponse])
-def get_variazioni_catastali(
-    unita_immobiliare_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("immobile.view")),
-):
-    """Storico delle variazioni dei dati catastali dell'unità, dalla più recente."""
-    return (
-        db.query(VariazioneCatastale)
-        .filter(VariazioneCatastale.bene_id == unita_immobiliare_id)
-        .order_by(VariazioneCatastale.created_at.desc(), VariazioneCatastale.id.desc())
-        .all()
-    )
 
 
 @router.delete("/{unita_immobiliare_id}", status_code=status.HTTP_204_NO_CONTENT)

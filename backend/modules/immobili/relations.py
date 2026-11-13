@@ -43,7 +43,11 @@ def _iso_date(col):
 
 
 def _indirizzo(u):
-    return sa.func.concat_ws(", ", u.indirizzo, u.comune)
+    """Address and comune; a bene without address (often a land parcel) by code and comune."""
+    return sa.case(
+        (sa.func.coalesce(u.indirizzo, "") == "", sa.func.concat_ws(" · ", u.codice, u.comune)),
+        else_=sa.func.concat_ws(", ", u.indirizzo, u.comune),
+    )
 
 
 def proprietari(db: Session, tenant_schema: str) -> Optional[sa.Select]:

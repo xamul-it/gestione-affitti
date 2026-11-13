@@ -25,7 +25,9 @@ logger = logging.getLogger(__name__)
 # Readable name of the object of a core relation, per entity type.
 _DESCRIZIONI_CORE = {
     "CONDOMINIO": ("immo_condomini", "COALESCE(NULLIF(o.nome, ''), concat_ws(', ', o.indirizzo, o.citta))"),
-    "IMMOBILE": ("immo_beni", "concat_ws(', ', o.indirizzo, o.comune)"),
+    # A bene without address (often a land parcel): code and comune.
+    "IMMOBILE": ("immo_beni", "CASE WHEN COALESCE(o.indirizzo, '') = '' THEN concat_ws(' · ', o.codice, o.comune) "
+                              "ELSE concat_ws(', ', o.indirizzo, o.comune) END"),
     "SOGGETTO_ANAGRAFICO": (
         "anag_soggetti_anagrafici",
         "COALESCE(NULLIF(o.ragione_sociale, ''), concat_ws(' ', o.cognome, o.nome))",
