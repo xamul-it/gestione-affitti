@@ -156,3 +156,19 @@ def test_tipologie_documentali_del_terreno():
     assert tipi["CDU"]["promemoria_giorni"] == [30]
     assert tipi["CONTRATTO_AFFITTO_AGRARIO"]["regime"] == "CUMULATIVO"
     assert "TIPO_MAPPALE" in tipi["VARIAZIONE_CATASTALE"]["sottotipi"]
+
+
+def test_modifica_dati_catastali_terreno_registra_variazioni(db_session):
+    from immobili.routes.beni import get_variazioni_catastali
+
+    t = _crea(db_session, codice="TAPI-VAR", foglio="40", particella="154")
+    update_terreno(t.id, TerrenoUpdate(
+        particella="155", nome="Campo",
+        porzioni=[TerrenoPorzioneIn(qualita="SEMINATIVO", superficie_mq=1000)],
+    ), db=db_session, current_user=UTENTE)
+    superuser = SimpleNamespace(id=1, is_superuser=True, get_permissions=lambda: set())
+    righe = get_variazioni_catastali(t.id, db=db_session, current_user=superuser)
+    assert {(r.campo, r.valore_precedente, r.valore_nuovo, r.origine) for r in righe} == {
+        ("particella", "154", "155", "MANUALE"),
+        ("superficie_mq", "426.0", "1000.0", "MANUALE"),
+    }

@@ -32,6 +32,15 @@ describe('VariazioniCatastali', () => {
     expect(beniAPI.getVariazioni).toHaveBeenCalledWith(5);
   });
 
+  it('labels the land parcel section', async () => {
+    beniAPI.getVariazioni.mockResolvedValue({ data: [
+      { id: 3, campo: 'sezione_catastale', valore_precedente: null, valore_nuovo: 'A', origine: 'MANUALE',
+        documento_id: null, data_riferimento: '2026-11-13', created_at: '2026-11-13T10:00:00Z' },
+    ] });
+    render(<VariazioniCatastali beneId={7} />);
+    expect(await screen.findByText('Sezione')).toBeInTheDocument();
+  });
+
   it('shows the empty state', async () => {
     beniAPI.getVariazioni.mockResolvedValue({ data: [] });
     render(<VariazioniCatastali beneId={5} />);

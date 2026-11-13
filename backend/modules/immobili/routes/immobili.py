@@ -12,6 +12,7 @@ from ..schemas.immobili import (
 )
 from ..services.ape import classi_da_ape
 from ..services.codici_beni import verifica_codice_libero
+from ..services.elimina_bene import elimina_bene
 from ..services.variazioni_catastali import registra_variazioni
 
 router = APIRouter(prefix="/unita-immobiliari", tags=["Unità Immobiliari"])
@@ -115,6 +116,6 @@ def delete_unita_immobiliare(
             detail=f"Unità immobiliare con ID {unita_immobiliare_id} non trovato"
         )
 
-    db.delete(db_unita)
+    elimina_bene(db, db_unita, getattr(current_user, "id", None))
     db.commit()
     return None

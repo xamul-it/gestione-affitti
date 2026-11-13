@@ -1,14 +1,19 @@
-"""Catastal changes log: compare a unit with the new values and record each change."""
+"""Catastal changes log: compare a bene (unit or land parcel) with the new values and record each change."""
 from datetime import date
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from ..models import UnitaImmobiliare, VariazioneCatastale
+from ..models import Bene, Terreno, VariazioneCatastale
 
 CAMPI_CATASTALI = (
     "categoria_catastale_id", "rendita_catastale", "superficie_mq",
     "foglio", "particella", "subalterno", "indirizzo", "piano",
+)
+
+# Land parcel: surface is the sum of its portions, computed by the server.
+CAMPI_CATASTALI_TERRENO = (
+    "sezione_catastale", "foglio", "particella", "subalterno", "indirizzo", "superficie_mq",
 )
 
 
@@ -18,7 +23,7 @@ def _text(value) -> Optional[str]:
 
 def registra_variazioni(
     db: Session,
-    unita: UnitaImmobiliare,
+    unita: Bene,
     nuovi: dict,
     *,
     origine: str,
@@ -28,7 +33,8 @@ def registra_variazioni(
 ) -> List[VariazioneCatastale]:
     """Write one row per catastal field whose value changes. Does not set the attributes."""
     rows = []
-    for campo in CAMPI_CATASTALI:
+    campi = CAMPI_CATASTALI_TERRENO if isinstance(unita, Terreno) else CAMPI_CATASTALI
+    for campo in campi:
         if campo not in nuovi:
             continue
         prima, dopo = getattr(unita, campo), nuovi[campo]

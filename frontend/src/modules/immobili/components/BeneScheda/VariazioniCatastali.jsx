@@ -11,6 +11,7 @@ const CAMPI = {
   categoria_catastale_id: 'Categoria catastale',
   rendita_catastale: 'Rendita catastale',
   superficie_mq: 'Superficie',
+  sezione_catastale: 'Sezione',
   foglio: 'Foglio',
   particella: 'Particella',
   subalterno: 'Subalterno',
@@ -18,7 +19,7 @@ const CAMPI = {
   piano: 'Piano',
 };
 
-/** Catastal changes of a unit (from imported visure and manual edits), newest first. */
+/** Catastal changes of a bene, unit or land parcel (from imported visure and manual edits), newest first. */
 export default function VariazioniCatastali({ beneId }) {
   const [righe, setRighe] = useState([]);
   const [categorie, setCategorie] = useState({});

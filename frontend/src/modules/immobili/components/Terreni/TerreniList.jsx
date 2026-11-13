@@ -1,8 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { DataTable } from '../../../../core/components';
 import { terreniAPI } from '../../services/immobiliAPI';
 import { haAreCa } from '../../utils/superficie';
+import { useToast } from '../../../../core/hooks/useToast';
+import { formatApiError } from '../../../../utils/errorHandling';
 import TerrenoForm from './TerrenoForm';
 import './Terreni.css';
 
@@ -75,19 +77,7 @@ const terreniTableConfig = {
       action: 'edit',
       variant: 'secondary',
     },
-    {
-      id: 'toggle',
-      label: (row) => (row.attivo ? 'Disattiva' : 'Ripristina'),
-      variant: (row) => (row.attivo ? 'danger' : 'success'),
-      onClick: async (row, table) => {
-        try {
-          await terreniAPI.update(row.id, { attivo: !row.attivo });
-          table.refresh();
-        } catch (err) {
-          console.error('Errore aggiornamento terreno:', err);
-        }
-      },
-    },
+    // 'toggle' (Disattiva / Ripristina) is added by the component: it needs the toast.
     {
       // DataTable asks for confirmation (ConfirmDialog) and calls DELETE /terreni/{id}.
       id: 'delete',
@@ -108,6 +98,28 @@ function TerrenoFormModal({ entity, onClose }) {
 }
 
 function TerreniList() {
+  const { error: mostraErrore } = useToast();
+  const config = useMemo(() => ({
+    ...terreniTableConfig,
+    rowActions: [
+      ...terreniTableConfig.rowActions.filter((a) => a.id !== 'delete'),
+      {
+        // Reversible: no confirmation and not in the colour of dangerous actions.
+        id: 'toggle',
+        label: (row) => (row.attivo ? 'Disattiva' : 'Ripristina'),
+        variant: () => 'secondary',
+        onClick: async (row, table) => {
+          try {
+            await terreniAPI.update(row.id, { attivo: !row.attivo });
+            table.refresh();
+          } catch (err) {
+            mostraErrore(formatApiError(err));
+          }
+        },
+      },
+      ...terreniTableConfig.rowActions.filter((a) => a.id === 'delete'),
+    ],
+  }), [mostraErrore]);
   const [filtroTipologia, setFiltroTipologia] = useState('');
   const [filtroAttivi, setFiltroAttivi] = useState(false);
 
@@ -149,7 +161,7 @@ function TerreniList() {
   return (
     <div className="terreni-container">
       <DataTable
-        config={terreniTableConfig}
+        config={config}
         FormComponent={TerrenoFormModal}
         toolbarContent={renderToolbar}
         options={{

@@ -3,6 +3,7 @@ API routes for Terreni (Land parcels).
 
 Provides CRUD operations for managing land parcels.
 """
+from datetime import date
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -17,6 +18,8 @@ from ..schemas.terreno import (
     TerrenoUpdate,
 )
 from ..services.codici_beni import verifica_codice_libero
+from ..services.elimina_bene import elimina_bene
+from ..services.variazioni_catastali import registra_variazioni
 
 router = APIRouter(prefix="/terreni", tags=["Terreni"])
 
@@ -183,6 +186,14 @@ def update_terreno(
     verifica_codice_libero(db, update_data.get("codice"), escludi_id=terreno_id)
     _verifica_tipologia(db, update_data.get("tipologia_id"))
 
+    nuovi = dict(update_data)
+    if terreno.porzioni is not None:
+        nuovi["superficie_mq"] = float(sum(p.superficie_mq for p in terreno.porzioni))
+    registra_variazioni(
+        db, db_terreno, nuovi,
+        origine="MANUALE", documento_id=None, data_riferimento=date.today(),
+        utente_id=getattr(current_user, "id", None),
+    )
     for field, value in update_data.items():
         setattr(db_terreno, field, value)
     if terreno.porzioni is not None:
@@ -199,7 +210,7 @@ def delete_terreno(terreno_id: int, db: Session = Depends(get_db), current_user:
     assignments, recurring costs and cadastral changes (ON DELETE CASCADE).
     To hide it without deleting, set `attivo` to false."""
     db_terreno = _carica(db, terreno_id)
-    db.delete(db_terreno)
+    elimina_bene(db, db_terreno, getattr(current_user, "id", None))
     db.commit()
     return None
 
