@@ -1,6 +1,6 @@
 # Beni catastali: unità immobiliari e terreni allo stesso livello — design
 
-Data: 2026-11-10, aggiornata il 2026-11-12 (collegamenti tra beni) · Stato: approvata dall'utente il 2026-11-12.
+Data: 2026-11-10, aggiornata il 2026-11-12 (collegamenti tra beni) e il 2026-11-13 (fase 2a fatta) · Stato: approvata dall'utente il 2026-11-12.
 Strada B (bene comune) scelta dall'utente il 2026-11-10.
 
 ## Perché
@@ -249,11 +249,19 @@ Ogni fase si rilascia da sola.
    azzeramento dei dati (vedi Dati esistenti), diritti/assegnazioni/variazioni/spese su
    `bene_id`, relazioni e documenti su `immo_beni`. Per l'utente non cambia
    nulla (stesse pagine), è il fondamento.
-2. **Terreni come beni**: specializzazione terreno, porzioni, scheda comune
-   con la parte terreno, riepilogo "chi paga cosa" (anche per le unità),
-   tipologie documentali, cancellazione, lista cliccabile, selettore unico
-   dei beni, **collegamenti tra beni** (pertinenze, fabbricato su
-   particella, parte di fondo).
+2. **Terreni come beni**, in due rilasci:
+   - **2a (fatta il 2026-11-13)**: specializzazione terreno, porzioni,
+     scheda comune `/beni/:id` con la parte terreno, API `/beni`,
+     tipologie documentali, cancellazione, lista cliccabile. Migrazione
+     `2026111301_terreni_beni` senza perdita di righe (i terreni del vecchio
+     layout diventano beni con una porzione; superficie sempre in m²).
+     `/beni` mostra le unità con `immobile.view` e i terreni con
+     `terreno.view`.
+   - **2b**: **collegamenti tra beni** (pertinenze, fabbricato su
+     particella, parte di fondo) e riepilogo "chi paga cosa" (anche per le
+     unità).
+   - Il **selettore unico dei beni** passa alla fase 3, dove ha i primi
+     utilizzatori (contratti, caricamento unico).
 3. **Contratti con più beni** in `affitti_lungo` (anche terreni), con la
    proposta delle pertinenze dell'abitazione scelta.
 4. **Import visure dei terreni** e caricamento unico dei documenti anche

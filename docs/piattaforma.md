@@ -128,6 +128,9 @@ Spec: `2026-11-10-relazioni-ruoli-soggetti-design.md`.
 - Le anagrafiche (elenco e dettaglio) mostrano i ruoli del soggetto con le
   stesse regole di visibilità; tutte le rotte delle anagrafiche richiedono
   `soggetto.view` / `create` / `edit` / `delete`.
+- Oggetto `IMMOBILE` = **bene** (unità o terreno, `immo_beni`): descrizione
+  "indirizzo, comune", o "codice · comune" se il bene non ha indirizzo
+  (spesso un terreno); il link porta a `/beni/:id`.
 
 Limite noto: un'anagrafica con relazioni nascoste da un modulo disattivato
 non si può eliminare.

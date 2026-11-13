@@ -1,6 +1,6 @@
 # Modulo Immobili — documento tecnico-funzionale
 
-Stato al 2026-11-10. Descrive **com'è il modulo oggi**: requisiti, regole di
+Stato al 2026-11-13. Descrive **com'è il modulo oggi**: requisiti, regole di
 dominio, funzioni e limiti. Per la piattaforma (tenant, permessi, documenti,
 relazioni, lettura automatica) vedi `docs/piattaforma.md`. L'analisi
 funzionale originale è in `backend/modules/immobili/Gestione immobiliare.md`
@@ -43,13 +43,20 @@ specializzazione con **lo stesso id** del bene (`immo_unita_immobiliari.id`
 `comune` del bene. Diritti, assegnazioni dei conduttori, variazioni
 catastali e spese ricorrenti puntano al bene (`bene_id`); certificati
 energetici, millesimi, affitti brevi e contratti restano sull'unità. I
-documenti `IMMOBILE` usano l'id del bene. I terreni diventano beni nella fase
-2 (spec `2026-11-10-beni-catastali-design.md`).
+documenti `IMMOBILE` usano l'id del bene.
+
+Dal 2026-11-13 (fase 2a, migrazione `2026111301_terreni_beni`) anche il
+**terreno** è un bene (`tipo_bene = TERRENO`, `immo_terreni.id` →
+`immo_beni.id`): ha diritti, conduttori, documenti, variazioni, spese e
+scadenze come l'unità. Il **codice è unico tra tutti i beni**: un codice già
+usato da un'unità o da un terreno dà 400 "Codice 'X' già usato da un altro
+bene". Spec `2026-11-10-beni-catastali-design.md`.
 
 | Area | Cosa fa | API (`/api/v1/…`) |
 |---|---|---|
-| Unità immobiliari | Anagrafica dell'unità: codice, tipo, indirizzo, città, CAP, provincia, piano, locali, superficie, dati catastali (foglio, particella, subalterno, categoria, rendita), condominio (`condominio_id`, oggi non impostabile dal form). Non ci sono ancora comune catastale, sezione, classe, consistenza e interno. Lista `/unita-immobiliari`, scheda `/unita-immobiliari/:id`. | `unita-immobiliari` |
-| Terreni | Foglio, particella, qualità, classe, redditi; tipologie di terreno. | `terreni`, `tipologie-terreno` |
+| Beni | Elenco comune di unità e terreni (`tipo_bene`, ricerca `q` su codice, indirizzo, comune o "foglio/particella" come `40/154`, zeri iniziali ignorati; `attivo`), dettaglio, variazioni catastali `GET /beni/{id}/variazioni-catastali`. Le unità si vedono con `immobile.view`, i terreni con `terreno.view` (un bene di un tipo non visibile è un 404). **Scheda** `/beni/:id` per entrambi; `/unita-immobiliari/:id` e `/terreni/:id` vi rimandano. | `beni` |
+| Unità immobiliari | Anagrafica dell'unità: codice, tipo, indirizzo, città, CAP, provincia, piano, locali, superficie, dati catastali (foglio, particella, subalterno, categoria, rendita), condominio (`condominio_id`, oggi non impostabile dal form). Non ci sono ancora comune catastale, sezione, classe, consistenza e interno. Lista `/unita-immobiliari`. | `unita-immobiliari` |
+| Terreni | Dati comuni del bene (comune, provincia, indirizzo o località, sezione `sezione_catastale`, foglio, particella, subalterno) più nome facoltativo, tipologia, nazione, **edificabile**, **esente IMU montano** (scelta manuale), **servitù** (nota) e una o più **porzioni** (`immo_terreni_porzioni`: porzione es. AA, qualità, classe, superficie m², reddito dominicale e agrario, deduzioni). Almeno una porzione; create/update le mandano tutte e sostituiscono le esistenti. `superficie_mq` = somma delle porzioni, calcolata dal server; la risposta ha anche i redditi totali. A video la superficie è in ettari, are e centiare (`9 ha 18 a 96 ca`). `DELETE` cancella davvero (bene, porzioni, diritti, assegnazioni, spese, variazioni); "Disattiva/Ripristina" usano `attivo`. Lista `/terreni` con il codice che apre la scheda. | `terreni`, `tipologie-terreno` |
 | Proprietari e diritti | Proprietario (legato a un soggetto anagrafico) e diritti sul bene (`bene_id`) con tipo diritto e quota; `GET /diritti-immobile/bene/{id}`. | `proprietari`, `diritti-immobile` |
 | Conduttori | Conduttore e assegnazioni al bene (`bene_id`) con periodo; `GET /assegnazioni-conduttore/bene/{id}`. Le assegnazioni restituiscono anche `soggetto_id` e `conduttore_nome` (solo a chi ha `soggetto.view`, come le relazioni), mostrati nella scheda con il link all'anagrafica. | `conduttori`, `assegnazioni-conduttore` |
 | Condomini | Condominio/complesso, tabelle millesimali e millesimi per unità; amministratore come relazione. | `condomini`, `tabelle-millesimali`, `millesimi-immobile` |
@@ -86,7 +93,7 @@ Tipologie dichiarate nel manifest (spec
 |---|---|---|---|
 | `VISURA_CATASTALE` | sostitutivo | — | import visure (lettura automatica) |
 | `PLANIMETRIA_CATASTALE` | sostitutivo | — | — |
-| `VARIAZIONE_CATASTALE` | cumulativo | — | sottotipi DOCFA, voltura, frazionamento, fusione |
+| `VARIAZIONE_CATASTALE` | cumulativo | — | sottotipi DOCFA, voltura, frazionamento, fusione, tipo mappale |
 | `APE` | sostitutivo | 10 anni dall'emissione | form `immobili.ape`: classe, EPgl,nren, codice, tecnico, decadenza |
 | `ATTO_PROVENIENZA` | cumulativo | — | sottotipi compravendita, successione, donazione |
 | `CONFORMITA_IMPIANTO` | sostitutivo per sottotipo | — | elettrico, gas, termico, idrico |
@@ -94,6 +101,9 @@ Tipologie dichiarate nel manifest (spec
 | `AGIBILITA` | sostitutivo | — | — |
 | `TITOLO_EDILIZIO` | cumulativo | — | — |
 | `POLIZZA_FABBRICATO` | sostitutivo | manuale | — |
+| `ESTRATTO_MAPPA` | sostitutivo | — | terreni |
+| `CDU` | sostitutivo | 12 mesi dal rilascio (L. 47/1985 art. 18), promemoria a 30 giorni | certificato di destinazione urbanistica |
+| `CONTRATTO_AFFITTO_AGRARIO` | cumulativo | — | — |
 | `ALTRO_IMMOBILE` | cumulativo | — | — |
 
 - Per i sostitutivi è in vigore il documento con la data di riferimento più
@@ -180,9 +190,14 @@ link della dashboard, icone dei documenti schiacciate e pulsanti dei form
 - sezioni Diritti, Conduttori e Spese della scheda nello stile vecchio
   (`window.confirm`, `alert`); il form dell'unità ripete queste sezioni;
 - pagine vecchie `/immobili/home` e `/old-home`;
-- **terreni** isolati: niente proprietari, conduttori, documenti, variazioni,
-  scheda né import da visura, e si possono solo disattivare, non eliminare
-  (spec `2026-11-10-beni-catastali-design.md`: fase 1 fatta, fase 2 terreni);
+- beni catastali (spec `2026-11-10-beni-catastali-design.md`): fatte la
+  fase 1 e la 2a (terreni come beni); restano collegamenti tra beni e
+  riepilogo "chi paga cosa" (2b), selettore unico dei beni e contratti con
+  più beni (3), import dei terreni dalle visure (4). Oggi un terreno non si
+  può ancora mettere in un contratto né importare da visura;
+- l'import visure genera i codici delle unità guardando solo le unità: un
+  terreno creato a mano con un codice dello stesso formato (es. `FC00003`)
+  può farlo fallire (da sistemare con l'import dei terreni);
 - cancellando un'unità le sue spese ricorrenti spariscono ma la scadenza
   collegata nello scadenzario resta attiva.
 
