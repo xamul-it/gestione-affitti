@@ -2,7 +2,7 @@
 API Routes per Soggetti Anagrafici - Versione 2 con sistema ruoli dinamici.
 
 Usa il sistema di registrazione dinamica dei ruoli invece di hardcodare
-i ruoli specifici (proprietario, affittuario, tecnico).
+i ruoli specifici (affittuario, tecnico).
 """
 from typing import List, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -20,17 +20,15 @@ router = APIRouter(prefix="/anagrafica/soggetti-v2", tags=["Soggetti Anagrafici 
 
 # attribute name -> the table it's backed by, for the has_table() pre-check below
 _ROLE_RELATIONSHIPS = {
-    "proprietari": "immo_proprietari",
     "affittuari": "affittuari",
     "tecnici": "tecnici",
-    "conduttori": "immo_conduttori",
 }
 
 
 def _has_role_records(db: Session, soggetto: SoggettoAnagrafico, tenant_schema: Optional[str]) -> bool:
     """
     Whether this soggetto has any role-specialization record linked to it
-    (Proprietario/Affittuario/Tecnico/Conduttore — the hardcoded per-module
+    (Affittuario/Tecnico — the hardcoded per-module
     role tables, not the newer dynamic SoggettoRuolo registry, which nothing
     in immobili/affitti_lungo currently populates when creating these roles).
 
@@ -457,7 +455,7 @@ def delete_soggetto_v2(
     if _has_role_records(db, db_soggetto, tenant_schema):
         raise HTTPException(
             status_code=400,
-            detail="Impossibile eliminare: il soggetto ha ruoli attivi (proprietario, affittuario, tecnico o conduttore). Eliminare prima i ruoli.",
+            detail="Impossibile eliminare: il soggetto ha ruoli attivi (affittuario o tecnico). Eliminare prima i ruoli.",
         )
 
     db.delete(db_soggetto)

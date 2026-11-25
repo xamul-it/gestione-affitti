@@ -58,8 +58,6 @@ DIFFERENZE_NOTE: dict[tuple[str, str, str], str] = {
     ("anag_ruoli_azienda", "nullabilità", "updated_at: db True, modello False"): _TS,
     ("anag_ruoli_azienda", "tipo", "updated_at: db TIMESTAMPTZ, modello TIMESTAMP"): _TS,
     ("anag_soggetti_anagrafici", "tipo", "tipo_soggetto: db VARCHAR(50), modello ENUM"): _ENUM_TESTO,
-    ("immo_assegnazioni_conduttore", "nullabilità", "created_at: db False, modello True"): _TS,
-    ("immo_conduttori", "nullabilità", "created_at: db False, modello True"): _TS,
     ("immo_spese_ricorrenti", "tipo", "responsabile: db VARCHAR(20), modello ENUM"): _ENUM_TESTO,
     ("pec_audit_accessi", "tipo", "dettagli: db JSONB, modello JSON"): _JSONB,
     ("pec_messaggi", "tipo", "allegati_meta: db JSONB, modello JSON"): _JSONB,

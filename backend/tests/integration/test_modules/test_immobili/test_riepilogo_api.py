@@ -60,20 +60,15 @@ def test_riepilogo_api_data_default_oggi(db_session, terreno_forli):
     assert _chi(prima, "SPESE_ORDINARIE") == ["Riep Usufrutto"]
 
 
-def test_riepilogo_senza_proprietario_view_403(db_session, terreno_forli):
-    with pytest.raises(HTTPException) as e:
-        get_riepilogo(terreno_forli.id, data=None, db=db_session,
-                      current_user=_utente("terreno.view", "conduttore.view"))
-    assert e.value.status_code == 403
-    r = get_riepilogo(terreno_forli.id, data=None, db=db_session,
-                      current_user=_utente("terreno.view", "conduttore.view", "proprietario.view"))
+def test_riepilogo_basta_il_permesso_di_vista_del_bene(db_session, terreno_forli):
+    """Visible with the bene's view permission only: no owner/tenant permissions exist any more."""
+    r = get_riepilogo(terreno_forli.id, data=None, db=db_session, current_user=_utente("terreno.view"))
     assert r.voci
 
 
 def test_riepilogo_terreno_con_solo_immobile_view_404(db_session, terreno_forli):
     with pytest.raises(HTTPException) as e:
-        get_riepilogo(terreno_forli.id, data=None, db=db_session,
-                      current_user=_utente("immobile.view", "proprietario.view", "conduttore.view"))
+        get_riepilogo(terreno_forli.id, data=None, db=db_session, current_user=_utente("immobile.view"))
     assert e.value.status_code == 404
 
 

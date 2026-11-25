@@ -15,7 +15,10 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..models import Bene, CollegamentoBeni, DirittoImmobile
+from app.core.models import RuoloDisponibile
+from app.core.platform.models import Relazione
+
+from ..models import Bene, CollegamentoBeni
 
 CATEGORIE_PERTINENZA = ("C/2", "C/6", "C/7")
 
@@ -157,14 +160,15 @@ def aggiorna_collegamento(db: Session, collegamento: CollegamentoBeni, data_iniz
 
 
 def _titolari_oggi(db: Session, bene_id: int, oggi: date) -> set[int]:
-    giorno = oggi.isoformat()
+    """Soggetti holding a real right (relation of the diritti_reali family) on the bene on that day."""
     return {
-        r[0] for r in db.query(DirittoImmobile.proprietario_id).filter(
-            DirittoImmobile.bene_id == bene_id,
-            or_(DirittoImmobile.data_inizio.is_(None), DirittoImmobile.data_inizio == "",
-                DirittoImmobile.data_inizio <= giorno),
-            or_(DirittoImmobile.data_fine.is_(None), DirittoImmobile.data_fine == "",
-                DirittoImmobile.data_fine >= giorno),
+        r[0] for r in db.query(Relazione.soggetto_id)
+        .join(RuoloDisponibile, RuoloDisponibile.id == Relazione.ruolo_id)
+        .filter(
+            Relazione.entity_type == "IMMOBILE", Relazione.entity_id == bene_id,
+            RuoloDisponibile.modulo_id == "immobili", RuoloDisponibile.famiglia == "diritti_reali",
+            or_(Relazione.data_inizio.is_(None), Relazione.data_inizio <= oggi),
+            or_(Relazione.data_fine.is_(None), Relazione.data_fine >= oggi),
         )
     }
 

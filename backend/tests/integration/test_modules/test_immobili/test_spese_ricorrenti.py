@@ -1,6 +1,5 @@
 """
-Integration tests for Conduttore/AssegnazioneConduttore/SpesaRicorrenteImmobile
-(the occupant-role and recurring-expense tracking added to immobili).
+Integration tests for SpesaRicorrenteImmobile (recurring-expense tracking of immobili).
 
 Calls route functions directly (db=pg_session, current_user=<real User>)
 rather than through TestClient/HTTP/JWT — same established pattern as
@@ -15,25 +14,17 @@ from app.core.auth.models import User
 from app.core.auth.security import get_password_hash
 from app.core.platform.models import Scadenza, StatoScadenza
 
-from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
-
 from immobili.models import Bene
 from immobili.models import (
-    AssegnazioneConduttore,
-    Conduttore,
     SpesaRicorrenteImmobile,
     UnitaImmobiliare,
 )
-from immobili.routes.conduttori import create_conduttore, delete_conduttore
-from immobili.routes.assegnazioni_conduttore import create_assegnazione
 from immobili.routes.spese_ricorrenti import (
     create_spesa_ricorrente,
     duplica_spesa_ricorrente,
     segna_pagato,
 )
 from immobili.schemas import (
-    AssegnazioneConduttoreCreate,
-    ConduttoreCreate,
     DuplicaSpesaRequest,
     SegnaPagatoRequest,
     SpesaRicorrenteCreate,
@@ -93,23 +84,6 @@ def unita(pg_session):
         pg_session.commit()
 
 
-@pytest.fixture
-def soggetto_conduttore(pg_session):
-    s = SoggettoAnagrafico(
-        tipo_soggetto=TipoSoggetto.PERSONA_FISICA,
-        nome="Mario",
-        cognome="Conduttore",
-        codice_fiscale="CNDMRA80A01H501X",
-    )
-    pg_session.add(s)
-    pg_session.commit()
-    try:
-        yield s
-    finally:
-        pg_session.query(SoggettoAnagrafico).filter_by(id=s.id).delete()
-        pg_session.commit()
-
-
 def _cleanup_spese(pg_session, spesa_ids, scadenza_ids):
     pg_session.rollback()
     ids = [i for i in spesa_ids if i]
@@ -119,60 +93,6 @@ def _cleanup_spese(pg_session, spesa_ids, scadenza_ids):
     if sids:
         pg_session.query(Scadenza).filter(Scadenza.id.in_(sids)).delete(synchronize_session=False)
     pg_session.commit()
-
-
-def test_create_conduttore_and_assegnazione(pg_session, soggetto_conduttore, unita):
-    conduttore = None
-    assegnazione = None
-    try:
-        conduttore = create_conduttore(
-            ConduttoreCreate(soggetto_id=soggetto_conduttore.id, note="test"),
-            db=pg_session,
-        )
-        assert conduttore.id is not None
-        assert conduttore.soggetto_id == soggetto_conduttore.id
-
-        assegnazione = create_assegnazione(
-            AssegnazioneConduttoreCreate(
-                bene_id=unita.id,
-                conduttore_id=conduttore.id,
-                data_inizio="2026-01-01",
-            ),
-            db=pg_session,
-        )
-        assert assegnazione.data_fine is None  # tuttora in corso
-    finally:
-        pg_session.rollback()
-        if assegnazione:
-            pg_session.query(AssegnazioneConduttore).filter_by(id=assegnazione.id).delete()
-        if conduttore:
-            pg_session.query(Conduttore).filter_by(id=conduttore.id).delete()
-        pg_session.commit()
-
-
-def test_delete_conduttore_cascades_assegnazioni(pg_session, soggetto_conduttore, unita):
-    """Regression test: deleting a Conduttore with an existing
-    AssegnazioneConduttore used to raise a NotNullViolation, because the
-    ORM tried to null out the (non-nullable) conduttore_id FK on the child
-    instead of trusting the DB's real ON DELETE CASCADE constraint."""
-    conduttore = create_conduttore(
-        ConduttoreCreate(soggetto_id=soggetto_conduttore.id),
-        db=pg_session,
-    )
-    assegnazione = create_assegnazione(
-        AssegnazioneConduttoreCreate(
-            bene_id=unita.id,
-            conduttore_id=conduttore.id,
-            data_inizio="2026-01-01",
-        ),
-        db=pg_session,
-    )
-    assegnazione_id = assegnazione.id
-
-    delete_conduttore(conduttore.id, db=pg_session)
-
-    assert pg_session.query(Conduttore).filter_by(id=conduttore.id).first() is None
-    assert pg_session.query(AssegnazioneConduttore).filter_by(id=assegnazione_id).first() is None
 
 
 def test_create_spesa_ricorrente_creates_linked_scadenza(pg_session, test_user, unita):
@@ -295,52 +215,3 @@ def test_duplica_spesa_ricorrente_creates_new_period(pg_session, test_user, unit
             [originale.id if originale else None, duplicata.id if duplicata else None],
             scadenza_ids,
         )
-
-
-def test_assegnazioni_di_unita_riportano_nome_del_conduttore(pg_session, test_user, soggetto_conduttore, unita):
-    """The unit page shows who occupies it: the assignment carries the tenant's name."""
-    from immobili.routes.assegnazioni_conduttore import get_assegnazioni, get_assegnazioni_by_bene
-
-    conduttore = create_conduttore(ConduttoreCreate(soggetto_id=soggetto_conduttore.id), db=pg_session)
-    try:
-        create_assegnazione(
-            AssegnazioneConduttoreCreate(bene_id=unita.id, conduttore_id=conduttore.id,
-                                         data_inizio="2026-01-01"),
-            db=pg_session,
-        )
-        per_unita = get_assegnazioni_by_bene(unita.id, db=pg_session, current_user=test_user)
-        tutte = get_assegnazioni(bene_id=unita.id, conduttore_id=None, solo_correnti=False,
-                                 db=pg_session, current_user=test_user)
-        for righe in (per_unita, tutte):
-            assert [(r.conduttore_nome, r.soggetto_id) for r in righe] == [
-                ("Mario Conduttore", soggetto_conduttore.id)
-            ]
-    finally:
-        pg_session.rollback()
-        pg_session.query(AssegnazioneConduttore).filter_by(conduttore_id=conduttore.id).delete()
-        pg_session.query(Conduttore).filter_by(id=conduttore.id).delete()
-        pg_session.commit()
-
-
-def test_nome_del_conduttore_solo_con_permesso_soggetto_view(pg_session, test_user, soggetto_conduttore, unita):
-    """Like the relazioni API, names of anagrafiche need soggetto.view."""
-    from types import SimpleNamespace
-    from immobili.routes.assegnazioni_conduttore import get_assegnazioni_by_bene
-
-    senza = SimpleNamespace(is_superuser=False, get_permissions=lambda: {"conduttore.view"})
-    con = SimpleNamespace(is_superuser=False, get_permissions=lambda: {"conduttore.view", "soggetto.view"})
-    conduttore = create_conduttore(ConduttoreCreate(soggetto_id=soggetto_conduttore.id), db=pg_session)
-    try:
-        create_assegnazione(
-            AssegnazioneConduttoreCreate(bene_id=unita.id, conduttore_id=conduttore.id),
-            db=pg_session,
-        )
-        [riga] = get_assegnazioni_by_bene(unita.id, db=pg_session, current_user=senza)
-        assert (riga.conduttore_nome, riga.soggetto_id) == (None, None)
-        [riga] = get_assegnazioni_by_bene(unita.id, db=pg_session, current_user=con)
-        assert riga.conduttore_nome == "Mario Conduttore"
-    finally:
-        pg_session.rollback()
-        pg_session.query(AssegnazioneConduttore).filter_by(conduttore_id=conduttore.id).delete()
-        pg_session.query(Conduttore).filter_by(id=conduttore.id).delete()
-        pg_session.commit()

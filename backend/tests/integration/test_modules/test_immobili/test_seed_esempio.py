@@ -18,6 +18,13 @@ def _id(db, codice):
     return db.execute(text("SELECT id FROM immo_beni WHERE codice = :c"), {"c": codice}).scalar()
 
 
+def _relazioni(db, codice_bene, tipo):
+    return db.execute(text(
+        "SELECT count(*) FROM core_relazioni r JOIN core_ruoli_disponibili t ON t.id = r.ruolo_id "
+        "WHERE r.entity_type = 'IMMOBILE' AND r.entity_id = :b AND t.codice = :t AND t.modulo_id = 'immobili'"
+    ), {"b": _id(db, codice_bene), "t": tipo}).scalar()
+
+
 def test_dati_di_esempio_dei_beni(db_session):
     seed_tenant_data(db_session, tenant_id=0, tenant_schema=None, seed_test_data=True)
     db = db_session
@@ -28,18 +35,26 @@ def test_dati_di_esempio_dei_beni(db_session):
     assert ("TER-002", "FAB-001", "FABBRICATO_SU_PARTICELLA") in collegamenti
 
     ruoli = ruoli_alla_data(db, _id(db, "TER-001"), date(2026, 6, 1))
-    assert [s.ruolo for s in ruoli.titolari_godimento] == ["USUFRUTTUARIO"]
-    assert [s.ruolo for s in ruoli.proprietari] == ["NUDA_PROPRIETA"]
+    assert [s.ruolo for s in ruoli.titolari_godimento] == ["usufrutto"]
+    assert [s.ruolo for s in ruoli.proprietari] == ["nuda_proprieta"]
     assert len(ruoli.conduttori) == 1 and ruoli.avvisi == []
 
-    assert db.execute(text(
-        "SELECT count(*) FROM immo_assegnazioni_conduttore WHERE bene_id = :b"), {"b": _id(db, "UNITA-002")}).scalar() == 1
+    assert _relazioni(db, "UNITA-002", "conduttore") == 1
+    assert _relazioni(db, "UNITA-001", "proprieta") == 2   # 1/2 + 1/2
+    assert _relazioni(db, "BOX-001", "proprieta") == 1
+    assert _relazioni(db, "TER-001", "nuda_proprieta") == 1 and _relazioni(db, "TER-001", "usufrutto") == 1
+    quote = {tuple(r) for r in db.execute(text(
+        "SELECT r.quota_numeratore, r.quota_denominatore FROM core_relazioni r "
+        "JOIN core_ruoli_disponibili t ON t.id = r.ruolo_id "
+        "WHERE r.entity_id = :b AND t.codice = 'proprieta'"), {"b": _id(db, "UNITA-001")})}
+    assert quote == {(1, 2)}
     assert db.execute(text(
         "SELECT count(*) FROM immo_spese_ricorrenti WHERE bene_id = :b"), {"b": _id(db, "UNITA-001")}).scalar() >= 1
 
 
 def test_dati_di_esempio_idempotenti(db_session):
     seed_tenant_data(db_session, tenant_id=0, tenant_schema=None, seed_test_data=True)
-    prima = db_session.execute(text("SELECT count(*) FROM immo_beni_collegamenti")).scalar()
+    conta = lambda t: db_session.execute(text(f"SELECT count(*) FROM {t}")).scalar()
+    prima = (conta("immo_beni_collegamenti"), conta("core_relazioni"))
     seed_tenant_data(db_session, tenant_id=0, tenant_schema=None, seed_test_data=True)
-    assert db_session.execute(text("SELECT count(*) FROM immo_beni_collegamenti")).scalar() == prima
+    assert (conta("immo_beni_collegamenti"), conta("core_relazioni")) == prima

@@ -57,14 +57,6 @@ MENU_ITEMS = [
     #     "required_permission": "affittuario.view"
     # },
     # {
-    #     "id": "affitti.proprietari",
-    #     "label": "Proprietari",
-    #     "path": "/proprietari",
-    #     "icon": "user-tie",
-    #     "order_index": 40,
-    #     "required_permission": "proprietario.view"
-    # },
-    # {
     #     "id": "affitti.condomini",
     #     "label": "Condomini",
     #     "path": "/condomini",

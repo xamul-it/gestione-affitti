@@ -10,7 +10,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import List, Optional, Tuple
 
-from immobili.models.diritti_immobile import TipoDiritto
+from immobili.models.tipo_diritto import TipoDiritto
 
 
 class FormatoVisura(str, Enum):

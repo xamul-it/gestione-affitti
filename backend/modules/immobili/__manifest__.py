@@ -167,8 +167,6 @@ manifest = {
         "immo_beni_collegamenti",
         "immo_unita_immobiliari",
         "immo_condomini",
-        "immo_proprietari",
-        "immo_diritti_immobile",
         "immo_certificati_energetici",
         "immo_tabelle_millesimali",
         "immo_millesimi_unita",
@@ -187,8 +185,6 @@ manifest = {
         "immo_beni",
         "immo_beni_collegamenti",
         "immo_unita_immobiliari",
-        "immo_proprietari",
-        "immo_diritti_immobile",
         "immo_certificati_energetici",
         "immo_tabelle_millesimali",
         "immo_millesimi_unita",
@@ -196,8 +192,6 @@ manifest = {
         "immo_terreni",
         "immo_terreni_porzioni",
         "immo_tipo_immobile_categoria_map",
-        "immo_conduttori",
-        "immo_assegnazioni_conduttore",
         "immo_spese_ricorrenti",
     ],
 
@@ -228,10 +222,6 @@ manifest = {
         "immobile.create",
         "immobile.edit",
         "immobile.delete",
-        "proprietario.view",
-        "proprietario.create",
-        "proprietario.edit",
-        "proprietario.delete",
         "condominio.view",
         "condominio.create",
         "condominio.edit",
@@ -244,10 +234,6 @@ manifest = {
         "terreno.create",
         "terreno.edit",
         "terreno.delete",
-        "conduttore.view",
-        "conduttore.create",
-        "conduttore.edit",
-        "conduttore.delete",
         "spesa_ricorrente.view",
         "spesa_ricorrente.create",
         "spesa_ricorrente.edit",
@@ -300,7 +286,7 @@ manifest = {
             "path": "/proprietari",
             "icon": "user",
             "order_index": 20,
-            "required_permission": "proprietario.view"
+            "required_permission": "immobile.view"
         },
         {
             "id": "immobili.condomini",
@@ -316,7 +302,7 @@ manifest = {
             "path": "/conduttori",
             "icon": "user-check",
             "order_index": 25,
-            "required_permission": "conduttori.read"
+            "required_permission": "immobile.view"
         },
         {
             "id": "immobili.documenti",

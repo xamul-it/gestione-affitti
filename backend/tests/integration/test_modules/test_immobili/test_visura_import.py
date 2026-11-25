@@ -16,9 +16,9 @@ from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto, TipoDoc
 from app.core.platform_services.document_type_sync import sync_document_types
 from immobili.__manifest__ import manifest as immobili_manifest
 
-from immobili.models import DirittoImmobile, Proprietario, UnitaImmobiliare
+from immobili.models import UnitaImmobiliare
 from immobili.services.relazioni_bene import crea_relazione_bene, relazioni_del_bene
-from immobili.models.diritti_immobile import TipoDiritto
+from immobili.models.tipo_diritto import TipoDiritto
 from immobili.services.visura import parse_visura
 from immobili.services.visura_import_service import (
     VisuraImportError,
@@ -79,34 +79,6 @@ def _soggetto(pg_session, **kwargs):
     pg_session.add(s)
     pg_session.flush()
     return s
-
-
-def test_diritto_uso_persisted(pg_session):
-    s = SoggettoAnagrafico(
-        tipo_soggetto=TipoSoggetto.PERSONA_FISICA,
-        nome="Ugo",
-        cognome="Usuario",
-        codice_fiscale="SURUGO80A01H501Z",
-    )
-    pg_session.add(s)
-    pg_session.flush()
-    p = Proprietario(soggetto_id=s.id)
-    u = UnitaImmobiliare(codice="TEST-USO-001", tipo="Magazzino", indirizzo="Via Uso 1", citta="Testville")
-    pg_session.add_all([p, u])
-    pg_session.flush()
-    d = DirittoImmobile(
-        bene_id=u.id,
-        proprietario_id=p.id,
-        tipo_diritto=TipoDiritto.USO,
-        quota_percentuale=Decimal("100"),
-    )
-    pg_session.add(d)
-    pg_session.flush()
-    pg_session.expire_all()
-
-    reloaded = pg_session.query(DirittoImmobile).filter_by(id=d.id).one()
-    assert reloaded.tipo_diritto == TipoDiritto.USO
-    # rollback in fixture teardown discards everything
 
 
 def seed_tipi_documento(db):
@@ -273,7 +245,6 @@ def test_apply_creates_everything(pg_session, storage, sintetica, pdf_sintetica)
     u592 = _find_unit(pg_session, "592", "2")
     tipi = sorted(r["tipo"] for r in relazioni_del_bene(pg_session, TENANT, u592.id)["diritti_reali"])
     assert tipi == ["proprieta", "uso"]
-    assert not pg_session.query(Proprietario).count()
 
 
 def test_reimport_is_noop(pg_session, storage, sintetica, pdf_sintetica):
@@ -619,7 +590,7 @@ def test_older_visura_changes_deselected(pg_session, storage, sintetica, pdf_sin
     assert any("più recente" in a for a in u.avvisi)
 
 
-# --- Relations instead of Proprietario/DirittoImmobile ---------------------
+# --- Relations instead of owner and right tables ------------------------------
 
 def _diritti(pg_session, unita_id):
     return relazioni_del_bene(pg_session, TENANT, unita_id)["diritti_reali"]

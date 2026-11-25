@@ -106,7 +106,7 @@ def test_duplicato_aperto(svc, db_session, rossi, condominio, unique_suffix):
 
 def test_tipo_modulo_rifiutato(svc, rossi):
     with pytest.raises(ValueError, match="gestito dal modulo"):
-        svc.crea(rossi.id, "proprietario")
+        svc.crea(rossi.id, "affittuario")
 
 
 def test_entity_type_non_applicabile(svc, rossi):

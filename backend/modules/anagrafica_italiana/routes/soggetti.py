@@ -35,17 +35,15 @@ def _ensure_soggetti_table(db: Session, tenant_schema: Optional[str]) -> None:
 
 def _get_role_tables(db: Session, tenant_schema: Optional[str]) -> dict:
     if not tenant_schema:
-        return {"proprietari": False, "affittuari": False, "tecnici": False}
+        return {"affittuari": False, "tecnici": False}
     inspector = inspect(db.get_bind())
     return {
-        "proprietari": inspector.has_table("immo_proprietari", schema=tenant_schema),
         "affittuari": inspector.has_table("affittuari", schema=tenant_schema),
         "tecnici": inspector.has_table("tecnici", schema=tenant_schema),
     }
 
 
 def _build_ruoli_info(soggetto: SoggettoAnagrafico, tables: dict) -> "RuoliInfo":
-    proprietario = tables.get("proprietari") and len(soggetto.proprietari) > 0
     affittuario = tables.get("affittuari") and len(soggetto.affittuari) > 0
     tecnico = tables.get("tecnici") and len(soggetto.tecnici) > 0
     tecnico_specializzazione = (
@@ -54,7 +52,6 @@ def _build_ruoli_info(soggetto: SoggettoAnagrafico, tables: dict) -> "RuoliInfo"
         else None
     )
     return RuoliInfo(
-        proprietario=bool(proprietario),
         affittuario=bool(affittuario),
         tecnico=bool(tecnico),
         tecnico_specializzazione=tecnico_specializzazione,
@@ -110,7 +107,6 @@ class SoggettoAnagra_ficoUpdate(BaseModel):
 
 class RuoliInfo(BaseModel):
     """Informazioni sui ruoli di un soggetto"""
-    proprietario: bool = False
     affittuario: bool = False
     tecnico: bool = False
     tecnico_specializzazione: Optional[str] = None
@@ -138,7 +134,7 @@ def get_all_soggetti(
 
     Per ogni soggetto restituisce:
     - Dati anagrafici completi
-    - Ruoli attivi (proprietario, affittuario, tecnico)
+    - Ruoli attivi (affittuario, tecnico)
     """
     _ensure_soggetti_table(db, tenant_schema)
     query = db.query(SoggettoAnagrafico)
@@ -428,7 +424,7 @@ def delete_soggetto(
     """
     Elimina un soggetto anagrafico.
 
-    ATTENZIONE: Elimina anche tutti i ruoli associati (proprietario, affittuario, tecnico)
+    ATTENZIONE: Elimina anche tutti i ruoli associati (affittuario, tecnico)
     grazie al CASCADE. Usare con cautela.
     """
     _ensure_soggetti_table(db, tenant_schema)
@@ -442,7 +438,6 @@ def delete_soggetto(
     # Verifica se ha ruoli attivi
     role_tables = _get_role_tables(db, tenant_schema)
     has_roles = (
-        (role_tables.get("proprietari") and len(db_soggetto.proprietari) > 0) or
         (role_tables.get("affittuari") and len(db_soggetto.affittuari) > 0) or
         (role_tables.get("tecnici") and len(db_soggetto.tecnici) > 0)
     )

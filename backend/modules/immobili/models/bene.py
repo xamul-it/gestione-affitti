@@ -43,11 +43,6 @@ class Bene(Base):
 
     __mapper_args__ = {"polymorphic_on": tipo_bene}
 
-    # immo_diritti_immobile has no real FK constraint in some older tenant
-    # schemas before 2026111201: keep the ORM cascade for rights. The others
-    # have ON DELETE CASCADE in the DB, so trust it (passive_deletes).
-    diritti = relationship("DirittoImmobile", back_populates="bene", cascade="all, delete-orphan")
-    assegnazioni_conduttore = relationship("AssegnazioneConduttore", back_populates="bene", passive_deletes=True)
     variazioni_catastali = relationship("VariazioneCatastale", back_populates="bene", passive_deletes=True)
     spese_ricorrenti = relationship(
         "SpesaRicorrenteImmobile",

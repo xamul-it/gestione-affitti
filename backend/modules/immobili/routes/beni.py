@@ -121,10 +121,6 @@ def get_variazioni_catastali(
     )
 
 
-# The summary shows owners' and tenants' names.
-_PERMESSI_RIEPILOGO = ("proprietario.view", "conduttore.view")
-
-
 @router.get("/{bene_id}/riepilogo", response_model=RiepilogoBeneResponse)
 def get_riepilogo(
     bene_id: int,
@@ -134,10 +130,6 @@ def get_riepilogo(
 ):
     """Chi paga cosa: a chi spetta ciascuna voce alla data, senza importi."""
     bene = _bene_visibile(db, bene_id, current_user)
-    if not getattr(current_user, "is_superuser", False):
-        permessi = current_user.get_permissions()
-        if any(p not in permessi for p in _PERMESSI_RIEPILOGO):
-            raise HTTPException(status_code=403, detail="Permessi insufficienti")
     return riepilogo_bene(db, bene, data or date.today())
 
 

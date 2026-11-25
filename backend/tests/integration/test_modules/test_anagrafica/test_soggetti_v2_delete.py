@@ -1,24 +1,8 @@
 """
 Regression tests for DELETE /anagrafica/soggetti-v2/{id} when the soggetto
-has an active role (Proprietario/Affittuario/Tecnico/Conduttore) linked
-to it.
-
-Before this fix, delete_soggetto_v2 had no guard and went straight to
-db.delete()/commit(). SoggettoAnagrafico.proprietari (and .tecnici) have
-no cascade/passive_deletes configured, and immo_proprietari has no real
-FK constraint in the DB at all, so deleting a soggetto already registered
-as a Proprietario crashed with a NotNullViolation instead of the intended
-"can't delete, has active roles" 400 (the v1 soggetti.py router — not
-mounted — already implements this exact guard; v2, the live route, never
-had it).
-
-Conduttore is included even though immo_conduttori DOES have a real
-ON DELETE CASCADE (unlike Proprietario): the original fix omitted
-Conduttore's role check entirely (SoggettoAnagrafico had no .conduttori
-relationship at all), so deleting a soggetto registered as a Conduttore
-silently cascaded away the Conduttore/AssegnazioneConduttore rows with no
-warning — the opposite policy from every other role, found by independent
-review.
+has relations (owner, tenant... of a bene, core_relazioni) or an active
+module role (Affittuario/Tecnico): the delete is refused with a 400 instead
+of cascading the rows away or crashing.
 
 Uses real PostgreSQL (pg_session), same pattern as test_public_api.py.
 """
@@ -29,10 +13,8 @@ from sqlalchemy import text
 from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
 from anagrafica_italiana.routes.soggetti_v2 import _has_role_records, delete_soggetto_v2
 
-from immobili.models import Conduttore, Proprietario
-from immobili.routes.proprietari import create_proprietario
-from immobili.routes.conduttori import create_conduttore
-from immobili.schemas import ConduttoreCreate, ProprietarioCreate
+from immobili.models import Bene, UnitaImmobiliare
+from immobili.services.relazioni_bene import crea_relazione_bene
 
 TENANT = "tenant_qa_test"
 
@@ -91,35 +73,28 @@ def soggetto(pg_session):
     pg_session.commit()
 
 
-def test_delete_soggetto_blocked_when_registered_as_proprietario(pg_session, soggetto):
-    proprietario = create_proprietario(ProprietarioCreate(soggetto_id=soggetto.id), db=pg_session)
-    proprietario_id = proprietario.id
+@pytest.mark.parametrize("tipo, quota", [("proprieta", "1/1"), ("conduttore", None)])
+def test_delete_soggetto_blocked_when_has_relation_on_bene(pg_session, soggetto, tipo, quota):
+    """Owners and tenants of a bene are core relations: the soggetto cannot be deleted from under them."""
+    unita = UnitaImmobiliare(codice="TEST-DEL-SOGG-001", tipo="Appartamento", indirizzo="Via Guard 1", citta="Testville")
+    pg_session.add(unita)
+    pg_session.commit()
+    unita_id = unita.id
     try:
+        rel, _ = crea_relazione_bene(pg_session, TENANT, None, unita_id, soggetto.id, tipo, quota=quota)
+        pg_session.commit()
         with pytest.raises(HTTPException) as exc_info:
             delete_soggetto_v2(soggetto.id, db=pg_session, tenant_schema=TENANT)
         assert exc_info.value.status_code == 400
 
         # Blocked, not silently cascaded: both rows must still exist.
         assert pg_session.query(SoggettoAnagrafico).filter_by(id=soggetto.id).first() is not None
-        assert pg_session.query(Proprietario).filter_by(id=proprietario_id).first() is not None
+        assert pg_session.execute(text("SELECT count(*) FROM core_relazioni WHERE soggetto_id = :s"),
+                                  {"s": soggetto.id}).scalar() == 1
     finally:
-        pg_session.query(Proprietario).filter_by(id=proprietario_id).delete()
-        pg_session.commit()
-
-
-def test_delete_soggetto_blocked_when_registered_as_conduttore(pg_session, soggetto):
-    conduttore = create_conduttore(ConduttoreCreate(soggetto_id=soggetto.id), db=pg_session)
-    conduttore_id = conduttore.id
-    try:
-        with pytest.raises(HTTPException) as exc_info:
-            delete_soggetto_v2(soggetto.id, db=pg_session, tenant_schema=TENANT)
-        assert exc_info.value.status_code == 400
-
-        # Blocked, not silently cascaded via immo_conduttori's real ON DELETE CASCADE.
-        assert pg_session.query(SoggettoAnagrafico).filter_by(id=soggetto.id).first() is not None
-        assert pg_session.query(Conduttore).filter_by(id=conduttore_id).first() is not None
-    finally:
-        pg_session.query(Conduttore).filter_by(id=conduttore_id).delete()
+        pg_session.rollback()
+        pg_session.execute(text("DELETE FROM core_relazioni WHERE soggetto_id = :s"), {"s": soggetto.id})
+        pg_session.query(Bene).filter_by(id=unita_id).delete()
         pg_session.commit()
 
 
@@ -141,9 +116,9 @@ def test_has_role_records_missing_table_does_not_reset_search_path(pg_session, s
     the ordinary, successful "no roles" path for any tenant missing one of
     these role modules, not just some rare error case.
 
-    None of immo_proprietari/affittuari/tecnici/immo_conduttori exist in
+    None of affittuari/tecnici exist in
     'public' (they're tenant-only tables), so passing tenant_schema=
-    'public' exercises the "table doesn't exist" branch for all four
+    'public' exercises the "table doesn't exist" branch for both
     without needing a second real tenant fixture.
     """
     result = _has_role_records(pg_session, soggetto, tenant_schema="public")

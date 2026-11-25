@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from immobili.models.diritti_immobile import TipoDiritto
+from immobili.models.tipo_diritto import TipoDiritto
 from immobili.services.visura import (
     FormatoVisura,
     VisuraFormatError,

@@ -15,7 +15,7 @@ domain rules this encodes):
   occupancy-linked/ordinary items like TARI and everyday utilities) — this
   is informational classification, not an access-control filter, and it
   never hides the proprietario: ownership is always still reachable via
-  the linked unit's DirittoImmobile rows regardless of who is "responsabile"
+  the linked unit's ownership relations regardless of who is "responsabile"
   here, because an owner is jointly liable for a conduttore's unpaid bills.
 - `tipo_spesa` is intentionally an open string, not a hardcoded enum with a
   fixed short list: IMU/TARI have a known calculation basis today, but the

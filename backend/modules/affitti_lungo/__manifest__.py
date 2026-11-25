@@ -15,7 +15,7 @@ manifest = {
 
     # Dependencies on other modules
     "dependencies": [
-        "immobili",              # UnitaImmobiliare, Condominio, Proprietario
+        "immobili",              # UnitaImmobiliare, Condominio
         "anagrafica_italiana",   # SoggettoAnagrafico
     ],
 

@@ -25,10 +25,6 @@ RESOURCES = {
     "/condomini": "condominio",
     "/tabelle-millesimali": "condominio",
     "/millesimi-immobile": "condominio",
-    "/conduttori": "conduttore",
-    "/assegnazioni-conduttore": "conduttore",
-    "/proprietari": "proprietario",
-    "/diritti-immobile": "proprietario",
     "/terreni": "terreno",
 }
 # shared domain tables in public: read by module users, written by platform admins

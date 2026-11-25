@@ -13,7 +13,8 @@ from anagrafica_italiana.models import SoggettoAnagrafico
 from anagrafica_italiana.models.soggetto_anagrafico import TipoSoggetto
 from affitti_lungo.__manifest__ import manifest as affitti_manifest
 from immobili.__manifest__ import manifest as immobili_manifest
-from immobili.models import AssegnazioneConduttore, Condominio, Conduttore, Proprietario, UnitaImmobiliare
+from immobili.models import Condominio, UnitaImmobiliare
+from immobili.services.relazioni_bene import crea_relazione_bene
 from app.core.auth.dependencies import get_current_active_user
 from app.core.auth.models import Permission, Role, User
 from app.core.database import engine, get_db, get_tenant_schema
@@ -42,14 +43,13 @@ def ctx(db_session, unique_suffix):
     prop, ex_cond, altro = mk("Prop"), mk("ExCond"), mk("Altro")
     db.add_all([prop, ex_cond, altro])
     db.flush()
-    db.add(Proprietario(soggetto_id=prop.id))
     u = UnitaImmobiliare(codice=f"SV-{unique_suffix}", tipo="Appartamento", indirizzo="Via A 1", citta="Roma")
-    c = Conduttore(soggetto_id=ex_cond.id)
     cond = Condominio(codice=f"SV-{unique_suffix}", nome="Aurora", indirizzo="Via A 1", citta="Roma")
-    db.add_all([u, c, cond])
+    db.add_all([u, cond])
     db.flush()
-    db.add(AssegnazioneConduttore(bene_id=u.id, conduttore_id=c.id,
-                                  data_inizio=date(2018, 1, 1), data_fine=date(2019, 1, 1)))
+    crea_relazione_bene(db, TEST_TENANT, None, u.id, prop.id, "proprieta", quota="1/1")
+    crea_relazione_bene(db, TEST_TENANT, None, u.id, ex_cond.id, "conduttore",
+                        data_inizio=date(2018, 1, 1), data_fine=date(2019, 1, 1))
     RelazioneService(db, TEST_TENANT).crea(prop.id, "amministratore_condominio", entity_type="CONDOMINIO",
                                           entity_id=cond.id, data_inizio=date(2026, 1, 1))
     db.flush()
@@ -71,7 +71,7 @@ def _ids(res):
 
 def test_filtro_ruolo(ctx):
     http, prop, ex_cond, altro = ctx
-    ids = _ids(http.get(URL, params={"ruolo": "proprietario", "limit": 5000}))
+    ids = _ids(http.get(URL, params={"ruolo": "proprieta", "limit": 5000}))
     assert prop.id in ids and altro.id not in ids and ex_cond.id not in ids
 
 
@@ -86,7 +86,7 @@ def test_ruoli_calcolati(ctx):
     http, prop, ex_cond, altro = ctx
     by_id = {s["id"]: s for s in http.get(URL, params={"limit": 5000}).json()}
     assert {r["codice"]: r["n"] for r in by_id[prop.id]["ruoli"]} == {
-        "proprietario": 1, "amministratore_condominio": 1,
+        "proprieta": 1, "amministratore_condominio": 1,
     }
     assert by_id[ex_cond.id]["ruoli"] == [{"codice": "conduttore", "nome": "Conduttore", "modulo": "immobili", "n": 0}]
     assert by_id[altro.id]["ruoli"] == []
@@ -135,4 +135,4 @@ def test_ruoli_senza_permesso_oggetto_non_si_vedono(ctx):
     by_id = {s["id"]: s for s in http.get(URL, params={"limit": 5000}).json()}
     assert [r["codice"] for r in by_id[prop.id]["ruoli"]] == ["amministratore_condominio"]
     assert by_id[ex_cond.id]["ruoli"] == []
-    assert _ids(http.get(URL, params={"ruolo": "proprietario", "limit": 5000})) == set()
+    assert _ids(http.get(URL, params={"ruolo": "proprieta", "limit": 5000})) == set()

@@ -11,7 +11,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional, Tuple
 
-from immobili.models.diritti_immobile import TipoDiritto
+from immobili.models.tipo_diritto import TipoDiritto
 
 from .models import IntestatoParsed, VisuraFormatError
 

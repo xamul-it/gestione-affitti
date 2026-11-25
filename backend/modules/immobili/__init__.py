@@ -1,7 +1,7 @@
 """
 Immobili Module - Real Estate Property Management
 
-Manages properties, condominiums, owners, and cadastral data.
+Manages properties, condominiums, and cadastral data.
 
 Module Standard Compliance:
 - module_short_code: IMMO
@@ -18,8 +18,6 @@ TENANT SCHEMA (business data):
 - immo_terreni: Land parcels
 - immo_unita_immobiliari: Property units
 - immo_condomini: Condominium buildings
-- immo_proprietari: Property owners (role)
-- immo_diritti_immobile: Property rights
 - immo_certificati_energetici: Energy certificates
 - immo_tabelle_millesimali: Millesimal tables
 - immo_millesimi_unita: Unit millesimal values
@@ -49,13 +47,9 @@ def get_routers():
         caricamento_documenti_router,
         immobili_router,
         condomini_router,
-        proprietari_router,
-        diritti_immobile_router,
         certificati_energetici_router,
         tabelle_millesimali_router,
         millesimi_immobile_router,
-        conduttori_router,
-        assegnazioni_conduttore_router,
         spese_ricorrenti_router,
     )
     return [
@@ -67,13 +61,9 @@ def get_routers():
         caricamento_documenti_router,
         immobili_router,
         condomini_router,
-        proprietari_router,
-        diritti_immobile_router,
         certificati_energetici_router,
         tabelle_millesimali_router,
         millesimi_immobile_router,
-        conduttori_router,
-        assegnazioni_conduttore_router,
         spese_ricorrenti_router,
     ]
 
@@ -105,7 +95,7 @@ MENU_ITEMS = [
         "path": "/proprietari",
         "icon": "user",
         "order_index": 20,
-        "required_permission": "proprietario.view"
+        "required_permission": "immobile.view"
     },
     {
         "id": "immobili.conduttori",
@@ -113,7 +103,7 @@ MENU_ITEMS = [
         "path": "/conduttori",
         "icon": "user-check",
         "order_index": 25,
-        "required_permission": "conduttori.read"
+        "required_permission": "immobile.view"
     },
     {
         "id": "immobili.condomini",
@@ -165,7 +155,7 @@ WIDGETS = [
         "id": "immobili.stats",
         "title": "Statistiche Immobili",
         "component": "ImmobiliStatsWidget",
-        "description": "Panoramica generale delle unità immobiliari, proprietari e condomini",
+        "description": "Panoramica generale delle unità immobiliari e condomini",
         "default_width": 6,
         "default_height": 4,
         "category": "stats",

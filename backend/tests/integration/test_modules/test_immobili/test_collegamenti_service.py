@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
 from immobili.models import (
-    CategoriaCatastale, CollegamentoBeni, DirittoImmobile, Proprietario,
+    CategoriaCatastale, CollegamentoBeni,
     Terreno, TerrenoPorzione, UnitaImmobiliare,
 )
 from immobili.services.collegamenti_beni import (
@@ -18,6 +18,8 @@ from immobili.services.collegamenti_beni import (
     avvisi_collegamenti, crea_collegamento,
 )
 from immobili.services.elimina_bene import elimina_bene
+from immobili.services.relazioni_bene import crea_relazione_bene
+from tests.integration.conftest import TEST_TENANT
 
 pytestmark = pytest.mark.integration
 
@@ -48,15 +50,11 @@ def _proprietario(db, cognome):
     s = SoggettoAnagrafico(tipo_soggetto=TipoSoggetto.PERSONA_FISICA, nome="Test", cognome=cognome)
     db.add(s)
     db.flush()
-    p = Proprietario(soggetto_id=s.id)
-    db.add(p)
-    db.flush()
-    return p
+    return s
 
 
-def _diritto(db, bene, proprietario, tipo="PROPRIETARIO"):
-    db.add(DirittoImmobile(bene_id=bene.id, proprietario_id=proprietario.id, tipo_diritto=tipo,
-                           quota_percentuale=100))
+def _diritto(db, bene, soggetto, tipo="proprieta"):
+    crea_relazione_bene(db, TEST_TENANT, None, bene.id, soggetto.id, tipo, quota="1/1")
     db.flush()
 
 

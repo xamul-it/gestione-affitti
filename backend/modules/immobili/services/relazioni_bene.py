@@ -28,7 +28,7 @@ FAMIGLIE = ("diritti_reali", "godimento", "incarichi")
 # Writes need the ".edit" counterpart (immobile.edit / terreno.edit).
 PERMESSO_PER_TIPO = {"UNITA": "immobile.view", "TERRENO": "terreno.view"}
 
-# Right of the old DirittoImmobile (TipoDiritto name) -> relation type of the diritti_reali family.
+# Right type of the old rights table (TipoDiritto name) -> relation type of the diritti_reali family.
 # A co-owner is just an owner with a share.
 MAPPA_TIPO_DIRITTO: Dict[str, str] = {
     "PROPRIETARIO": "proprieta",

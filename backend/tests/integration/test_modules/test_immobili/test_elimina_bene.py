@@ -13,6 +13,8 @@ from app.core.platform_services.scadenze_collegate import apri_o_aggiorna, utent
 from immobili.models import Terreno, TerrenoPorzione, UnitaImmobiliare
 from immobili.routes.immobili import delete_unita_immobiliare
 from immobili.routes.terreni import delete_terreno
+from immobili.services.relazioni_bene import crea_relazione_bene
+from tests.integration.conftest import TEST_TENANT
 
 pytestmark = pytest.mark.integration
 
@@ -59,3 +61,46 @@ def test_cancellare_unita_toglie_documenti_e_scadenze(db_session):
     delete_unita_immobiliare(u.id, db=db_session, current_user=UTENTE)
 
     _verifica_ripulito(db_session, u.id, scadenza_id)
+
+
+def _soggetto(db, cognome):
+    from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
+    s = SoggettoAnagrafico(tipo_soggetto=TipoSoggetto.PERSONA_FISICA, nome="Del", cognome=cognome)
+    db.add(s)
+    db.flush()
+    return s
+
+
+def _conta_relazioni(db, bene_id):
+    return db.execute(text(
+        "SELECT count(*) FROM core_relazioni WHERE entity_type = 'IMMOBILE' AND entity_id = :id"
+    ), {"id": bene_id}).scalar()
+
+
+def test_cancellare_unita_toglie_le_sue_relazioni(db_session):
+    u = UnitaImmobiliare(codice="DEL-U-2", tipo="Box", indirizzo="Via A 2", citta="Forlì")
+    db_session.add(u)
+    db_session.flush()
+    crea_relazione_bene(db_session, TEST_TENANT, None, u.id, _soggetto(db_session, "Titolare").id,
+                        "proprieta", quota="1/1")
+    crea_relazione_bene(db_session, TEST_TENANT, None, u.id, _soggetto(db_session, "Inquilino").id,
+                        "conduttore", data_inizio=date(2025, 1, 1))
+    assert _conta_relazioni(db_session, u.id) == 2
+
+    delete_unita_immobiliare(u.id, db=db_session, current_user=UTENTE)
+
+    assert _conta_relazioni(db_session, u.id) == 0
+
+
+def test_cancellare_terreno_toglie_le_sue_relazioni(db_session):
+    t = Terreno(codice="DEL-T-2", comune="Forlì", provincia="FC",
+                porzioni=[TerrenoPorzione(qualita="SEMINATIVO", superficie_mq=10)])
+    db_session.add(t)
+    db_session.flush()
+    crea_relazione_bene(db_session, TEST_TENANT, None, t.id, _soggetto(db_session, "Nudo").id,
+                        "nuda_proprieta", quota="1/1")
+    assert _conta_relazioni(db_session, t.id) == 1
+
+    delete_terreno(t.id, db=db_session, current_user=UTENTE)
+
+    assert _conta_relazioni(db_session, t.id) == 0

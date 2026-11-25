@@ -127,26 +127,6 @@ def test_etichetta_terreno_senza_indirizzo(db_session):
     assert entity_label_registry.labels(db_session, "IMMOBILE", [t.id]) == {t.id: "T-9 · Forlì"}
 
 
-def test_descrizione_relazione_terreno_senza_indirizzo(db_session):
-    from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
-    from immobili.models import DirittoImmobile, Proprietario
-    from immobili.relations import proprietari
-
-    t = _crea(db_session, codice="T-10")
-    s = SoggettoAnagrafico(tipo_soggetto=TipoSoggetto.PERSONA_FISICA, nome="Rel", cognome="Terreno")
-    db_session.add(s)
-    db_session.flush()
-    p = Proprietario(soggetto_id=s.id)
-    db_session.add(p)
-    db_session.flush()
-    db_session.add(DirittoImmobile(bene_id=t.id, proprietario_id=p.id, tipo_diritto="USUFRUTTUARIO"))
-    db_session.flush()
-    sel = proprietari(db_session, "tenant_qa_test").subquery()
-    descrizione = db_session.execute(
-        __import__("sqlalchemy").select(sel.c.descrizione).where(sel.c.entity_id == t.id)).scalar()
-    assert descrizione.startswith("T-10 · Forlì — ")
-
-
 def test_tipologie_documentali_del_terreno():
     from immobili.__manifest__ import manifest
 

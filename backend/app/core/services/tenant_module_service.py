@@ -49,8 +49,6 @@ class TenantModuleService:
             "immo_beni",
             "immo_beni_collegamenti",
             "immo_unita_immobiliari",
-            "immo_proprietari",
-            "immo_diritti_immobile",
             "immo_certificati_energetici",
             "immo_tabelle_millesimali",
             "immo_millesimi_unita",

@@ -9,8 +9,6 @@ if modules_dir not in sys.path:
 from immobili.models import (
     UnitaImmobiliare,
     Condominio,
-    Proprietario,
-    DirittoImmobile,
     TipoDiritto,
     CertificatoEnergetico,
     ClasseEnergetica,
@@ -42,8 +40,6 @@ __all__ = [
     "SpecializzazioneTecnico",
     "CertificatoEnergetico",
     "ClasseEnergetica",
-    "Proprietario",
-    "DirittoImmobile",
     "TipoDiritto",
     "Condominio",
     "TabellaMillesimale",

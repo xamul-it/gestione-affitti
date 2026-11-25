@@ -1,9 +1,8 @@
 """
 Delete a bene (unit or land parcel) for good.
 
-Rights, tenant assignments, cadastral changes, recurring costs and land
-portions go with ON DELETE CASCADE. Documents, scadenze and core relations
-point to the bene by entity_type IMMOBILE + entity_id, without a FK: they
+Cadastral changes, recurring costs and land portions go with ON DELETE CASCADE. Documents, scadenze and core relations
+(rights, tenancies, assignments) point to the bene by entity_type IMMOBILE + entity_id, without a FK: they
 are removed here (document scadenze and relation scadenze are cancelled).
 The document files stay in storage, as in the phase 1 reset: nothing is
 lost by mistake.

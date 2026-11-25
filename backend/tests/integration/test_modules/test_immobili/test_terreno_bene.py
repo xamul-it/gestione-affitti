@@ -53,23 +53,8 @@ def test_sezione_catastale_e_sinonimo_di_sezione(db_session):
     assert t.sezione == "A"
 
 
-def test_cancellare_terreno_cancella_bene_porzioni_e_figli(db_session):
-    from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
-    from immobili.models import AssegnazioneConduttore, Conduttore, DirittoImmobile, Proprietario
-
+def test_cancellare_terreno_cancella_bene_e_porzioni(db_session):
     t = _terreno(db_session, codice="TER-B-4")
-    s = SoggettoAnagrafico(tipo_soggetto=TipoSoggetto.PERSONA_FISICA, nome="Terreno", cognome="Figli")
-    db_session.add(s)
-    db_session.flush()
-    p = Proprietario(soggetto_id=s.id)
-    c = Conduttore(soggetto_id=s.id)
-    db_session.add_all([p, c])
-    db_session.flush()
-    db_session.add_all([
-        DirittoImmobile(bene_id=t.id, proprietario_id=p.id, tipo_diritto="USUFRUTTUARIO"),
-        AssegnazioneConduttore(bene_id=t.id, conduttore_id=c.id),
-    ])
-    db_session.flush()
     bene_id = t.id
 
     db_session.delete(t)
@@ -80,5 +65,3 @@ def test_cancellare_terreno_cancella_bene_porzioni_e_figli(db_session):
         assert db_session.execute(text(f"SELECT count(*) FROM {tabella} WHERE id = :id"), {"id": bene_id}).scalar() == 0
     assert db_session.execute(text(
         "SELECT count(*) FROM immo_terreni_porzioni WHERE terreno_id = :id"), {"id": bene_id}).scalar() == 0
-    for tabella in ("immo_diritti_immobile", "immo_assegnazioni_conduttore"):
-        assert db_session.execute(text(f"SELECT count(*) FROM {tabella} WHERE bene_id = :id"), {"id": bene_id}).scalar() == 0

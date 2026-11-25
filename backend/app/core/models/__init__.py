@@ -8,7 +8,7 @@ Domain-specific models have been moved to their respective modules:
 
 - SoggettoAnagrafico, TipoSoggetto -> modules/anagrafica_italiana
 - CategoriaCatastale, ComuneItalia, TipoImmobileCategoriaMap -> modules/immobili
-- UnitaImmobiliare, Condominio, Proprietario, etc. -> modules/immobili
+- UnitaImmobiliare, Condominio, etc. -> modules/immobili
 
 Import from the appropriate module instead:
     from anagrafica_italiana.models import SoggettoAnagrafico

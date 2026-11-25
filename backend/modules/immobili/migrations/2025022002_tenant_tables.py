@@ -19,8 +19,6 @@ for module_name in [
     "immobili.models.terreno",
     "immobili.models.unita_immobiliare",
     "immobili.models.condomini",
-    "immobili.models.proprietari",
-    "immobili.models.diritti_immobile",
     "immobili.models.certificati_energetici",
     "immobili.models.tabelle_millesimali",
     "immobili.models.millesimi_unita",
@@ -68,6 +66,12 @@ EXCLUDED_TABLES = {
 }
 
 
+# immo_proprietari and immo_diritti_immobile used to be created here from their
+# models; the models are gone (owners and rights are core relations since
+# 2026112501_relazione_unica), so a new tenant no longer gets these two tables
+# and the later migrations skip them when absent.
+
+
 def _get_target_schema():
     return context.get_x_argument(as_dictionary=True).get("schema")
 
@@ -113,8 +117,6 @@ def _order_tenant_tables(tables: list[Table]) -> list[Table]:
         "immo_condomini",
         "immo_beni",  # the unit's id is the bene's id (2026111201_beni)
         "immo_unita_immobiliari",
-        "immo_proprietari",
-        "immo_diritti_immobile",
         "immo_certificati_energetici",
         "immo_tabelle_millesimali",
         "immo_millesimi_unita",

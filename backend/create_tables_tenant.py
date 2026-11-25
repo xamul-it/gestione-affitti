@@ -19,7 +19,7 @@ from app.core.platform.models import MenuItem, Widget, UserDashboard, Scadenza, 
 from anagrafica_italiana.models import SoggettoAnagrafico
 from immobili.models import (
     UnitaImmobiliare, Condominio, CertificatoEnergetico,
-    TabellaMillesimale, MillesimiUnita, DirittoImmobile,
+    TabellaMillesimale, MillesimiUnita,
     CategoriaCatastale, ComuneItalia
 )
 from affitti_lungo.models import (

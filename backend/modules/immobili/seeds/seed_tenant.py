@@ -14,6 +14,7 @@ Esempi di dati che potrebbero essere aggiunti:
 """
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from datetime import date
 from typing import Optional
 import logging
 
@@ -79,62 +80,45 @@ def _collega(db: Session, principale: int, collegato: int, tipo: str) -> None:
     ), {"p": principale, "c": collegato, "t": tipo})
 
 
-def _diritto(db: Session, bene_id: int, proprietario_id: int, tipo: str, quota: float) -> None:
-    if db.execute(text(
-        "SELECT 1 FROM immo_diritti_immobile WHERE bene_id = :b AND proprietario_id = :p"
-    ), {"b": bene_id, "p": proprietario_id}).first():
+def _relazione(db: Session, tenant_schema: Optional[str], bene_id: int, soggetto_id: int, tipo: str,
+               quota: Optional[str] = None, data_inizio: date = date(2020, 1, 1)) -> None:
+    """Example relation on a bene, skipped when the same one is already open."""
+    from immobili.services.relazioni_bene import crea_relazione_bene
+    esiste = db.execute(text(
+        "SELECT 1 FROM core_relazioni r JOIN core_ruoli_disponibili t ON t.id = r.ruolo_id "
+        "WHERE r.entity_type = 'IMMOBILE' AND r.entity_id = :b AND r.soggetto_id = :s "
+        "AND t.codice = :t AND t.modulo_id = 'immobili' AND r.data_fine IS NULL"
+    ), {"b": bene_id, "s": soggetto_id, "t": tipo}).first()
+    if esiste:
         return
-    db.execute(text(
-        "INSERT INTO immo_diritti_immobile (bene_id, proprietario_id, tipo_diritto, quota_percentuale, data_inizio) "
-        "VALUES (:b, :p, :t, :q, '2020-01-01')"
-    ), {"b": bene_id, "p": proprietario_id, "t": tipo, "q": quota})
+    crea_relazione_bene(db, tenant_schema, None, bene_id, soggetto_id, tipo, quota=quota, data_inizio=data_inizio)
 
 
-def _conduttore(db: Session, soggetto_id: int) -> int:
-    conduttore_id = db.execute(text("SELECT id FROM immo_conduttori WHERE soggetto_id = :s"), {"s": soggetto_id}).scalar()
-    if conduttore_id:
-        return conduttore_id
-    return db.execute(text(
-        "INSERT INTO immo_conduttori (soggetto_id, note) VALUES (:s, 'Conduttore di esempio') RETURNING id"
-    ), {"s": soggetto_id}).scalar()
-
-
-def _assegna(db: Session, bene_id: int, conduttore_id: int) -> None:
-    if db.execute(text(
-        "SELECT 1 FROM immo_assegnazioni_conduttore WHERE bene_id = :b AND conduttore_id = :c"
-    ), {"b": bene_id, "c": conduttore_id}).first():
-        return
-    db.execute(text(
-        "INSERT INTO immo_assegnazioni_conduttore (bene_id, conduttore_id, data_inizio) VALUES (:b, :c, '2025-01-01')"
-    ), {"b": bene_id, "c": conduttore_id})
-
-
-def seed_beni_demo(db: Session, soggetto_ids: list, proprietari_ids: list, unita_ids: list) -> dict:
+def seed_beni_demo(db: Session, tenant_schema: Optional[str], soggetto_ids: list, unita_ids: list) -> dict:
     """Beni features of phase 1-2b: tenant, usufruct, pertinenza, building on a parcel, recurring cost.
 
     Needs the demo units (UNITA-*) and land parcels (TER-*) already created.
     """
     box = _unita_demo(db, "BOX-001", "Box", "C/6", "Via Roma 1", "Milano")
     fabbricato = _unita_demo(db, "FAB-001", "Fabbricato rurale", "A/3", "Località Campi", "Milano")
-    _diritto(db, box, proprietari_ids[0], "PROPRIETARIO", 100)
-    _diritto(db, fabbricato, proprietari_ids[2], "PROPRIETARIO", 100)
+    _relazione(db, tenant_schema, box, soggetto_ids[0], "proprieta", "1/1")
+    _relazione(db, tenant_schema, fabbricato, soggetto_ids[2], "proprieta", "1/1")
     _collega(db, unita_ids[0], box, "PERTINENZA")
     terreno, area = _bene_id(db, "TER-001"), _bene_id(db, "TER-002")
     if area:
         _collega(db, area, fabbricato, "FABBRICATO_SU_PARTICELLA")
-    conduttore = _conduttore(db, soggetto_ids[3])
-    _assegna(db, unita_ids[1], conduttore)
+    _relazione(db, tenant_schema, unita_ids[1], soggetto_ids[3], "conduttore", data_inizio=date(2025, 1, 1))
     if terreno:
         # Nudo proprietario + usufruttuario + tenant farming the land.
-        _diritto(db, terreno, proprietari_ids[1], "NUDA_PROPRIETA", 100)
-        _diritto(db, terreno, proprietari_ids[2], "USUFRUTTUARIO", 100)
-        _assegna(db, terreno, conduttore)
+        _relazione(db, tenant_schema, terreno, soggetto_ids[1], "nuda_proprieta", "1/1")
+        _relazione(db, tenant_schema, terreno, soggetto_ids[2], "usufrutto", "1/1")
+        _relazione(db, tenant_schema, terreno, soggetto_ids[3], "conduttore", data_inizio=date(2025, 1, 1))
     if not db.execute(text("SELECT 1 FROM immo_spese_ricorrenti WHERE bene_id = :b"), {"b": unita_ids[0]}).first():
         db.execute(text(
             "INSERT INTO immo_spese_ricorrenti (bene_id, tipo_spesa, responsabile, periodo, rata, importo, data_scadenza) "
             "VALUES (:b, 'IMU', 'PROPRIETARIO', '2026', 'ACCONTO', 420.50, '2026-06-16')"
         ), {"b": unita_ids[0]})
-    return {"immo_beni_collegamenti": 2, "immo_assegnazioni_conduttore": 2, "immo_spese_ricorrenti": 1}
+    return {"immo_beni_collegamenti": 2, "core_relazioni": 5, "immo_spese_ricorrenti": 1}
 
 
 def seed_tenant_data(
@@ -170,7 +154,7 @@ def seed_tenant_data(
     # Attualmente nessun dato di seed per tenant
     # Il modulo immobili utilizza principalmente:
     # - Dati pubblici (categorie catastali, tipologie terreno) condivisi tra tutti i tenant
-    # - Dati inseriti dall'utente (unità immobiliari, condomini, proprietari, etc.)
+    # - Dati inseriti dall'utente (unità immobiliari, condomini, etc.)
     if not seed_test_data:
         logger.info(f"[IMMO] Tenant seed completed: {results}")
         return results
@@ -211,33 +195,6 @@ def seed_tenant_data(
             _get_or_create_soggetto(f"{base_cf}0004", "Giulia", "Neri", f"giulia.neri+{tenant_id or 0}@example.test"),
         ]
         results["anag_soggetti_anagrafici"] = len(soggetto_ids)
-
-        def _get_or_create_proprietario(soggetto_id: int, label: str) -> int:
-            proprietario_id = db.execute(
-                text("SELECT id FROM immo_proprietari WHERE soggetto_id = :sid"),
-                {"sid": soggetto_id},
-            ).scalar()
-            if proprietario_id:
-                return proprietario_id
-            return db.execute(
-                text(
-                    """
-                    INSERT INTO immo_proprietari
-                        (soggetto_id, note_proprietario)
-                    VALUES
-                        (:soggetto_id, :note)
-                    RETURNING id
-                    """
-                ),
-                {"soggetto_id": soggetto_id, "note": label},
-            ).scalar()
-
-        proprietari_ids = [
-            _get_or_create_proprietario(soggetto_ids[0], "Proprietario principale"),
-            _get_or_create_proprietario(soggetto_ids[1], "Comproprietario"),
-            _get_or_create_proprietario(soggetto_ids[2], "Proprietario investimento"),
-        ]
-        results["immo_proprietari"] = len(proprietari_ids)
 
         def _get_or_create_condominio(codice: str, nome: str, indirizzo: str) -> int:
             condominio_id = db.execute(
@@ -314,35 +271,15 @@ def seed_tenant_data(
         ]
         results["immo_unita_immobiliari"] = len(unita_ids)
 
-        def _ensure_diritto(unita_id: int, proprietario_id: int, quota: float):
-            exists = db.execute(
-                text(
-                    """
-                    SELECT id FROM immo_diritti_immobile
-                    WHERE bene_id = :unita_id AND proprietario_id = :proprietario_id
-                    """
-                ),
-                {"unita_id": unita_id, "proprietario_id": proprietario_id},
-            ).scalar()
-            if exists:
-                return
-            db.execute(
-                text(
-                    """
-                    INSERT INTO immo_diritti_immobile
-                        (bene_id, proprietario_id, tipo_diritto, quota_percentuale, data_inizio)
-                    VALUES
-                        (:unita_id, :proprietario_id, 'PROPRIETARIO', :quota, '2025-01-01')
-                    """
-                ),
-                {"unita_id": unita_id, "proprietario_id": proprietario_id, "quota": quota},
-            )
-
-        _ensure_diritto(unita_ids[0], proprietari_ids[0], 50.0)
-        _ensure_diritto(unita_ids[0], proprietari_ids[1], 50.0)
-        _ensure_diritto(unita_ids[1], proprietari_ids[2], 100.0)
-        _ensure_diritto(unita_ids[2], proprietari_ids[0], 100.0)
-        results["immo_diritti_immobile"] = 4
+        # Rights as core relations (diritti_reali family): shares as fractions.
+        for unita, soggetto, quota in (
+            (unita_ids[0], soggetto_ids[0], "1/2"),
+            (unita_ids[0], soggetto_ids[1], "1/2"),
+            (unita_ids[1], soggetto_ids[2], "1/1"),
+            (unita_ids[2], soggetto_ids[0], "1/1"),
+        ):
+            _relazione(db, tenant_schema, unita, soggetto, "proprieta", quota, date(2025, 1, 1))
+        results["core_relazioni_diritti"] = 4
 
         def _ensure_certificato(unita_id: int, tecnico_id: int, classe: str, protocollo: str):
             exists = db.execute(
@@ -463,7 +400,7 @@ def seed_tenant_data(
         results["immo_tabelle_millesimali"] = 4
         results["immo_millesimi_unita"] = 8
 
-        results.update(seed_beni_demo(db, soggetto_ids, proprietari_ids, unita_ids))
+        results.update(seed_beni_demo(db, tenant_schema, soggetto_ids, unita_ids))
 
         db.commit()
     except Exception as exc:

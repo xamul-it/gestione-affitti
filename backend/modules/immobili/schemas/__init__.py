@@ -39,18 +39,6 @@ from .condomini import (
     CondominioUpdate,
     CondominioResponse,
 )
-from .proprietari import (
-    ProprietarioBase,
-    ProprietarioCreate,
-    ProprietarioUpdate,
-    ProprietarioResponse,
-)
-from .diritti_immobile import (
-    DirittoImmobileBase,
-    DirittoImmobileCreate,
-    DirittoImmobileUpdate,
-    DirittoImmobileResponse,
-)
 from .certificati_energetici import (
     CertificatoEnergeticoBase,
     CertificatoEnergeticoCreate,
@@ -68,18 +56,6 @@ from .millesimi_unita import (
     MillesimiUnitaCreate,
     MillesimiUnitaUpdate,
     MillesimiUnitaResponse,
-)
-from .conduttore import (
-    ConduttoreBase,
-    ConduttoreCreate,
-    ConduttoreUpdate,
-    ConduttoreResponse,
-)
-from .assegnazione_conduttore import (
-    AssegnazioneConduttoreBase,
-    AssegnazioneConduttoreCreate,
-    AssegnazioneConduttoreUpdate,
-    AssegnazioneConduttoreResponse,
 )
 from .spesa_ricorrente import (
     SpesaRicorrenteBase,
@@ -116,20 +92,12 @@ __all__ = [
     "ImmobileBase", "ImmobileCreate", "ImmobileUpdate", "ImmobileResponse",
     # Condomini
     "CondominioBase", "CondominioCreate", "CondominioUpdate", "CondominioResponse",
-    # Proprietari
-    "ProprietarioBase", "ProprietarioCreate", "ProprietarioUpdate", "ProprietarioResponse",
-    # Diritti Immobile
-    "DirittoImmobileBase", "DirittoImmobileCreate", "DirittoImmobileUpdate", "DirittoImmobileResponse",
     # Certificati Energetici
     "CertificatoEnergeticoBase", "CertificatoEnergeticoCreate", "CertificatoEnergeticoUpdate", "CertificatoEnergeticoResponse",
     # Tabelle Millesimali
     "TabellaMillesimaleBase", "TabellaMillesimaleCreate", "TabellaMillesimaleUpdate", "TabellaMillesimaleResponse",
     # Millesimi Unità
     "MillesimiUnitaBase", "MillesimiUnitaCreate", "MillesimiUnitaUpdate", "MillesimiUnitaResponse",
-    # Conduttori
-    "ConduttoreBase", "ConduttoreCreate", "ConduttoreUpdate", "ConduttoreResponse",
-    # Assegnazioni Conduttore
-    "AssegnazioneConduttoreBase", "AssegnazioneConduttoreCreate", "AssegnazioneConduttoreUpdate", "AssegnazioneConduttoreResponse",
     # Spese Ricorrenti
     "SpesaRicorrenteBase", "SpesaRicorrenteCreate", "SpesaRicorrenteUpdate", "SpesaRicorrenteResponse",
     "SegnaPagatoRequest", "DuplicaSpesaRequest",

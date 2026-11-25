@@ -9,7 +9,7 @@ from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel
 
-from ..models.diritti_immobile import TipoDiritto
+from ..models.tipo_diritto import TipoDiritto
 from ..services.visura.models import FormatoVisura
 
 Azione = Literal["crea", "aggiorna", "invariato"]

@@ -42,10 +42,7 @@ def test_struttura_beni(db_session):
     assert "tipo_bene" in _colonne(db_session, "immo_beni")
     unita = _colonne(db_session, "immo_unita_immobiliari")
     assert not unita & {"indirizzo", "citta", "codice", "created_at"}
-    for tabella in (
-        "immo_diritti_immobile", "immo_assegnazioni_conduttore",
-        "immo_variazioni_catastali", "immo_spese_ricorrenti",
-    ):
+    for tabella in ("immo_variazioni_catastali", "immo_spese_ricorrenti"):
         colonne = _colonne(db_session, tabella)
         assert "bene_id" in colonne, tabella
         assert "unita_immobiliare_id" not in colonne, tabella
@@ -67,11 +64,6 @@ def test_azzera_svuota_beni_e_lascia_anagrafica(db_session, migrazione):
         "VALUES ('UNITA', 'AZZ-1', 'Via A 1', 'Forlì') RETURNING id")
     db_session.execute(text(
         "INSERT INTO immo_unita_immobiliari (id, tipo) VALUES (:id, 'Appartamento')"), {"id": bene_id})
-    proprietario_id = _conta(db_session,
-        "INSERT INTO immo_proprietari (soggetto_id) VALUES (:s) RETURNING id", s=soggetto_id)
-    db_session.execute(text(
-        "INSERT INTO immo_diritti_immobile (bene_id, proprietario_id, tipo_diritto) "
-        "VALUES (:b, :p, 'PROPRIETARIO')"), {"b": bene_id, "p": proprietario_id})
     for entity_type, entity_id in (("IMMOBILE", bene_id), ("SOGGETTO_ANAGRAFICO", soggetto_id)):
         db_session.execute(text(
             "INSERT INTO core_documenti (entity_type, entity_id, tipo_documento) "
@@ -81,7 +73,6 @@ def test_azzera_svuota_beni_e_lascia_anagrafica(db_session, migrazione):
 
     assert risultato["immo_unita_immobiliari"] >= 1
     assert _conta(db_session, "SELECT count(*) FROM immo_unita_immobiliari") == 0
-    assert _conta(db_session, "SELECT count(*) FROM immo_diritti_immobile") == 0
     assert _conta(db_session,
         "SELECT count(*) FROM core_documenti WHERE entity_type = 'IMMOBILE'") == 0
     assert _conta(db_session,
@@ -159,8 +150,8 @@ def test_installazione_su_tenant_nuovo(db_session):
 
     assert "tipo_bene" in colonne("immo_beni")
     assert not colonne("immo_unita_immobiliari") & {"indirizzo", "citta", "codice", "created_at"}
-    for tabella in ("immo_diritti_immobile", "immo_assegnazioni_conduttore",
-                    "immo_variazioni_catastali", "immo_spese_ricorrenti"):
+    # The old owner/tenant tables are no longer created on a new tenant (core relations).
+    for tabella in ("immo_assegnazioni_conduttore", "immo_variazioni_catastali", "immo_spese_ricorrenti"):
         assert "bene_id" in colonne(tabella), tabella
         assert "unita_immobiliare_id" not in colonne(tabella), tabella
     terreni = colonne("immo_terreni")

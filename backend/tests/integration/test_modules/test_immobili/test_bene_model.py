@@ -48,29 +48,14 @@ def test_api_unita_risponde_con_citta(db_session):
 
 
 def test_cancellare_unita_cancella_bene_e_figli(db_session):
-    from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
-    from immobili.models import (
-        AssegnazioneConduttore, Conduttore, DirittoImmobile, Proprietario,
-        SpesaRicorrenteImmobile, ResponsabileSpesa,
-    )
+    from immobili.models import SpesaRicorrenteImmobile, ResponsabileSpesa
     from datetime import date
 
     u = _unita(db_session, codice="BENE-T-4")
-    s = SoggettoAnagrafico(tipo_soggetto=TipoSoggetto.PERSONA_FISICA, nome="Bene", cognome="Figli")
-    db_session.add(s)
-    db_session.flush()
-    p = Proprietario(soggetto_id=s.id)
-    c = Conduttore(soggetto_id=s.id)
-    db_session.add_all([p, c])
-    db_session.flush()
-    db_session.add_all([
-        DirittoImmobile(bene_id=u.id, proprietario_id=p.id, tipo_diritto="PROPRIETARIO"),
-        AssegnazioneConduttore(bene_id=u.id, conduttore_id=c.id),
-        SpesaRicorrenteImmobile(
-            bene_id=u.id, tipo_spesa="IMU", responsabile=ResponsabileSpesa.PROPRIETARIO,
-            periodo="2026", importo=10, data_scadenza=date(2026, 6, 16),
-        ),
-    ])
+    db_session.add(SpesaRicorrenteImmobile(
+        bene_id=u.id, tipo_spesa="IMU", responsabile=ResponsabileSpesa.PROPRIETARIO,
+        periodo="2026", importo=10, data_scadenza=date(2026, 6, 16),
+    ))
     db_session.flush()
     bene_id = u.id
 
@@ -80,7 +65,7 @@ def test_cancellare_unita_cancella_bene_e_figli(db_session):
 
     for tabella in ("immo_beni", "immo_unita_immobiliari"):
         assert db_session.execute(text(f"SELECT count(*) FROM {tabella} WHERE id = :id"), {"id": bene_id}).scalar() == 0
-    for tabella in ("immo_diritti_immobile", "immo_assegnazioni_conduttore", "immo_spese_ricorrenti"):
+    for tabella in ("immo_spese_ricorrenti",):
         assert db_session.execute(text(f"SELECT count(*) FROM {tabella} WHERE bene_id = :id"), {"id": bene_id}).scalar() == 0
 
 
