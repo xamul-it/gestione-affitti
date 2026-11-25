@@ -226,3 +226,11 @@ def test_godimento_altro_avviso():
     assert _chi(voci["REDDITO_AGRARIO"]) == [("Altro", Decimal(100))]
     assert voci["REDDITO_AGRARIO"].avvisi == [
         "Titolo di godimento non specificato: verificare che conduca il fondo"]
+
+
+def test_quota_frazione_keeps_stored_text():
+    p = _soggetto("P")
+    riga = RigaRelazione(p.id, p.nome, "proprieta", Fraction(2, 4), None, None, "2/4")
+    s = ruoli_da_righe([riga], OGGI).titolari_godimento[0]
+    assert s.quota_frazione == "2/4"
+    assert s.quota_esatta == Fraction(1, 2)

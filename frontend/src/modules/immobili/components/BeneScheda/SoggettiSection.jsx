@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../../../../core/components/common/ConfirmDialog'
 import { EmptyState } from '../../../../core/components/common/EmptyState';
 import { LoadingSpinner } from '../../../../core/components/common/LoadingSpinner';
 import DocumentiPanel from '../../../../core/components/Documenti/DocumentiPanel';
-import { formatDate } from '../../../../core/components/Documenti/documentiUtils';
+import { formatDate, todayIso } from '../../../../core/components/Documenti/documentiUtils';
 import { ErrorMessage } from '../../../../core/components/common/ErrorMessage';
 import { useToast } from '../../../../core/hooks/useToast';
 import { relazioniAPI } from '../../../../services/relazioniAPI';
@@ -14,7 +14,6 @@ import { beniAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
 import RelazioneBeneForm from './RelazioneBeneForm';
 
-const oggi = () => new Date().toISOString().slice(0, 10);
 
 const BLOCCHI = [
   { famiglia: 'diritti_reali', titolo: 'Diritti reali', vuoto: 'Nessun diritto reale registrato', conQuota: true },
@@ -129,7 +128,7 @@ export default function SoggettiSection({ beneId, onChange }) {
                   </thead>
                   <tbody>
                     {righe.flatMap((r) => {
-                      const chiusa = Boolean(r.data_fine) && r.data_fine < oggi();
+                      const chiusa = Boolean(r.data_fine) && r.data_fine < todayIso();
                       return [
                         <tr key={r.id} className={chiusa ? 'is-chiuso' : undefined}>
                           <td data-label="Anagrafica">
@@ -153,7 +152,7 @@ export default function SoggettiSection({ beneId, onChange }) {
                                 <Button variant="ghost" size="sm" onClick={() => setForm({ blocco: b, relazione: r })}
                                   aria-label={`Modifica la relazione di ${r.soggetto_nome}`}>Modifica</Button>
                                 {!r.data_fine && (
-                                  <Button variant="ghost" size="sm" onClick={() => setChiusura({ id: r.id, data: oggi() })}
+                                  <Button variant="ghost" size="sm" onClick={() => setChiusura({ id: r.id, data: todayIso() })}
                                     aria-label={`Chiudi la relazione di ${r.soggetto_nome}`}>Chiudi</Button>
                                 )}
                                 <Button variant="ghost" size="sm"

@@ -4,13 +4,12 @@ import { Plus } from 'lucide-react';
 import { Button } from '../../../../components/UI';
 import { ConfirmDialog } from '../../../../core/components/common/ConfirmDialog';
 import { LoadingSpinner } from '../../../../core/components/common/LoadingSpinner';
-import { formatDate } from '../../../../core/components/Documenti/documentiUtils';
+import { formatDate, todayIso } from '../../../../core/components/Documenti/documentiUtils';
 import { beniAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
 import { opzioniCollegamento } from './opzioniCollegamento';
 import CollegamentoForm from './CollegamentoForm';
 
-const oggi = () => new Date().toISOString().slice(0, 10);
 
 function periodo(c) {
   if (c.data_inizio && c.data_fine) return `dal ${formatDate(c.data_inizio)} al ${formatDate(c.data_fine)}`;
@@ -122,7 +121,7 @@ export default function CollegamentiSection({ beneId, bene }) {
                     ) : (
                       <div className="collegamenti__azioni">
                         {c.aperto && (
-                          <Button variant="ghost" size="sm" onClick={() => setChiusura({ id: c.id, data: oggi() })}
+                          <Button variant="ghost" size="sm" onClick={() => setChiusura({ id: c.id, data: todayIso() })}
                             aria-label={`Chiudi il collegamento con ${c.altro_bene.codice}`}>Chiudi</Button>
                         )}
                         <Button variant="ghost" size="sm" onClick={() => setDaEliminare(c)}

@@ -1,9 +1,9 @@
 import { useEffect, useId, useState } from 'react';
 import { LoadingSpinner } from '../../../../core/components/common/LoadingSpinner';
 import { beniAPI } from '../../services/immobiliAPI';
+import { todayIso } from '../../../../core/components/Documenti/documentiUtils';
 import { formatApiError } from '../../../../utils/errorHandling';
 
-const oggi = () => new Date().toISOString().slice(0, 10);
 
 function quota(q) {
   if (q === null || q === undefined) return '—';
@@ -16,7 +16,7 @@ function quota(q) {
  */
 export default function RiepilogoSection({ beneId }) {
   const uid = useId();
-  const [data, setData] = useState(oggi());
+  const [data, setData] = useState(todayIso());
   const [riepilogo, setRiepilogo] = useState(null);
   const [nascosta, setNascosta] = useState(false);
   const [loading, setLoading] = useState(true);

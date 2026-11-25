@@ -259,6 +259,14 @@ Spec: `2026-11-10-caricamento-unico-documenti-immobili-design.md`.
 
 ## 5. Limiti e attività note
 
+- Le validazioni specifiche dei beni (formato della data di registrazione del
+  comodato, avviso quote oltre 1) girano solo alla creazione con
+  `POST /beni/{id}/relazioni`; le modifiche con `PUT /relazioni/{id}` non le
+  eseguono (tracciato come issue #2 di xamul-it/gestione-affitti).
+- I documenti allegati a una relazione (`entity_type` RELAZIONE), come quelli
+  su IMMOBILE, sono protetti solo dai permessi `documenti.*`, non dalla
+  visibilita' della relazione o del bene (tracciato come issue #3 di xamul-it/gestione-affitti).
+
 Revisione UI/UX e funzionale del 2026-11-10: corretti icone non registrate,
 link della dashboard, icone dei documenti schiacciate e pulsanti dei form
 (ora `Button` del design system), nome del conduttore nella scheda, errori
@@ -322,3 +330,9 @@ corretti):
 ### Migrazione diritti e conduttori nella relazione unica (2026112501_relazione_unica)
 
 La migrazione di modulo sposta `immo_diritti_immobile`/`immo_proprietari` e `immo_assegnazioni_conduttore`/`immo_conduttori` in `core_relazioni` (entity_type `IMMOBILE`) e poi elimina le quattro tabelle; il ritorno e' dal backup (`downgrade` non supportato). Tipi secondo la mappa `tipo_diritto` (PROPRIETARIO/COMPROPRIETARIO -> `proprieta`, ...); le quote percentuali diventano frazioni (denominatore massimo 24, altrimenti `p*100/10000` con riga "quota da ricontrollare" nel log); `note_proprietario` va in `dati.note_ruolo`; i documenti `PROPRIETARIO` passano al soggetto. Si ferma senza scrivere se trova due diritti aperti (stesso soggetto+tipo+bene dopo la mappatura, anche con `data_fine` futura) o date non `YYYY-MM-DD`. Va eseguita solo tramite `scripts/sync_modules.py` dopo `alembic -x schema=all upgrade head` (servono colonne quota e tipi di relazione sincronizzati).
+
+**Rilascio di questa fase.** La migrazione elimina quattro tabelle in ogni schema tenant e cancella righe da `core_permissions`/`core_role_permissions`: il controllo di `promote.sh` le segnalerebbe come perdite. Rilasciare con:
+
+```bash
+PROMOTE_PERDITA_CONSENTITA="immo_proprietari immo_diritti_immobile immo_conduttori immo_assegnazioni_conduttore core_permissions core_role_permissions" scripts/promote.sh
+```

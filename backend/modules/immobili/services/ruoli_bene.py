@@ -53,6 +53,7 @@ class RigaRelazione:
     quota: Optional[Fraction]
     data_inizio: Optional[date]
     data_fine: Optional[date]
+    quota_testo: Optional[str] = None  # stored text ("2/4"), kept for display
 
 
 @dataclass
@@ -106,7 +107,12 @@ def _vale(riga: RigaRelazione, giorno: date) -> bool:
 def _soggetto(riga: RigaRelazione, quota: Optional[Fraction]) -> Soggetto:
     percento = None if quota is None else (Decimal(quota.numerator) * CENTO / Decimal(quota.denominator)
                                            ).quantize(Decimal("0.01"), ROUND_HALF_UP)
-    frazione = None if quota is None else f"{quota.numerator}/{quota.denominator}"
+    if quota is None:
+        frazione = None
+    elif riga.quota_testo and quota == riga.quota:
+        frazione = riga.quota_testo  # keep the stored text: "2/4" stays "2/4"
+    else:
+        frazione = f"{quota.numerator}/{quota.denominator}"
     return Soggetto(soggetto_id=riga.soggetto_id, nome=riga.nome, ruolo=riga.tipo, quota=percento,
                     quota_esatta=quota, quota_frazione=frazione)
 
@@ -197,7 +203,7 @@ def ruoli_alla_data(db: Session, bene_id: int, d: date) -> RuoliBene:
         }
     righe = [
         RigaRelazione(r.soggetto_id, nomi.get(r.soggetto_id, f"Anagrafica {r.soggetto_id}"), codice,
-                      r.quota_frazione, r.data_inizio, r.data_fine)
+                      r.quota_frazione, r.data_inizio, r.data_fine, r.quota)
         for r, codice in rel
     ]
     return ruoli_da_righe(righe, d)
