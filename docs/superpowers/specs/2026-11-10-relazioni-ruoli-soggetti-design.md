@@ -32,6 +32,9 @@ Ogni modulo dichiara i suoi tipi di relazione nel `__manifest__.py`, come per `d
 | `scadenza` | `null` = nessuna; `{"manuale": true}` = data facoltativa inserita a mano; `{"mesi": n, "da": "data_inizio"}` = calcolata. Solo per `fonte = CORE` |
 | `promemoria_giorni` | es. `[60, 30]`, salvato come per i documenti |
 | `sottotipi_fonte` | opzionale: da dove vengono i sottotipi (vedi 5, ruoli in azienda) |
+| `famiglia` | opzionale, max 30 caratteri: raggruppamento dei tipi (`diritti_reali`, `godimento`, `incarichi`); filtro `?famiglia=` su `/relazioni/` e `/relazioni/tipi` |
+| `ammette_quota` | `false` di default; se `true` la relazione CORE può avere una quota, frazione `quota_numeratore`/`quota_denominatore` in `core_relazioni` (> 0 e <= 1, CHECK a DB); in API `"1/2"` |
+| `solo_beni` | `false` di default; se `true` il tipo vale solo per i beni (`IMMOBILE`) |
 
 La scadenza è decisa dal **tipo** (approvato dall'utente). Ogni relazione ha comunque `data_inizio` / `data_fine`: la fine dice che la relazione è chiusa, la scadenza dice quando va rinnovata/verificata e solo quella va nello scadenziario.
 

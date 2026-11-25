@@ -39,10 +39,19 @@ class RelationTypeDefinition:
     sottotipi_fonte: Optional[str] = None
     unico_per_oggetto: bool = False
     permesso_oggetto: Optional[str] = None
+    famiglia: Optional[str] = None
+    ammette_quota: bool = False
+    solo_beni: bool = False
 
     def __post_init__(self):
         if not self.codice or not self.nome or not self.modulo:
             raise ValueError("codice, nome e modulo sono obbligatori")
+        if self.famiglia is not None and (not isinstance(self.famiglia, str) or not self.famiglia
+                                          or len(self.famiglia) > 30):
+            raise ValueError(f"{self.codice}: famiglia deve essere un testo di al più 30 caratteri")
+        for flag in ("ammette_quota", "solo_beni"):
+            if not isinstance(getattr(self, flag), bool):
+                raise ValueError(f"{self.codice}: {flag} deve essere true o false")
         if self.fonte not in FONTI:
             raise ValueError(f"{self.codice}: fonte '{self.fonte}' non valida ({', '.join(FONTI)})")
         if self.entity_types is not None:

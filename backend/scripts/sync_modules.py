@@ -4,6 +4,8 @@ base pubblici. Pensato per scripts/promote.sh, dopo `alembic -x schema=all`
 (che esegue solo la catena core).
 
 Per ogni modulo registrato, in ordine di dipendenza:
+  0. tipologie documentali e tipi di relazione (cataloghi pubblici), prima di
+     ogni migrazione: le migrazioni di modulo possono dipenderne;
   1. migrazioni di modulo sullo schema public (se schema_target lo prevede);
   2. migrazioni di modulo su ogni tenant in cui il modulo e' installato
      (cioe' ha la sua tabella alembic_version_<codice>);
@@ -138,6 +140,58 @@ def call_seed(name: str, entry_point: str, db) -> None:
         func(db)
 
 
+def sync_catalogs(engine, manifests: dict, registered: list, order: list, dry_run: bool) -> bool:
+    """Document types and relation types (public catalogs). They run BEFORE the
+    module migrations, which may rely on the catalog rows (e.g. a migration
+    that moves relations to a type declared in the manifest)."""
+    from sqlalchemy.orm import Session
+
+    ok = True
+    log("==> Tipologie documentali")
+    # complete=True deactivates also unowned legacy types: only safe when
+    # every registered module's manifest was read.
+    complete = len(manifests) == len(registered)
+    declared = sum(len(m.get("document_types") or []) for m in manifests.values())
+    log(f"  {declared} tipologie dichiarate da {len(manifests)} moduli (completo: {complete})")
+    if not dry_run:
+        load_all_models(order)
+        with Session(engine) as db:
+            try:
+                db.execute(text("SET search_path TO public"))
+                report = sync_document_types(db, manifests, complete=complete)
+                db.commit()
+                log(f"  create {report.creati or '-'}; aggiornate {report.aggiornati or '-'}; "
+                    f"disattivate {report.disattivati or '-'}")
+                for e in report.errori:
+                    log(f"  ERRORE tipologia {e}")
+                    ok = False
+            except Exception as exc:
+                db.rollback()
+                log(f"  ERRORE sync tipologie: {exc}")
+                ok = False
+
+    log("==> Tipi di relazione")
+    declared = sum(len(m.get("relation_types") or []) for m in manifests.values())
+    log(f"  {declared} tipi dichiarati da {len(manifests)} moduli (completo: {complete})")
+    if not dry_run:
+        load_all_models(order)
+        with Session(engine) as db:
+            try:
+                db.execute(text("SET search_path TO public"))
+                report = sync_relation_types(db, manifests, complete=complete)
+                db.commit()
+                log(f"  creati {report.creati or '-'}; aggiornati {report.aggiornati or '-'}; "
+                    f"disattivati {report.disattivati or '-'}")
+                for e in report.errori:
+                    log(f"  ERRORE tipo di relazione {e}")
+                    ok = False
+            except Exception as exc:
+                db.rollback()
+                log(f"  ERRORE sync tipi di relazione: {exc}")
+                ok = False
+    return ok
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     parser.add_argument("--dry-run", action="store_true")
@@ -187,6 +241,8 @@ def main() -> int:
                     {"p": str(MODULE_DIR / name), "n": name},
                 )
 
+    ok &= sync_catalogs(engine, manifests, registered, order, args.dry_run)
+
     to_install = []
     for name in order:
         manifest = manifests[name]
@@ -229,49 +285,6 @@ def main() -> int:
             if not ok:
                 log("==> Installazioni fallite: seed pubblici non eseguiti")
                 return 1
-
-    log("==> Tipologie documentali")
-    # complete=True deactivates also unowned legacy types: only safe when
-    # every registered module's manifest was read.
-    complete = len(manifests) == len(registered)
-    declared = sum(len(m.get("document_types") or []) for m in manifests.values())
-    log(f"  {declared} tipologie dichiarate da {len(manifests)} moduli (completo: {complete})")
-    if not args.dry_run:
-        load_all_models(order)
-        with Session(engine) as db:
-            try:
-                db.execute(text("SET search_path TO public"))
-                report = sync_document_types(db, manifests, complete=complete)
-                db.commit()
-                log(f"  create {report.creati or '-'}; aggiornate {report.aggiornati or '-'}; "
-                    f"disattivate {report.disattivati or '-'}")
-                for e in report.errori:
-                    log(f"  ERRORE tipologia {e}")
-                    ok = False
-            except Exception as exc:
-                db.rollback()
-                log(f"  ERRORE sync tipologie: {exc}")
-                ok = False
-
-    log("==> Tipi di relazione")
-    declared = sum(len(m.get("relation_types") or []) for m in manifests.values())
-    log(f"  {declared} tipi dichiarati da {len(manifests)} moduli (completo: {complete})")
-    if not args.dry_run:
-        load_all_models(order)
-        with Session(engine) as db:
-            try:
-                db.execute(text("SET search_path TO public"))
-                report = sync_relation_types(db, manifests, complete=complete)
-                db.commit()
-                log(f"  creati {report.creati or '-'}; aggiornati {report.aggiornati or '-'}; "
-                    f"disattivati {report.disattivati or '-'}")
-                for e in report.errori:
-                    log(f"  ERRORE tipo di relazione {e}")
-                    ok = False
-            except Exception as exc:
-                db.rollback()
-                log(f"  ERRORE sync tipi di relazione: {exc}")
-                ok = False
 
     log("==> Permessi dei moduli")
     # Additive only: creates missing manifest permissions and grants them to

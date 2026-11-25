@@ -10,7 +10,7 @@ docs/superpowers/specs/2026-11-10-relazioni-ruoli-soggetti-design.md).
 - Flushes, never commits: the caller owns the transaction.
 """
 from datetime import date
-from typing import Optional
+from typing import Optional, Tuple
 
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import text
@@ -28,7 +28,7 @@ TABELLE_OGGETTI = {
     "SOGGETTO_ANAGRAFICO": "anag_soggetti_anagrafici",
 }
 
-_CAMPI_MODIFICABILI = ("sottotipo", "data_inizio", "data_fine", "data_scadenza", "note", "dati")
+_CAMPI_MODIFICABILI = ("sottotipo", "data_inizio", "data_fine", "data_scadenza", "note", "dati", "quota")
 
 
 def e_corrente(data_fine: Optional[date], oggi: Optional[date] = None) -> bool:
@@ -134,6 +134,16 @@ class RelazioneService:
         if duplicato:
             raise ValueError(f"Esiste già una relazione '{tipo.nome_display}' aperta per questa anagrafica e questo oggetto")
 
+    @staticmethod
+    def _verifica_quota(tipo: RuoloDisponibile, quota: Optional[Tuple[int, int]]) -> None:
+        if quota is None:
+            return
+        if not tipo.ammette_quota:
+            raise ValueError(f"Il tipo '{tipo.nome_display}' non ammette una quota")
+        num, den = quota
+        if not (0 < num <= den):
+            raise ValueError("La quota deve essere maggiore di zero e al massimo 1")
+
     # ------------------------------------------------------------ scadenza
 
     @staticmethod
@@ -171,7 +181,7 @@ class RelazioneService:
              entity_id: Optional[int] = None, sottotipo: Optional[str] = None,
              data_inizio: Optional[date] = None, data_fine: Optional[date] = None,
              data_scadenza: Optional[date] = None, note: Optional[str] = None,
-             dati: Optional[dict] = None) -> Relazione:
+             dati: Optional[dict] = None, quota: Optional[Tuple[int, int]] = None) -> Relazione:
         tipo = self.tipo(tipo_codice)
         verifica_modulo_attivo(self.db, self.tenant_schema, tipo)
         if tipo.fonte != "CORE":
@@ -179,6 +189,7 @@ class RelazioneService:
         soggetto = self._soggetto(soggetto_id)
         self._verifica_oggetto(tipo, entity_type, entity_id)
         self._verifica_regole_tipo(tipo, soggetto, entity_id)
+        self._verifica_quota(tipo, quota)
         if data_inizio and data_fine and data_fine < data_inizio:
             raise ValueError("La data di fine precede quella di inizio")
         rel = Relazione(
@@ -186,6 +197,7 @@ class RelazioneService:
             sottotipo=sottotipo, data_inizio=data_inizio, data_fine=data_fine,
             data_scadenza=self._scadenza(tipo, data_inizio, data_scadenza), note=note, dati=dati,
             creato_da=self._user_id,
+            quota_numeratore=quota[0] if quota else None, quota_denominatore=quota[1] if quota else None,
         )
         self._verifica_duplicati(tipo, rel)
         self.db.add(rel)
@@ -201,6 +213,10 @@ class RelazioneService:
         sconosciuti = set(campi) - set(_CAMPI_MODIFICABILI)
         if sconosciuti:
             raise ValueError(f"Campi non modificabili: {', '.join(sorted(sconosciuti))}")
+        if "quota" in campi:
+            quota = campi.pop("quota")
+            self._verifica_quota(tipo, quota)
+            rel.quota_numeratore, rel.quota_denominatore = quota if quota else (None, None)
         for nome, valore in campi.items():
             setattr(rel, nome, valore)
         if rel.data_inizio and rel.data_fine and rel.data_fine < rel.data_inizio:

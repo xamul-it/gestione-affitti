@@ -25,6 +25,7 @@ REGISTER_ROLES_MODULES = ("gestione_pec",)
 _FIELDS = (
     "nome_display", "descrizione", "entity_types", "fonte", "provider", "scadenza",
     "promemoria_giorni", "sottotipi_fonte", "unico_per_oggetto", "permesso_oggetto",
+    "famiglia", "ammette_quota", "solo_beni",
 )
 
 
@@ -54,6 +55,9 @@ def _values(d: RelationTypeDefinition) -> dict:
         "sottotipi_fonte": d.sottotipi_fonte,
         "unico_per_oggetto": bool(d.unico_per_oggetto),
         "permesso_oggetto": d.permesso_oggetto,
+        "famiglia": d.famiglia,
+        "ammette_quota": d.ammette_quota,
+        "solo_beni": d.solo_beni,
     }
 
 

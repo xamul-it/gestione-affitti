@@ -182,3 +182,49 @@ def test_fk_cascade_se_l_anagrafica_sparisce(svc, db_session, rossi, condominio)
     db_session.execute(text("DELETE FROM anag_soggetti_anagrafici WHERE id = :id"), {"id": rossi.id})
     db_session.expire_all()
     assert db_session.execute(text("SELECT count(*) FROM core_relazioni WHERE id = :id"), {"id": rel_id}).scalar() == 0
+
+
+@pytest.fixture
+def tipi_quota(db_session, unique_suffix):
+    s = unique_suffix
+    _attiva_modulo(db_session, f"m_{s}")
+    sync_relation_types(db_session, {f"m_{s}": {"relation_types": [
+        {"codice": f"usu_{s}", "nome": "Usufrutto", "entity_types": ["CONDOMINIO"],
+         "famiglia": "diritti_reali", "ammette_quota": True},
+        {"codice": f"inq_{s}", "nome": "Inquilino", "entity_types": ["CONDOMINIO"], "famiglia": "godimento"},
+    ]}})
+    return f"usu_{s}", f"inq_{s}"
+
+
+def test_crea_con_quota(svc, rossi, condominio, tipi_quota):
+    rel = svc.crea(rossi.id, tipi_quota[0], entity_type="CONDOMINIO", entity_id=condominio.id, quota=(2, 4))
+    assert (rel.quota_numeratore, rel.quota_denominatore) == (2, 4)
+    assert rel.quota == "2/4"
+    assert str(rel.quota_frazione) == "1/2"
+    senza = svc.crea(rossi.id, tipi_quota[1], entity_type="CONDOMINIO", entity_id=condominio.id)
+    assert senza.quota is None and senza.quota_frazione is None
+
+
+def test_quota_rifiutata_se_non_ammessa(svc, rossi, condominio, tipi_quota):
+    with pytest.raises(ValueError, match="Il tipo 'Inquilino' non ammette una quota"):
+        svc.crea(rossi.id, tipi_quota[1], entity_type="CONDOMINIO", entity_id=condominio.id, quota=(1, 2))
+
+
+def test_aggiorna_quota(svc, rossi, condominio, tipi_quota):
+    rel = svc.crea(rossi.id, tipi_quota[0], entity_type="CONDOMINIO", entity_id=condominio.id, quota=(1, 2))
+    rel = svc.aggiorna(rel.id, quota=(1, 3))
+    assert rel.quota == "1/3"
+    rel = svc.aggiorna(rel.id, quota=None)
+    assert rel.quota is None
+    inq = svc.crea(rossi.id, tipi_quota[1], entity_type="CONDOMINIO", entity_id=condominio.id)
+    with pytest.raises(ValueError, match="non ammette una quota"):
+        svc.aggiorna(inq.id, quota=(1, 2))
+
+
+def test_check_db_numeratore_senza_denominatore(svc, db_session, rossi, condominio, tipi_quota):
+    from sqlalchemy.exc import IntegrityError
+    rel = svc.crea(rossi.id, tipi_quota[0], entity_type="CONDOMINIO", entity_id=condominio.id)
+    rel.quota_numeratore = 1
+    with pytest.raises(IntegrityError):
+        db_session.flush()
+    db_session.rollback()

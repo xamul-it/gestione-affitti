@@ -18,7 +18,8 @@ from app.core.database import get_db, get_tenant_schema
 from app.core.models import RuoloDisponibile
 from app.core.models.tenant import Tenant, TenantModule
 from app.core.platform.models import Relazione
-from app.core.platform_services import relazioni_query
+from app.core.platform_services import object_permissions, relazioni_query
+from app.core.platform_services.quote import parse_quota
 from app.core.platform_services.relazione_service import RelazioneService
 from app.core.schemas.relazioni import (
     RelazioneCoreOut, RelazioneIn, RelazioneOut, RelazioneUpdate, TipoRelazioneOut,
@@ -61,9 +62,21 @@ def _errori(fn):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
 
 
+def _verifica_oggetto(db, tenant_schema, user: User, tipo: RuoloDisponibile, entity_type, entity_id,
+                      lettura: bool = False) -> None:
+    """The caller must be allowed to see the object: the module hook decides if there is one; else,
+    reading needs the type's permesso_oggetto (writes are covered by _verifica_scrittura)."""
+    if not object_permissions.oggetto_visibile(
+        db, _schema(tenant_schema), user.get_permissions(), entity_type=entity_type,
+        entity_id=entity_id, permesso_oggetto=tipo.permesso_oggetto if lettura else None,
+    ):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Non hai accesso a questo oggetto")
+
+
 @router.get("/tipi", response_model=List[TipoRelazioneOut])
 def list_tipi(
     entity_type: Optional[str] = None,
+    famiglia: Optional[str] = None,
     db: Session = Depends(get_db),
     tenant_schema=Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.view")),
@@ -76,10 +89,13 @@ def list_tipi(
             continue
         if entity_type and entity_type not in (t.entity_types or []):
             continue
+        if famiglia and t.famiglia != famiglia:
+            continue
         out.append(TipoRelazioneOut(
             id=t.id, codice=t.codice, nome=t.nome_display, modulo=t.modulo_id, fonte=t.fonte,
             entity_types=t.entity_types, scadenza=t.scadenza, unico_per_oggetto=t.unico_per_oggetto,
-            sottotipi_fonte=t.sottotipi_fonte,
+            sottotipi_fonte=t.sottotipi_fonte, famiglia=t.famiglia,
+            ammette_quota=t.ammette_quota, solo_beni=t.solo_beni,
         ))
     return out
 
@@ -91,6 +107,7 @@ def list_relazioni(
     entity_type: Optional[str] = None,
     entity_id: Optional[int] = None,
     solo_correnti: bool = Query(False),
+    famiglia: Optional[str] = None,
     db: Session = Depends(get_db),
     tenant_schema=Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.view")),
@@ -99,6 +116,7 @@ def list_relazioni(
         db, _schema(tenant_schema), permessi=current_user.get_permissions(),
         soggetto_ids=[soggetto_id] if soggetto_id is not None else None,
         tipo=tipo, entity_type=entity_type, entity_id=entity_id, solo_correnti=solo_correnti,
+        famiglia=famiglia,
     )
 
 
@@ -116,18 +134,36 @@ def create_relazione(
     svc = _service(db, tenant_schema, current_user)
     tipo = _errori(lambda: svc.tipo(data.tipo))
     _verifica_scrittura(current_user, tipo)
+    _verifica_oggetto(db, tenant_schema, current_user, tipo, data.entity_type, data.entity_id)
     campi = data.model_dump(exclude={"soggetto_id", "tipo"})
+    campi["quota"] = _errori(lambda: parse_quota(data.quota)) if data.quota else None
     rel = _errori(lambda: svc.crea(data.soggetto_id, data.tipo, **campi))
     db.commit()
     db.refresh(rel)
     return rel
 
 
-def _tipo_di(db: Session, relazione_id: int) -> RuoloDisponibile:
+def _tipo_di(db: Session, relazione_id: int, tenant_schema=None, user: Optional[User] = None,
+             lettura: bool = False) -> RuoloDisponibile:
+    """Type of a core relation; with `user`, also checks the object permission (403)."""
     rel = db.get(Relazione, relazione_id)
     if rel is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Relazione {relazione_id} inesistente")
-    return db.get(RuoloDisponibile, rel.ruolo_id)
+    tipo = db.get(RuoloDisponibile, rel.ruolo_id)
+    if user is not None:
+        _verifica_oggetto(db, tenant_schema, user, tipo, rel.entity_type, rel.entity_id, lettura)
+    return tipo
+
+
+@router.get("/{relazione_id}", response_model=RelazioneCoreOut)
+def get_relazione(
+    relazione_id: int,
+    db: Session = Depends(get_db),
+    tenant_schema=Depends(get_tenant_schema),
+    current_user: User = Depends(require_permission("soggetto.view")),
+):
+    _tipo_di(db, relazione_id, tenant_schema, current_user, lettura=True)
+    return db.get(Relazione, relazione_id)
 
 
 @router.put("/{relazione_id}", response_model=RelazioneCoreOut)
@@ -138,9 +174,12 @@ def update_relazione(
     tenant_schema=Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.edit")),
 ):
-    _verifica_scrittura(current_user, _tipo_di(db, relazione_id))
+    _verifica_scrittura(current_user, _tipo_di(db, relazione_id, tenant_schema, current_user))
     svc = _service(db, tenant_schema, current_user)
-    rel = _errori(lambda: svc.aggiorna(relazione_id, **data.model_dump(exclude_unset=True)))
+    campi = data.model_dump(exclude_unset=True)
+    if campi.get("quota"):
+        campi["quota"] = _errori(lambda: parse_quota(campi["quota"]))
+    rel = _errori(lambda: svc.aggiorna(relazione_id, **campi))
     db.commit()
     db.refresh(rel)
     return rel
@@ -153,7 +192,7 @@ def rinnova_relazione(
     tenant_schema=Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.edit")),
 ):
-    _verifica_scrittura(current_user, _tipo_di(db, relazione_id))
+    _verifica_scrittura(current_user, _tipo_di(db, relazione_id, tenant_schema, current_user))
     rel = _errori(lambda: _service(db, tenant_schema, current_user).rinnova(relazione_id))
     db.commit()
     db.refresh(rel)
@@ -167,7 +206,7 @@ def delete_relazione(
     tenant_schema=Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.edit")),
 ):
-    _verifica_scrittura(current_user, _tipo_di(db, relazione_id))
+    _verifica_scrittura(current_user, _tipo_di(db, relazione_id, tenant_schema, current_user))
     _errori(lambda: _service(db, tenant_schema, current_user).elimina(relazione_id))
     db.commit()
     return None

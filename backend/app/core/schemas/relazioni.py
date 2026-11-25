@@ -17,6 +17,9 @@ class TipoRelazioneOut(BaseModel):
     scadenza: Optional[Dict[str, Any]] = None
     unico_per_oggetto: bool = False
     sottotipi_fonte: Optional[str] = None
+    famiglia: Optional[str] = None
+    ammette_quota: bool = False
+    solo_beni: bool = False
 
 
 class RelazioneOut(BaseModel):
@@ -34,6 +37,10 @@ class RelazioneOut(BaseModel):
     data_inizio: Optional[date] = None
     data_fine: Optional[date] = None
     data_scadenza: Optional[date] = None
+    famiglia: Optional[str] = None
+    quota_numeratore: Optional[int] = None
+    quota_denominatore: Optional[int] = None
+    quota: Optional[str] = None
     corrente: bool
 
 
@@ -48,6 +55,7 @@ class RelazioneIn(BaseModel):
     data_scadenza: Optional[date] = None
     note: Optional[str] = None
     dati: Optional[Dict[str, Any]] = None
+    quota: Optional[str] = None  # fraction, e.g. "1/2"
 
 
 class RelazioneUpdate(BaseModel):
@@ -57,6 +65,7 @@ class RelazioneUpdate(BaseModel):
     data_scadenza: Optional[date] = None
     note: Optional[str] = None
     dati: Optional[Dict[str, Any]] = None
+    quota: Optional[str] = None  # fraction, e.g. "1/2"; null removes it
 
 
 class RelazioneCoreOut(BaseModel):
@@ -74,3 +83,6 @@ class RelazioneCoreOut(BaseModel):
     scadenza_id: Optional[int] = None
     note: Optional[str] = None
     dati: Optional[Dict[str, Any]] = None
+    quota_numeratore: Optional[int] = None
+    quota_denominatore: Optional[int] = None
+    quota: Optional[str] = None

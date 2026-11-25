@@ -128,3 +128,48 @@ def test_anagrafica_con_relazioni_non_si_elimina(ctx):
     res = http.delete(url.format(id=s.id))
     assert res.status_code == 400
     assert "relazion" in res.json()["detail"]
+
+
+@pytest.fixture
+def tipi_famiglie(db_session, unique_suffix):
+    from app.core.models.tenant import Tenant, TenantModule
+    s = unique_suffix
+    tenant = db_session.query(Tenant).filter_by(schema_name=TEST_TENANT).one()
+    db_session.add(TenantModule(tenant_id=tenant.id, module_id=f"m_{s}", enabled=True))
+    sync_relation_types(db_session, {f"m_{s}": {"relation_types": [
+        {"codice": f"usu_{s}", "nome": "Usufrutto", "entity_types": ["CONDOMINIO"],
+         "famiglia": "diritti_reali", "ammette_quota": True},
+        {"codice": f"inq_{s}", "nome": "Inquilino", "entity_types": ["CONDOMINIO"], "famiglia": "godimento"},
+    ]}})
+    return f"usu_{s}", f"inq_{s}"
+
+
+def test_list_filtra_per_famiglia(ctx, tipi_famiglie):
+    http, s, c = ctx
+    usu, inq = tipi_famiglie
+    _as("soggetto.view", "soggetto.edit")
+    for tipo in (usu, inq):
+        assert http.post("/api/v1/relazioni/", json=_body(s, c, tipo=tipo)).status_code == 201
+    res = http.get("/api/v1/relazioni/?famiglia=godimento")
+    assert [r["tipo"] for r in res.json()] == [inq]
+    assert res.json()[0]["famiglia"] == "godimento"
+    tipi = http.get("/api/v1/relazioni/tipi?famiglia=diritti_reali").json()
+    assert [t["codice"] for t in tipi] == [usu]
+    assert tipi[0]["ammette_quota"] is True and tipi[0]["famiglia"] == "diritti_reali"
+
+
+def test_quota_via_api(ctx, tipi_famiglie):
+    http, s, c = ctx
+    usu, inq = tipi_famiglie
+    _as("soggetto.view", "soggetto.edit")
+    res = http.post("/api/v1/relazioni/", json=_body(s, c, tipo=usu, quota="2/4"))
+    assert res.status_code == 201, res.text
+    assert (res.json()["quota_numeratore"], res.json()["quota_denominatore"], res.json()["quota"]) == (2, 4, "2/4")
+    listed = http.get(f"/api/v1/relazioni/?tipo={usu}").json()
+    assert listed[0]["quota"] == "2/4"
+    upd = http.put(f"/api/v1/relazioni/{res.json()['id']}", json={"quota": "1 / 3"})
+    assert upd.json()["quota"] == "1/3"
+    assert http.put(f"/api/v1/relazioni/{res.json()['id']}", json={"quota": "50%"}).status_code == 422
+    res = http.post("/api/v1/relazioni/", json=_body(s, c, tipo=inq, quota="1/2"))
+    assert res.status_code == 422
+    assert "non ammette una quota" in res.json()["detail"]

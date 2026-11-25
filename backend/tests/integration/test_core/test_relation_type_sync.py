@@ -105,3 +105,18 @@ def test_invalid_entry_reported(db_session, unique_suffix):
 def test_invalid_definition_rejected(bad):
     with pytest.raises(ValueError):
         RelationTypeDefinition(codice="x", nome="X", modulo="m", **bad)
+
+
+def test_sync_scrive_famiglia(db_session, unique_suffix):
+    s = unique_suffix
+    manifests = {f"mod_f_{s}": {"relation_types": [
+        {"codice": f"fam_{s}", "nome": "Diritto", "entity_types": ["IMMOBILE"],
+         "famiglia": "diritti_reali", "ammette_quota": True, "solo_beni": True},
+    ]}}
+    sync_relation_types(db_session, manifests)
+    row = _get(db_session, f"fam_{s}", f"mod_f_{s}")
+    assert (row.famiglia, row.ammette_quota, row.solo_beni) == ("diritti_reali", True, True)
+    assert sync_relation_types(db_session, manifests).aggiornati == []
+    manifests[f"mod_f_{s}"]["relation_types"][0].update(famiglia="godimento", ammette_quota=False)
+    assert sync_relation_types(db_session, manifests).aggiornati == [f"fam_{s}"]
+    assert (row.famiglia, row.ammette_quota) == ("godimento", False)

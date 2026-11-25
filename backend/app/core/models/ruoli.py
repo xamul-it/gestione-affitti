@@ -58,6 +58,11 @@ class RuoloDisponibile(Base):
     sottotipi_fonte = Column(String(100), nullable=True)
     unico_per_oggetto = Column(Boolean, nullable=False, default=False, server_default="false")
     permesso_oggetto = Column(String(100), nullable=True)
+    # Family of the type (diritti_reali, godimento, incarichi), whether the
+    # relation may carry a share, whether it applies to beni only.
+    famiglia = Column(String(30), nullable=True)
+    ammette_quota = Column(Boolean, nullable=False, default=False, server_default="false")
+    solo_beni = Column(Boolean, nullable=False, default=False, server_default="false")
 
     # Flag attivo/disattivo
     attivo = Column(Boolean, default=True, nullable=False)

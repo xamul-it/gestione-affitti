@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.core.models import RuoloDisponibile
 from app.core.platform.models import Relazione
+from app.core.platform_services import object_permissions
 from app.core.platform_services.relazioni_moduli import moduli_attivi
 
 logger = logging.getLogger(__name__)
@@ -75,7 +76,7 @@ def relazioni_select(db: Session, tenant_schema: str, *, tipo: Optional[str] = N
         r = sa.table(
             "core_relazioni", *(sa.column(c) for c in (
                 "id", "soggetto_id", "ruolo_id", "entity_type", "entity_id", "sottotipo",
-                "data_inizio", "data_fine", "data_scadenza",
+                "data_inizio", "data_fine", "data_scadenza", "quota_numeratore", "quota_denominatore",
             )),
         ).alias("r")
         k = RuoloDisponibile.__table__.c
@@ -87,6 +88,7 @@ def relazioni_select(db: Session, tenant_schema: str, *, tipo: Optional[str] = N
                 k.modulo_id.label("modulo"),
                 k.fonte.label("fonte"),
                 k.permesso_oggetto.label("permesso_oggetto"),
+                k.famiglia.label("famiglia"),
                 r.c.id.label("relazione_id"),
                 r.c.entity_type.label("entity_type"),
                 r.c.entity_id.label("entity_id"),
@@ -95,6 +97,8 @@ def relazioni_select(db: Session, tenant_schema: str, *, tipo: Optional[str] = N
                 r.c.data_inizio.label("data_inizio"),
                 r.c.data_fine.label("data_fine"),
                 r.c.data_scadenza.label("data_scadenza"),
+                r.c.quota_numeratore.label("quota_numeratore"),
+                r.c.quota_denominatore.label("quota_denominatore"),
                 sa.cast(sa.null(), sa.Integer).label("record_id"),
             )
             .select_from(r.join(RuoloDisponibile.__table__, k.id == r.c.ruolo_id))
@@ -119,6 +123,7 @@ def relazioni_select(db: Session, tenant_schema: str, *, tipo: Optional[str] = N
             sa.literal(t.modulo_id, sa.String).label("modulo"),
             sa.literal("MODULO", sa.String).label("fonte"),
             sa.literal(t.permesso_oggetto, sa.String).label("permesso_oggetto"),
+            sa.literal(t.famiglia, sa.String).label("famiglia"),
             sa.cast(sa.null(), sa.Integer).label("relazione_id"),
             sa.cast(p.c.entity_type, sa.String).label("entity_type"),
             p.c.entity_id,
@@ -127,6 +132,8 @@ def relazioni_select(db: Session, tenant_schema: str, *, tipo: Optional[str] = N
             p.c.data_inizio,
             p.c.data_fine,
             sa.cast(sa.null(), sa.Date).label("data_scadenza"),
+            sa.cast(sa.null(), sa.Integer).label("quota_numeratore"),
+            sa.cast(sa.null(), sa.Integer).label("quota_denominatore"),
             p.c.record_id,
         ))
 
@@ -140,15 +147,28 @@ def _corrente(col):
 
 
 def _filtrata(db, tenant_schema, *, permessi: set, tipo=None, soggetto_ids=None, entity_type=None,
-              entity_id=None, solo_correnti=False):
-    """Relations the caller may see: a type with permesso_oggetto needs that permission."""
+              entity_id=None, solo_correnti=False, famiglia=None):
+    """Relations the caller may see: a type with permesso_oggetto needs that permission,
+    unless a module hook (object_permissions) decides per object for that entity type."""
     sel = relazioni_select(db, tenant_schema, tipo=tipo)
     if sel is None:
         return None
     u = sel.subquery("rel")
     q = sa.select(u)
     if "*" not in permessi:
-        q = q.where(sa.or_(u.c.permesso_oggetto.is_(None), u.c.permesso_oggetto.in_(list(permessi))))
+        per_tipo = sa.or_(u.c.permesso_oggetto.is_(None), u.c.permesso_oggetto.in_(list(permessi)))
+        hooks = object_permissions.hook_selects(db, tenant_schema)
+        if hooks:
+            condizioni = [sa.and_(sa.or_(u.c.entity_type.is_(None), u.c.entity_type.notin_(list(hooks))), per_tipo)]
+            for hooked, hook in hooks.items():
+                sub = hook.subquery()
+                consentiti = sa.select(sub.c.entity_id).where(sub.c.permesso.in_(list(permessi)))
+                condizioni.append(sa.and_(u.c.entity_type == hooked, u.c.entity_id.in_(consentiti)))
+            q = q.where(sa.or_(*condizioni))
+        else:
+            q = q.where(per_tipo)
+    if famiglia:
+        q = q.where(u.c.famiglia == famiglia)
     if soggetto_ids is not None:
         q = q.where(u.c.soggetto_id.in_(list(soggetto_ids)))
     if entity_type:
@@ -162,10 +182,10 @@ def _filtrata(db, tenant_schema, *, permessi: set, tipo=None, soggetto_ids=None,
 
 def elenca(db: Session, tenant_schema: str, *, permessi: set, soggetto_ids: Optional[Iterable[int]] = None,
            tipo: Optional[str] = None, entity_type: Optional[str] = None, entity_id: Optional[int] = None,
-           solo_correnti: bool = False) -> List[dict]:
+           solo_correnti: bool = False, famiglia: Optional[str] = None) -> List[dict]:
     """Relations as dicts, only those of the types the caller may see."""
     built = _filtrata(db, tenant_schema, permessi=permessi, tipo=tipo, soggetto_ids=soggetto_ids, entity_type=entity_type,
-                      entity_id=entity_id, solo_correnti=solo_correnti)
+                      entity_id=entity_id, solo_correnti=solo_correnti, famiglia=famiglia)
     if built is None:
         return []
     q, u = built
@@ -174,6 +194,7 @@ def elenca(db: Session, tenant_schema: str, *, permessi: set, soggetto_ids: Opti
     for row in db.execute(q.order_by(u.c.tipo, u.c.soggetto_id, u.c.data_inizio)).mappings():
         r = dict(row)
         r.pop("permesso_oggetto")
+        r["quota"] = f"{r['quota_numeratore']}/{r['quota_denominatore']}" if r["quota_numeratore"] else None
         r["corrente"] = r["data_fine"] is None or r["data_fine"] >= oggi
         out.append(r)
     return out

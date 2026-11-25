@@ -152,12 +152,31 @@ Spec: `2026-11-10-relazioni-ruoli-soggetti-design.md`.
     scadenza e promemoria;
   - **MODULO**: ricavate dalle tabelle del modulo tramite un provider (es.
     proprietari da `immo_diritti_immobile`); nessuna doppia scrittura.
-- API: `GET /api/v1/relazioni` (unione delle due fonti), `GET /relazioni/tipi`,
-  scrittura solo per le CORE.
+- **Famiglie e quote**: ogni tipo può dichiarare `famiglia` (raggruppamento,
+  es. `diritti_reali`, `godimento`, `incarichi`), `ammette_quota` (la relazione
+  può avere una quota) e `solo_beni` (il tipo vale solo per i beni). La quota è
+  una frazione (`quota_numeratore`/`quota_denominatore` in `core_relazioni`,
+  salvata come scritta: `2/4` resta `2/4`; maggiore di zero e al massimo 1;
+  vincolo CHECK a DB); in API è il testo `"1/2"` (anche `"1 / 2"`), un tipo che
+  non ammette quota la rifiuta con 422. Le relazioni MODULO non hanno quota.
+- API: `GET /api/v1/relazioni` (unione delle due fonti; filtri `tipo`,
+  `famiglia`, `entity_type`, `entity_id`, `soggetto_id`, `solo_correnti`),
+  `GET /relazioni/tipi` (filtri `entity_type`, `famiglia`), `GET /relazioni/{id}`,
+  scrittura solo per le CORE. Le risposte riportano `famiglia`, `quota_numeratore`,
+  `quota_denominatore`, `quota`.
 - **Visibilità**: un tipo di relazione si vede solo se l'utente ha il
   permesso dichiarato dal tipo (`permesso_oggetto`) e solo se il modulo del
   tipo è attivo nel tenant. Un tenant noto senza moduli attivi non vede
   nessuna relazione.
+- **Permessi per oggetto**: un modulo può dichiarare nel manifest
+  `object_permissions: {"<ENTITY_TYPE>": "modulo.path:funzione"}`. La funzione
+  `(db, tenant_schema)` restituisce una select `(entity_id, permesso)`: per quel
+  tipo di oggetto sostituisce `permesso_oggetto` (un oggetto assente non è
+  visibile). La select è unita in SQL: una sola chiamata per elenco. Vale anche
+  per lettura, modifica, rinnovo ed eliminazione di una singola relazione (403).
+  Il superutente non è filtrato. Hook non caricabile = oggetti nascosti.
+- `scripts/sync_modules.py` sincronizza tipologie documentali e tipi di
+  relazione **prima** delle migrazioni di modulo.
 - Le anagrafiche (elenco e dettaglio) mostrano i ruoli del soggetto con le
   stesse regole di visibilità; tutte le rotte delle anagrafiche richiedono
   `soggetto.view` / `create` / `edit` / `delete`.

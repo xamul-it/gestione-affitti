@@ -30,6 +30,7 @@ class EntityType(str, enum.Enum):
     CERTIFICATO_ENERGETICO = "CERTIFICATO_ENERGETICO"
     PROPRIETARIO = "PROPRIETARIO"
     SOGGETTO_ANAGRAFICO = "SOGGETTO_ANAGRAFICO"
+    RELAZIONE = "RELAZIONE"
 
 
 class TipoDocumentoEnum(str, enum.Enum):
