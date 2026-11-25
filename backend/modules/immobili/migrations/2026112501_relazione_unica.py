@@ -137,6 +137,8 @@ def converti(conn) -> dict:
         tipo = MAPPA_TIPO_DIRITTO.get(d.tipo_diritto)
         if tipo is None:
             raise RuntimeError(f"Diritto {d.id}: unknown tipo_diritto '{d.tipo_diritto}'")
+        if inizio and fine and fine < inizio:
+            raise RuntimeError(f"Diritto {d.id}: data_fine {fine} precedes data_inizio {inizio}")
         righe.append((d, tipo, inizio, fine))
 
     from datetime import date
@@ -147,6 +149,19 @@ def converti(conn) -> dict:
             aperti.setdefault((d.bene_id, d.soggetto_id, tipo), []).append(d.id)
     doppioni = [f"bene {b}, soggetto {s}, tipo {t}: diritti {ids}"
                 for (b, s, t), ids in sorted(aperti.items()) if len(ids) > 1]
+
+    if n_assegnazioni:
+        invertite = [r.id for r in conn.execute(text(
+            "SELECT a.id FROM immo_assegnazioni_conduttore a JOIN immo_conduttori c ON c.id = a.conduttore_id "
+            "WHERE a.data_fine < a.data_inizio ORDER BY a.id"))]
+        if invertite:
+            raise RuntimeError(f"Assegnazioni {invertite}: data_fine precedes data_inizio, nothing was written")
+        for r in conn.execute(text(
+                "SELECT a.bene_id, c.soggetto_id, array_agg(a.id ORDER BY a.id) AS ids "
+                "FROM immo_assegnazioni_conduttore a JOIN immo_conduttori c ON c.id = a.conduttore_id "
+                "WHERE (a.data_fine IS NULL OR a.data_fine >= CURRENT_DATE) "
+                "GROUP BY a.bene_id, c.soggetto_id HAVING count(*) > 1 ORDER BY 1, 2")):
+            doppioni.append(f"bene {r.bene_id}, soggetto {r.soggetto_id}, tipo conduttore: assegnazioni {list(r.ids)}")
 
     codici = {tipo for _, tipo, _, _ in righe}
     if n_assegnazioni:

@@ -247,3 +247,37 @@ def test_tabelle_vecchie_vuote_conteggi_zero(db_session, migrazione):
     conn = db_session.connection()
     _schema_vecchio(conn)
     assert migrazione.converti(conn)["diritti"] == 0
+
+
+def test_doppione_conduttore_ferma(db_session, migrazione):
+    conn = db_session.connection()
+    _schema_vecchio(conn)
+    b1, _ = _beni(conn)
+    c1 = conn.execute(text("INSERT INTO immo_conduttori (soggetto_id) VALUES (201) RETURNING id")).scalar()
+    c2 = conn.execute(text("INSERT INTO immo_conduttori (soggetto_id) VALUES (201) RETURNING id")).scalar()
+    conn.execute(text(
+        "INSERT INTO immo_assegnazioni_conduttore (bene_id, conduttore_id, data_inizio) "
+        "VALUES (:b, :c1, '2022-01-01'), (:b, :c2, '2023-01-01')"), {"b": b1, "c1": c1, "c2": c2})
+    with pytest.raises(RuntimeError) as e:
+        migrazione.converti(conn)
+    assert f"bene {b1}" in str(e.value) and "soggetto 201" in str(e.value)
+    assert conn.execute(text("SELECT count(*) FROM core_relazioni")).scalar() == 0
+
+
+def test_date_invertite_ferma(db_session, migrazione):
+    conn = db_session.connection()
+    _schema_vecchio(conn)
+    b1, _ = _beni(conn)
+    d = _diritto(conn, b1, _prop(conn, 101), "PROPRIETARIO", 100, "2020-01-01", "2019-01-01")
+    with pytest.raises(RuntimeError) as e:
+        migrazione.converti(conn)
+    assert f"Diritto {d}" in str(e.value)
+    conn.execute(text("DELETE FROM immo_diritti_immobile"))
+    c = conn.execute(text("INSERT INTO immo_conduttori (soggetto_id) VALUES (201) RETURNING id")).scalar()
+    a = conn.execute(text(
+        "INSERT INTO immo_assegnazioni_conduttore (bene_id, conduttore_id, data_inizio, data_fine) "
+        "VALUES (:b, :c, '2022-01-01', '2021-01-01') RETURNING id"), {"b": b1, "c": c}).scalar()
+    with pytest.raises(RuntimeError) as e:
+        migrazione.converti(conn)
+    assert str(a) in str(e.value)
+    assert conn.execute(text("SELECT count(*) FROM core_relazioni")).scalar() == 0
