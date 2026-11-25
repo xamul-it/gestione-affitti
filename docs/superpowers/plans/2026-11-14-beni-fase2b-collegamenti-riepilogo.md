@@ -46,10 +46,10 @@ Fuori da questo piano:
 - **Quote**: `quota_percentuale` del diritto. Se manca e il soggetto è l'unico del gruppo vale 100; se manca e i soggetti sono più di uno vale `null`, con l'avviso `"Quote mancanti per <gruppo>"`. Un gruppo con quote tutte presenti la cui somma non è 100 dà l'avviso `"Le quote di <gruppo> sommano a <X>%"`. `<gruppo>` vale `titolari del godimento` o `proprietari`.
 - **Voci del riepilogo**, nell'ordine: `codice | etichetta | a chi | norma`.
   - `RENDITA`: "Rendita catastale" per l'unità, "Reddito dominicale" per il terreno. Va ai titolari del godimento. Norma: "TUIR artt. 26, 27".
-  - `REDDITO_AGRARIO`: solo per i terreni. Va ai conduttori in corso che non sono titolari; se non ce ne sono, ai titolari del godimento. Norma: "TUIR artt. 32, 33".
+  - `REDDITO_AGRARIO`: solo per i terreni. Va ai conduttori in corso, anche se contitolari (verifica di dominio del 2026-11-25: il comproprietario che conduce l'intero fondo ha l'agrario per la quota sua e per quella presa in affitto); se non ce ne sono, ai titolari del godimento. Norma: "TUIR artt. 32, 33".
   - `IMU`: ai titolari del godimento. Norma: "L. 160/2019, c. 743".
   - `SPESE_ORDINARIE`: ai conduttori in corso se ci sono, altrimenti ai titolari del godimento. Norma: "c.c. art. 1004".
-  - `SPESE_STRAORDINARIE`: ai proprietari se esiste un diritto di godimento diverso dalla proprietà, altrimenti ai titolari del godimento. Norma: "c.c. art. 1005".
+  - `SPESE_STRAORDINARIE`: ai proprietari se c'è usufrutto, uso o abitazione (c.c. artt. 1005, 1026); con enfiteusi o superficie, e senza diritti di godimento, ai titolari del godimento (verifica del 2026-11-25: l'enfiteuta le sostiene, art. 960; il superficiario possiede la costruzione, art. 952). Norma: "c.c. art. 1005".
   - `CANONE`: ai titolari del godimento. Norma: "chi concede il godimento (modulo affitti)".
 - **Quota dei conduttori**: `null` quando i conduttori sono più di uno, 100 quando è uno solo.
 - **Nessun importo**: il riepilogo dice a chi va ciascuna voce, non quanto.
@@ -210,7 +210,7 @@ Fuori da questo piano:
     - Ogni voce va a [P1 50, P2 50].
     - Niente `REDDITO_AGRARIO`; prima etichetta "Rendita catastale".
   - `test_conduttore_che_e_titolare`: il conduttore C è anche proprietario.
-    - `REDDITO_AGRARIO` va ai titolari del godimento, perché C non è un terzo.
+    - `REDDITO_AGRARIO` va a [C] (corretto dalla verifica di dominio dello Step 1).
     - `SPESE_ORDINARIE` va a [C].
   - `test_diritto_scaduto_non_conta`: `data_fine` = ieri → escluso. Con `d` = due giorni fa → incluso.
   - `test_quote_mancanti_e_somma`: due comproprietari senza quota → quote `None` e avviso `"Quote mancanti per titolari del godimento"`; quote 50 + 40 → avviso `"... sommano a 90%"`.

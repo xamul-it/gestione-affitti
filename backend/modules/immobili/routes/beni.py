@@ -24,7 +24,9 @@ from ..services.collegamenti_beni import (
     TIPI_COLLEGAMENTO, CollegamentoNonValido, aggiorna_collegamento, avvisi_collegamenti,
     crea_collegamento,
 )
+from ..services.ruoli_bene import riepilogo_bene
 from ..schemas.immobili import VariazioneCatastaleResponse
+from ..schemas.riepilogo_bene import RiepilogoBeneResponse
 
 router = APIRouter(prefix="/beni", tags=["Beni"])
 
@@ -113,6 +115,26 @@ def get_variazioni_catastali(
         .order_by(VariazioneCatastale.created_at.desc(), VariazioneCatastale.id.desc())
         .all()
     )
+
+
+# The summary shows owners' and tenants' names.
+_PERMESSI_RIEPILOGO = ("proprietario.view", "conduttore.view")
+
+
+@router.get("/{bene_id}/riepilogo", response_model=RiepilogoBeneResponse)
+def get_riepilogo(
+    bene_id: int,
+    data: Optional[date] = Query(None, description="Giorno di riferimento, default oggi"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Chi paga cosa: a chi spetta ciascuna voce alla data, senza importi."""
+    bene = _bene_visibile(db, bene_id, current_user)
+    if not getattr(current_user, "is_superuser", False):
+        permessi = current_user.get_permissions()
+        if any(p not in permessi for p in _PERMESSI_RIEPILOGO):
+            raise HTTPException(status_code=403, detail="Permessi insufficienti")
+    return riepilogo_bene(db, bene, data or date.today())
 
 
 # --- Links between beni (phase 2b) -------------------------------------------

@@ -129,15 +129,17 @@ terreni e fabbricato rurale in usufrutto a uno e nuda proprietà a un
 altro). I diritti e le quote esistono già (`NUDA_PROPRIETA`,
 `USUFRUTTUARIO`, date di inizio e fine); il conduttore è l'assegnazione di
 oggi. Il **titolare del godimento** è il pieno proprietario o, se c'è,
-l'usufruttuario.
+l'usufruttuario (o il titolare di uso, abitazione, enfiteusi, superficie:
+soggetti passivi IMU, Circ. MEF 1/DF 2020; redditi per il loro diritto,
+TUIR art. 26). Verifica con l'Archivio Fiscale del 2026-11-25.
 
 | Voce | A chi va |
 |---|---|
 | Reddito dominicale del terreno, rendita del fabbricato | titolare del godimento, per quota; al nudo proprietario nulla (TUIR artt. 26, 27) |
-| Reddito agrario | chi conduce il terreno: il conduttore se c'è ed è diverso dai titolari, altrimenti il titolare del godimento (TUIR artt. 32, 33) |
+| Reddito agrario | chi conduce il terreno: il conduttore se c'è, anche se è contitolare (conduce la quota sua e quella presa in affitto), altrimenti il titolare del godimento (TUIR artt. 32, 33) |
 | IMU | titolare del godimento, non il nudo proprietario (L. 160/2019, c. 743) |
 | Spese ordinarie | conduttore se c'è; altrimenti titolare del godimento (c.c. art. 1004) |
-| Spese straordinarie | nudo proprietario se c'è usufrutto, altrimenti proprietario (c.c. art. 1005) |
+| Spese straordinarie | nudo proprietario se c'è usufrutto, uso o abitazione (c.c. artt. 1005, 1026); con enfiteusi l'enfiteuta (art. 960), con superficie il superficiario, proprietario della costruzione (art. 952); altrimenti il proprietario |
 | Canone dell'affitto | a chi concede il godimento: l'usufruttuario se c'è (modulo affitti) |
 
 Senza conduttore registrato il bene è condotto dai titolari stessi: non
@@ -282,4 +284,9 @@ Pré-Saint-Didier, Castiglione della Pescaia; esenzione IRPEF CD/IAP dal 2023 e 
 ridotta per CD/IAP; IMU su enfiteusi e superficie (L. 160/2019); regola
 "una pertinenza per categoria" anche per agevolazioni prima casa e
 cedolare secca (qui solo come avviso IMU); forma,
-disdetta e art. 45 della L. 203/1982; regole regionali sulle zone montane.
+disdetta e art. 45 della L. 203/1982; regole regionali sulle zone montane;
+diritto di superficie prima dell'ultimazione della costruzione (chi paga
+l'IMU sul suolo); spese straordinarie in enfiteusi (fonti indirette,
+contano le clausole); affitto tra comproprietari del fondo (serve un
+contratto registrato sulla quota altrui); conduttore società di capitali
+(reddito d'impresa, non agrario).
