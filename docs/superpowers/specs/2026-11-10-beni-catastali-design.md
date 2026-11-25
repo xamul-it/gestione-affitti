@@ -1,292 +1,407 @@
-# Beni catastali: unità immobiliari e terreni allo stesso livello — design
+# Beni catastali: beni, raggruppamenti e relazioni con i soggetti — design
 
-Data: 2026-11-10, aggiornata il 2026-11-12 (collegamenti tra beni) e il 2026-11-13 (fase 2a fatta) · Stato: approvata dall'utente il 2026-11-12.
-Strada B (bene comune) scelta dall'utente il 2026-11-10.
+Data: 2026-11-10 · aggiornata il 2026-11-12 (collegamenti), il 2026-11-13
+(fase 2a fatta), il 2026-11-25 (fase 2b fatta) e **riscritta il 2026-11-25**
+(perimetro ristretto ai beni; relazione unica; raggruppamenti ad albero).
+Stato: fasi 1, 2a, 2b approvate e rilasciate; la riscrittura del 2026-11-25
+è in attesa di approvazione dell'utente.
+
+## Perimetro
+
+Questa spec tratta **solo i beni catastali e i loro legami**:
+
+- il **bene** (foglia): unità immobiliare o terreno, coi dati catastali;
+- il **raggruppamento** (ramo): complesso, edificio, abitazione con
+  pertinenze, fondo…, che contiene beni e altri raggruppamenti;
+- la **relazione** soggetto ↔ bene o raggruppamento, che dice quale diritto,
+  godimento o incarico il soggetto ha;
+- i **documenti** del bene, del raggruppamento e della relazione;
+- il riepilogo "chi paga cosa" che si ricava dalle relazioni.
+
+Fuori perimetro (decisione dell'utente del 2026-11-25): contratti di
+locazione (`affitti_lungo`), affitti brevi, condominio e millesimi,
+calcoli fiscali. Quando questi moduli hanno bisogno dei beni li leggono
+tramite i servizi di immobili.
 
 ## Perché
 
-Oggi il terreno è un'entità isolata: ha i dati catastali in una riga, ma non
-ha proprietari e diritti, conduttori, documenti, variazioni, scheda; l'import
-visure lo **conta senza importarlo**; si può solo disattivare. Per l'utente
-"non è diverso da un immobile, è solo diverso il catasto".
-
-In più il modulo affitti è legato alla sola unità immobiliare
-(`contratti.unita_immobiliare_id`): **un terreno non si può affittare** e un
-contratto copre **un solo immobile**, mentre nella realtà ne copre spesso
-più d'uno (appartamento + box + cantina, casa + terreno). Il modello RLI
-(ed. 14/10/2025, Quadro C) prevede infatti più immobili per contratto, sia
-del Catasto Fabbricati ("U") sia del Catasto Terreni ("T").
-
-Regole di dominio: rapporto dell'agente esperto sull'Archivio Fiscale del
-2026-11-10 (fonti tra parentesi).
+- Il terreno "non è diverso da un immobile, è solo diverso il catasto"
+  (fasi 1-2, fatte).
+- Il legame tra soggetto e bene oggi è sparso: diritti reali in
+  `immo_diritti_immobile` (via `immo_proprietari`), conduttori in
+  `immo_assegnazioni_conduttore` (via `immo_conduttori`), amministratore in
+  `core_relazioni`, tecnici in `affitti_lungo.tecnici` senza bene. Il
+  comodatario non ha posto. L'utente vuole **una sola relazione** con un
+  tipo, divisa in famiglie.
+- I beni si raggruppano a più livelli. Caso reale dell'utente: un complesso
+  di 3 edifici gestito **senza amministratore**, uno con 4 unità collegate a
+  un terreno. Un incarico (es. il manutentore della caldaia centralizzata)
+  riguarda l'edificio, non la singola unità.
 
 ## Obiettivi
 
-1. **Bene catastale** come concetto comune: un bene è un'**unità
-   immobiliare** (Catasto Fabbricati) o un **terreno** (Catasto Terreni).
-   Proprietari e diritti, conduttori, documenti, variazioni catastali,
-   spese ricorrenti (IMU, consorzi…), scadenze e relazioni si riferiscono al
-   bene, quindi valgono per entrambi senza duplicare nulla.
-2. **Identificazione catastale comune**: codice catastale del comune (es.
-   A944) e nome, sezione, foglio, particella (anche numero/denominatore),
-   subalterno, più indirizzo o località (Mod. RLI, Quadro C).
-3. **Terreno completo**: una o più **porzioni** con qualità, classe,
-   superficie, reddito dominicale e agrario, deduzioni (Circ. 9/1990; TUIR
-   art. 30); uso del terreno, edificabile, esente IMU per montanità come
-   scelta manuale; servitù come nota.
-4. **Chi paga cosa**: dai diritti (piena proprietà, nuda proprietà,
-   usufrutto, con le quote) e dal conduttore la scheda dice a chi vanno
-   redditi, imposte e spese del bene (vedi "Titolari, usufrutto e
-   conduttore"). Il conduttore resta quello di oggi (soggetto e periodo): il
-   rapporto contrattuale è affare del modulo affitti, qui conta solo sapere
-   **se il bene è condotto da qualcuno diverso dai titolari**.
-5. **Scheda del bene**: la scheda dell'unità diventa la scheda del bene, con
-   le stesse sezioni per unità e terreni; i dati specifici cambiano col tipo.
-6. **Contratti di affitto con più beni** (modulo `affitti_lungo`): un
-   contratto riguarda una lista di beni, unità e/o terreni.
-7. **Import visure** anche dei terreni (fase dedicata, serve un campione).
-8. **Documenti del terreno**: visura, estratto di mappa, certificato di
-   destinazione urbanistica (scade un anno dal rilascio: L. 47/1985 art. 18;
-   corrispondenza con art. 30 DPR 380/2001 da verificare), atto di
-   provenienza, contratto di affitto agrario, tipo di frazionamento / tipo
-   mappale, altro.
-9. **Collegamenti tra beni** (richiesta dell'utente del 2026-11-12): un
-   bene può essere legato a un altro, con un tipo e un periodo. Primo uso:
-   le **pertinenze** (box, cantina, soffitta di un'abitazione); poi il
-   fabbricato rurale sulla particella "ente urbano" e le particelle che
-   formano un fondo.
+1. **Bene** comune a unità e terreni (fatto, fasi 1-2a).
+2. **Raggruppamenti ad albero**: un ramo ha un tipo, un nome e al più un
+   ramo padre; un bene sta al più in un ramo. Albero puro (scelta
+   dell'utente del 2026-11-25): niente beni o rami con due padri.
+3. **Relazione unica** soggetto ↔ bene o ramo in `core_relazioni`, con i
+   tipi in famiglie: **diritti reali**, **godimento**, **incarichi**
+   (elenco estendibile). Sostituisce diritti e assegnazioni dei conduttori.
+4. **Eredità**: una relazione su un ramo vale per tutto quello che il ramo
+   contiene; la scheda del bene mostra anche le relazioni ereditate.
+5. **Documenti** su bene, ramo e relazione.
+6. **Chi paga cosa** dalle relazioni (diritti reali del bene + godimento
+   del bene o ereditato).
+7. **Selettore unico** dei beni e dei rami.
+8. **Import visure dei terreni** (fase successiva, campioni disponibili).
 
 ## Non obiettivi (per ora)
 
-- **Calcoli fiscali** dei terreni (rivalutazioni 80%/70% + 30% L. 228/2012,
-  esenzione IRPEF CD/IAP, IMU agricola e aree fabbricabili): le fonti hanno
-  buchi (esenzione IRPEF dal 2023, elenco comuni montani della Circ. MEF
-  9/1993, IMU dopo L. 160/2019). Si registrano i dati, non i calcoli.
-- **Adempimenti del contratto agrario** (registrazione RLI codici T1–T4,
-  denuncia annuale di febbraio, comunicazione offerte a 90 giorni e
-  prelazione, durata minima 15/6 anni): il contratto potrà riguardare un
-  terreno, ma le regole specifiche dell'affitto agrario sono un lavoro
-  successivo del modulo affitti.
-- **Affitti brevi**: riguardano solo alloggi, restano legati alle unità.
-- **Millesimi e spese condominiali** (`affitti_lungo.spese`,
-  `ripartizione_spesa`): restano sulle unità.
-- Collegamento **automatico** ente urbano ↔ unità dall'import delle visure
-  ("Particelle corrispondenti al catasto terreni"): il collegamento si crea
-  a mano in fase 2; l'import lo proporrà nella fase 4.
-- Complessi senza amministratore (palazzine): si gestiscono come condominio,
-  nessuna entità nuova. La scelta del condominio nel form dell'unità e la
-  scheda del condominio sono un lavoro a parte (immobili.md §5).
-- Tipo di conduzione e qualifica del conduttore agricolo (coltivatore
-  diretto, IAP): servono solo ai calcoli fiscali, quindi più avanti.
+- Contratti, canoni, registrazioni RLI: modulo `affitti_lungo`. Resta da
+  decidere se un contratto registrato crei da sé la relazione di godimento
+  (vedi Domande aperte).
+- Spostare i **tecnici** di `affitti_lungo` tra gli incarichi: lavoro
+  separato. Per ora gli incarichi su un bene si creano scegliendo
+  un'anagrafica qualsiasi.
+- **Condominio**: resta un'entità a sé con l'amministratore come relazione
+  (`amministratore_condominio`). Unirlo ai raggruppamenti si valuterà quando
+  servirà; l'utente oggi non ha amministratori.
+- Calcoli fiscali (IMU, redditi, rivalutazioni): si registrano i dati, non
+  i calcoli.
+- Adempimenti del contratto agrario e dell'impianto termico (catasto
+  regionale impianti, comunicazioni del terzo responsabile): si registra chi
+  ha l'incarico e i documenti, non le scadenze normative.
 
 ## Anti-obiettivi
 
-- Due copie di componenti, servizi o API per unità e terreni.
-- Cancellare soggetti dell'anagrafica o dati di altri moduli che non
-  dipendono dai beni (vedi Dati esistenti).
+- Due modi di fare la stessa cosa: due tabelle di relazioni, due meccanismi
+  di raggruppamento, componenti duplicati per unità e terreni.
+- Un ramo che entra in un calcolo fiscale come se fosse un bene.
+- Perdere dati di `tenant_produzione` (dati reali dell'utente): niente
+  azzeramento, migrazione con conteggi verificati.
+
+## Approcci considerati
+
+- **A. Rami in una tabella propria** (`immo_raggruppamenti`), beni che
+  puntano al ramo. `immo_beni` resta catasto puro. **Scelto dall'utente il
+  2026-11-25.**
+- B. Rami e beni come nodi della stessa tabella `immo_beni`: tutto ciò che
+  punta a `bene_id` vale subito anche per i rami, ma ogni lista e calcolo
+  deve escluderli e i dati catastali obbligatori non hanno senso sul ramo.
+- Scartati: relazioni separate per famiglia (contro la relazione unica);
+  ramo come testo nel bene (non regge l'annidamento).
+
+Per la relazione unica, scelta di chi scrive la spec: **riusare
+`core_relazioni`** della piattaforma (spec
+`2026-11-10-relazioni-ruoli-soggetti-design.md`) invece di una tabella nuova
+di immobili. Ha già soggetto, tipo da catalogo, oggetto
+(`entity_type`/`entity_id`), periodo, sottotipo, dati, scadenze,
+visibilità per permesso e modulo, e ci sta già l'amministratore. Diritti e
+conduttori passano da relazioni "MODULO" (lette dalle tabelle di immobili)
+a relazioni "CORE".
 
 ## Come funziona
 
-### Modello: bene con unità e terreno come specializzazioni
+### Bene (fatto)
 
 ```
 immo_beni (id, tipo_bene UNITA|TERRENO, codice, comune_codice, comune, provincia,
            indirizzo/località, cap, sezione, foglio, particella, denominatore,
-           subalterno, partita, descrizione, note, attivo, timestamp)
-   ├── immo_unita_immobiliari (id = immo_beni.id) dati del fabbricato:
-   │     categoria, rendita, superficie, locali, piano, condominio…
-   └── immo_terreni (id = immo_beni.id) dati del terreno: tipologia, uso,
-         edificabile, esente IMU montano, servitù
-           └── immo_terreni_porzioni (qualità, classe, superficie m²,
-                 reddito dominicale, reddito agrario, deduzioni)
+           subalterno, partita, descrizione, note, attivo, timestamp,
+           raggruppamento_id → immo_raggruppamenti, nullable)   ← nuovo
+   ├── immo_unita_immobiliari (id = immo_beni.id): categoria, rendita, superficie…
+   └── immo_terreni (id = immo_beni.id): tipologia, uso, edificabile, esente IMU…
+           └── immo_terreni_porzioni (qualità, classe, superficie m², redditi…)
 ```
 
-**Lo stesso id identifica il bene e la sua specializzazione** (in
-SQLAlchemy: ereditarietà a tabelle collegate). Conseguenze:
+Lo stesso id identifica il bene e la specializzazione (ereditarietà a
+tabelle collegate). `entity_type = IMMOBILE` di documenti, scadenze e
+relazioni significa "bene".
 
-- tutto ciò che oggi punta a `immo_unita_immobiliari.id` (affitti brevi,
-  spese condominiali, millesimi, documenti con `entity_type = IMMOBILE`,
-  scadenze) **resta valido senza modifiche**;
-- `IMMOBILE` come `entity_type` di documenti, scadenze e relazioni passa a
-  significare "bene" e punta a `immo_beni`: un documento di un terreno è un
-  documento `IMMOBILE` col suo id.
+### Raggruppamenti
 
-Tabelle che passano dall'unità al bene (`bene_id` al posto di
-`unita_immobiliare_id`): diritti, assegnazioni dei conduttori, variazioni
-catastali, spese ricorrenti (che poi lasciano il posto al registro costi e
-ricavi, `2026-11-12-costi-ricavi-design.md`). `affitti_lungo`: nuova tabella
-`contratto_beni (contratto_id, bene_id)`; `contratti.unita_immobiliare_id` sparisce.
+```
+immo_raggruppamenti (id, tipo, nome, padre_id → immo_raggruppamenti nullable,
+                     descrizione, note, attivo, timestamp)
+```
 
-I campi comuni (indirizzo, foglio, particella…) oggi duplicati in unità e
-terreno si spostano nel bene. Il terreno guadagna la cancellazione vera
-(oggi solo disattivazione), come l'unità.
+- **Tipi** (elenco estendibile, dichiarato da immobili):
+  `COMPLESSO`, `EDIFICIO`, `ABITAZIONE_CON_PERTINENZE`, `FONDO`, `ALTRO`.
+- **Albero puro**: un ramo ha al più un padre, un bene al più un ramo
+  (`immo_beni.raggruppamento_id`). Il servizio rifiuta i cicli (un ramo non
+  può finire dentro un suo discendente).
+- **Controlli per tipo** (avvisi, non blocchi, salvo dove detto):
+  - `ABITAZIONE_CON_PERTINENZE`: contiene solo beni, nessun sotto-ramo
+    (blocco); esattamente un'unità di categoria A (tranne A/10) e unità
+    C/2, C/6, C/7; **avviso** se c'è più di una pertinenza della stessa
+    categoria (IMU abitazione principale: una per categoria, L. 160/2019
+    c. 741).
+  - `FONDO`: avviso se contiene unità che non sono fabbricati rurali.
+- **Cancellare un ramo**: i figli (beni e rami) salgono al padre del ramo
+  cancellato; le relazioni e i documenti del ramo si eliminano come per il
+  bene (i file restano nello storage). Si chiede conferma mostrando cosa
+  sale e cosa si elimina.
+- **Spostare** un bene o un ramo = cambiarne il padre (anche "nessuno").
 
-### Titolari, usufrutto e conduttore
+### Collegamenti tra beni (ridotti)
 
-Su un bene possono esserci insieme tre ruoli: **nudo proprietario**,
-**usufruttuario** e **conduttore** (caso reale delle visure dell'utente:
-terreni e fabbricato rurale in usufrutto a uno e nuda proprietà a un
-altro). I diritti e le quote esistono già (`NUDA_PROPRIETA`,
-`USUFRUTTUARIO`, date di inizio e fine); il conduttore è l'assegnazione di
-oggi. Il **titolare del godimento** è il pieno proprietario o, se c'è,
-l'usufruttuario (o il titolare di uso, abitazione, enfiteusi, superficie:
-soggetti passivi IMU, Circ. MEF 1/DF 2020; redditi per il loro diritto,
-TUIR art. 26). Verifica con l'Archivio Fiscale del 2026-11-25.
+`immo_beni_collegamenti` resta solo per il legame che **non è un
+raggruppamento**: `FABBRICATO_SU_PARTICELLA` (particella del catasto terreni
+"ente urbano" o area di corte ↔ unità costruita sopra: lo stesso pezzo di
+terra visto dai due catasti). I tipi `PERTINENZA` e `PARTE_DI_FONDO`
+diventano raggruppamenti (vedi Migrazione).
+
+### Relazione unica
+
+Ogni relazione è una riga di `core_relazioni`:
+
+- `soggetto_id`: l'anagrafica;
+- `ruolo_id`: il tipo, dal catalogo `core_ruoli_disponibili` (dichiarato in
+  `relation_types` del manifest di immobili);
+- `entity_type` + `entity_id`: `IMMOBILE` + id del bene, oppure
+  **`RAGGRUPPAMENTO`** (nuovo) + id del ramo;
+- `data_inizio`, `data_fine`, `note`, `dati`, scadenza se il tipo la
+  prevede;
+- **quota** (nuova colonna `quota_percentuale`, Numeric 5,2, nullable): solo
+  per i tipi che la ammettono.
+
+Il catalogo guadagna tre campi nei `relation_types` (sincronizzati in
+`core_ruoli_disponibili` come gli altri): `famiglia`, `ammette_quota`,
+`solo_beni` (vero = non si aggancia a un ramo).
+
+**Tipi di immobili** (tutti `fonte = CORE`):
+
+| Famiglia | Tipi | Quota | Su |
+|---|---|---|---|
+| Diritti reali | `proprieta`, `nuda_proprieta`, `usufrutto`, `uso`, `abitazione`, `superficie`, `enfiteusi`, `diritto_reale_altro` | sì | solo beni |
+| Godimento | `conduttore` (locazione), `affittuario_agrario`, `comodatario`, `godimento_altro` | no | bene o ramo |
+| Incarichi | `manutentore`, `terzo_responsabile_impianto`, `responsabile_impianto`, `tecnico_incaricato`, `incarico_altro` | no | bene o ramo |
+
+- I diritti reali stanno solo sui beni perché il catasto e l'IMU ragionano
+  per bene; la quota è quella della visura.
+- **"Applica a tutti i beni del ramo"** (scelta dell'utente del
+  2026-11-25): dalla scheda del ramo si sceglie soggetto, tipo di diritto
+  reale, quota e date, e il servizio crea la stessa relazione su ogni bene
+  contenuto (anche nei sotto-rami). Prima mostra l'elenco dei beni e salta,
+  segnalandoli, quelli dove il soggetto ha già quel diritto aperto o dove le
+  quote supererebbero 100. Le relazioni create sono normali relazioni dei
+  beni: nessun legame col ramo resta dopo.
+- Il **titolo** del godimento è il tipo stesso (locazione, affitto agrario,
+  comodato). Per il comodato scritto la relazione può portare in `dati` gli
+  estremi di registrazione (data, ufficio, numero): servono per la riduzione
+  IMU del comodato a parenti di primo grado e per le detrazioni dei lavori
+  del comodatario (Ris. MEF 1/DF/2016; Circ. AdE 26/E/2015). La
+  registrazione del comodato scritto va fatta entro 20 giorni, imposta fissa
+  200 euro: qui si registra il dato, non si controlla il termine.
+- **Impianto termico** (DPR 74/2013 art. 6; DPR 412/1993 art. 1): il
+  responsabile è l'occupante o il proprietario, l'amministratore negli
+  impianti centralizzati in condominio; può delegare un terzo responsabile
+  con atto scritto (vietato per le singole unità residenziali con generatore
+  non in locale tecnico dedicato). Il terzo responsabile e il manutentore si
+  agganciano all'unità (caldaia autonoma) o al ramo (caldaia centralizzata
+  dell'edificio). Qui non si controlla il divieto di delega: si registra.
+- `amministratore_condominio` resta com'è (oggetto `CONDOMINIO`).
+- Il codice `conduttore` resta lo stesso di oggi; `proprietario` diventa
+  l'insieme dei tipi della famiglia "diritti reali" (le liste e i filtri
+  "Proprietari" lo usano così).
+
+**Regole del servizio** (in immobili, sopra `RelazioneService`):
+
+- un tipo `solo_beni` su un ramo → errore;
+- quota ammessa solo se `ammette_quota`; per i diritti reali le quote
+  aperte dello stesso tipo sullo stesso bene non superano 100 (**avviso**,
+  come oggi);
+- duplicati: come le relazioni del core (stesso soggetto, tipo, oggetto
+  aperti → errore).
+
+### Eredità sui rami
+
+Le relazioni **effettive** di un bene alla data D sono le sue più quelle di
+tutti i rami antenati, valide in D. Un servizio unico
+(`relazioni_effettive(bene_id, d)`) le calcola e dice da dove viene
+ciascuna. Lo usano la scheda, "chi paga cosa" e il registro costi/ricavi.
+
+- La scheda del bene mostra le ereditate in sola lettura con "dal ramo X"
+  e il link al ramo.
+- La scheda del ramo mostra le relazioni proprie e quelle ereditate dai
+  suoi antenati.
+- Se lo stesso tipo è sia sul bene che su un ramo antenato valgono
+  entrambe (es. manutentore della caldaia autonoma e manutentore
+  dell'ascensore dell'edificio): la scheda le distingue per provenienza.
+
+### Chi paga cosa
+
+Stesse regole di oggi (`services/ruoli_bene.py`, verificate con l'esperto e
+l'Archivio Fiscale il 2026-11-25), lette dalle relazioni effettive:
 
 | Voce | A chi va |
 |---|---|
-| Reddito dominicale del terreno, rendita del fabbricato | titolare del godimento, per quota; al nudo proprietario nulla (TUIR artt. 26, 27) |
-| Reddito agrario | chi conduce il terreno: il conduttore se c'è, anche se è contitolare (conduce la quota sua e quella presa in affitto), altrimenti il titolare del godimento (TUIR artt. 32, 33) |
-| IMU | titolare del godimento, non il nudo proprietario (L. 160/2019, c. 743) |
-| Spese ordinarie | conduttore se c'è; altrimenti titolare del godimento (c.c. art. 1004) |
-| Spese straordinarie | nudo proprietario se c'è usufrutto, uso o abitazione (c.c. artt. 1005, 1026); con enfiteusi l'enfiteuta (art. 960), con superficie il superficiario, proprietario della costruzione (art. 952); altrimenti il proprietario |
-| Canone dell'affitto | a chi concede il godimento: l'usufruttuario se c'è (modulo affitti) |
+| Reddito dominicale, rendita del fabbricato | titolare del godimento (pieno proprietario o usufruttuario/uso/abitazione/enfiteusi/superficie), per quota; al nudo proprietario nulla (TUIR artt. 26, 27) |
+| Reddito agrario | chi conduce il terreno: affittuario agrario (o altro godimento) se c'è, anche se contitolare; altrimenti il titolare del godimento (TUIR artt. 32, 33) |
+| IMU | titolare del diritto reale di godimento; mai il conduttore o il comodatario (L. 160/2019 c. 743; CGT Veneto 248/2024 per il comodato) |
+| Spese ordinarie | chi ha il godimento personale (conduttore, affittuario, comodatario: c.c. art. 1808 per il comodato) se c'è; altrimenti il titolare del godimento (c.c. art. 1004) |
+| Spese straordinarie | nudo proprietario con usufrutto, uso o abitazione (c.c. artt. 1005, 1026); enfiteuta (art. 960); superficiario (art. 952); altrimenti il proprietario |
 
-Senza conduttore registrato il bene è condotto dai titolari stessi: non
-serve un campo apposta. La scheda mostra questo riepilogo; le spese seguono la
-tabella con le quote per ruolo del registro costi e ricavi
-(`2026-11-12-costi-ricavi-design.md`), che sostituisce le spese ricorrenti. Nessun importo d'imposta viene calcolato (vedi Non obiettivi).
+Gli incarichi non entrano nel riepilogo. Senza godimento personale il bene
+è condotto dai titolari. **Da verificare con l'esperto prima della fase
+che lo implementa**: reddito agrario e spese ordinarie del comodatario di un
+terreno; comodato di fabbricato (la rendita resta al proprietario). Regola
+provvisoria fino alla verifica: il comodatario si tratta come gli altri
+godimenti personali (tabella sopra).
 
-### Collegamenti tra beni
+### Documenti
 
-```
-immo_beni_collegamenti (id, bene_id, bene_collegato_id, tipo, data_inizio,
-                        data_fine, note, timestamp)
-```
-
-`bene_id` è il bene principale (es. l'abitazione), `bene_collegato_id` quello
-che gli è legato (es. il box); entrambi con `ON DELETE CASCADE`. Un bene non
-si collega a sé stesso, e la stessa coppia ha un solo collegamento aperto
-per tipo. Tipi:
-
-| Tipo | Principale → collegato | Controlli |
-|---|---|---|
-| `PERTINENZA` | abitazione (unità di categoria A, tranne A/10) → unità C/2, C/6 o C/7 | una pertinenza appartiene a una sola abitazione per volta; **avviso**, senza bloccare, se un'abitazione ha più di una pertinenza della stessa categoria (per l'IMU dell'abitazione principale ne conta una per categoria: L. 160/2019, c. 741) |
-| `FABBRICATO_SU_PARTICELLA` | terreno (particella "ente urbano" o area di corte) → unità costruita sopra | nessuno |
-| `PARTE_DI_FONDO` | terreno principale del fondo → altre particelle dello stesso fondo | nessuno |
-
-Il tipo è un elenco che si può estendere. Il collegamento non sposta né
-copia diritti o conduttori: ogni bene tiene i suoi, e la scheda segnala se
-una pertinenza ha titolari diversi dalla sua abitazione. Dove serve, si usa:
-
-- **scheda**: sezione "Beni collegati" in entrambe le direzioni (il box
-  mostra "pertinenza di…", l'appartamento elenca le sue pertinenze);
-- **contratti** (fase 3): scegliendo un'abitazione si propongono le sue
-  pertinenze aperte da aggiungere al contratto;
-- **liste**: l'unità mostra un'icona se è pertinenza o ne ha.
+- `EntityType` (enum PostgreSQL di `core_documenti`) guadagna
+  `RAGGRUPPAMENTO` e `RELAZIONE`: serve un `ALTER TYPE … ADD VALUE` nella
+  migrazione.
+- Sul **bene**: le tipologie di oggi (visura, planimetria, APE…).
+- Sul **ramo**: libretto della caldaia centralizzata, conformità impianti
+  comuni, titoli edilizi dell'edificio, estratto di mappa del fondo, altro.
+  Le tipologie dichiarano su quali `entity_type` valgono.
+- Sulla **relazione**: atto di provenienza (diritto reale), contratto di
+  comodato o di affitto agrario (godimento), delega al terzo responsabile
+  e lettera d'incarico (incarichi).
+- La scheda del bene elenca anche i documenti dei rami antenati, divisi
+  per provenienza.
 
 ### API
 
-- `/api/v1/beni/` lista e dettaglio comuni (filtro per tipo, ricerca per
-  codice, indirizzo, foglio/particella), con i dati della specializzazione.
-- `/unita-immobiliari` e `/terreni` restano per creare e modificare i dati
-  specifici; leggono e scrivono anche la parte comune.
-- Diritti, assegnazioni, variazioni, spese: parametro `bene_id`.
-- `/api/v1/beni/{id}/collegamenti` elenco (in entrambe le direzioni),
-  creazione, modifica, chiusura con data di fine, cancellazione.
+- `/api/v1/raggruppamenti/`: lista (albero o piatta, filtro per tipo),
+  dettaglio con figli, crea, modifica, sposta (cambia padre), cancella.
+- `/api/v1/beni/{id}`: aggiunge `raggruppamento_id` e il percorso
+  (complesso › edificio › …); `PATCH` per spostarlo.
+- `/api/v1/beni/{id}/relazioni` e `/api/v1/raggruppamenti/{id}/relazioni`:
+  relazioni proprie ed ereditate (con provenienza) e creazione;
+  aggiornamento e chiusura via le rotte delle relazioni del core.
+- Le rotte `/proprietari`, `/diritti-immobile`, `/conduttori`,
+  `/assegnazioni-conduttore` spariscono a fine migrazione; il frontend
+  passa alle relazioni.
+- Selettore: `/api/v1/beni/cerca?q=…&rami=true` cerca tra unità, terreni e
+  rami (codice, indirizzo, foglio/particella, nome del ramo), senza il
+  limite di 20 di oggi (paginato).
 
 ### Interfaccia
 
-- **Scheda** `/beni/:id` (i link `/unita-immobiliari/:id` e `/terreni/:id`
-  vi rimandano): intestazione, dati comuni, dati del tipo (per il terreno
-  la tabella delle porzioni, superficie in ha.are.ca), documenti,
-  variazioni, diritti, conduttori, spese, scadenze.
-- Liste unità e terreni restano separate (colonne diverse) e aprono la
-  scheda; Proprietari e Conduttori mostrano "Beni" (unità e terreni).
-- Scelta del bene (diritto, contratto, documento): un unico selettore che
-  cerca tra unità e terreni.
-- Contratto: elenco dei beni del contratto al posto dell'unità singola.
+- **Albero** `/raggruppamenti`: rami espandibili coi beni dentro; crea
+  ramo, sposta (scegliendo il nuovo padre dal selettore), cancella.
+- **Scheda del ramo** `/raggruppamenti/:id`: percorso, figli, relazioni
+  (proprie ed ereditate), documenti.
+- **Scheda del bene**: percorso del ramo in alto; sezione "Soggetti" unica
+  con le relazioni divise per famiglia (diritti reali con quote,
+  godimento, incarichi), le ereditate in sola lettura; "chi paga cosa";
+  documenti propri e dei rami.
+- **Proprietari** e **Conduttori** restano voci di menu: lista unica delle
+  anagrafiche prefiltrata per famiglia (diritti reali / godimento), come
+  previsto dalla spec delle relazioni.
+- **Selettore unico** di beni e rami ovunque si sceglie un bene.
 
-### Abbinamento e import visure
+### Import visure
 
-Chiave del bene: comune (codice catastale o nome) + foglio + particella
-(+ denominatore, + subalterno), zeri iniziali ignorati; il tipo (U/T) viene
-dalla sezione della visura. L'import dei terreni propone, come per le
-unità, beni da aggiungere o aggiornare, porzioni, intestatari e diritti.
+Le visure scrivono i diritti reali come relazioni (tipo dalla visura,
+quota, date). La chiave del bene non cambia (comune + foglio + particella
++ denominatore + subalterno). Se una visura più recente cambia gli
+intestatari, l'import propone di chiudere le relazioni vecchie con una
+data di fine. L'import dei terreni (porzioni, intestatari) e la proposta
+fabbricato ↔ particella dalle visure analitiche sono l'ultima fase.
 
-Campioni disponibili (`docs/visure/`, non versionati): visura per soggetto
-in tabella (2016, fabbricati e terreni), visura attuale per soggetto
-(2025, fabbricati e terreni, porzioni AA/AB con qualità, classe,
-superficie, redditi e deduzioni, partita) e visure per immobile al catasto
-terreni (ente urbano; particella soppressa con le particelle che ha
-originato). I tre parser esistenti riconoscono già i blocchi dei terreni e
-li contano: la fase 4 li estrae. Una particella soppressa non crea beni ma
-può proporre una variazione su quelli che ha originato. Se una visura più recente cambia gli
-intestatari (es. un altro usufruttuario), l'import propone di chiudere i
-diritti vecchi con una data di fine invece di cancellarli.
+## Migrazione dei dati
 
-## Dati esistenti
+In ogni schema tenant, **senza azzerare** (prima backup in
+`~/apps/gestione-affitti-backups`). Conteggio del 2026-11-25 in
+`tenant_produzione`: 0 diritti, 0 assegnazioni, 0 proprietari, 0
+conduttori, 0 collegamenti, 0 documenti `PROPRIETARIO` (l'utente non ha
+ancora ricaricato dopo l'azzeramento della fase 1). La migrazione va
+comunque scritta per i tenant che hanno dati (tenant di prova, dati di
+esempio) e ricontata prima del rilascio.
 
-**Decisione dell'utente (2026-11-12): ripartenza.** I dati di questo giro
-si buttano e l'utente ricarica pulito dalle visure e dal caricamento unico
-dei documenti. Niente migrazione dei dati.
+Regole per i casi dubbi (scelte di chi scrive la spec): la migrazione **si
+ferma e li elenca** invece di indovinare; in particolare due diritti
+aperti dello stesso soggetto, tipo e bene (anche `PROPRIETARIO` +
+`COMPROPRIETARIO`) e date non `YYYY-MM-DD`. Un soggetto ha **una sola
+relazione** per tipo e bene, con la quota totale: il vincolo dei duplicati
+del core resta com'è.
 
-La migrazione della fase 1, in ogni schema tenant:
+1. `immo_diritti_immobile` → `core_relazioni`: soggetto =
+   `immo_proprietari.soggetto_id`; tipo da `tipo_diritto`
+   (`PROPRIETARIO` e `COMPROPRIETARIO` → `proprieta`, `NUDA_PROPRIETA` →
+   `nuda_proprieta`, `USUFRUTTUARIO` → `usufrutto`, `USO`, `ABITAZIONE`,
+   `SUPERFICIE`, `ENFITEUSI` → omonimi, `ALTRO` → `diritto_reale_altro`);
+   quota, date (oggi stringhe `YYYY-MM-DD` → Date), note.
+2. `immo_assegnazioni_conduttore` → `core_relazioni` tipo `conduttore`,
+   soggetto = `immo_conduttori.soggetto_id`, date e note.
+3. Le note di `immo_proprietari.note_proprietario` e `immo_conduttori.note`
+   non hanno un bene: finiscono in `dati.note_ruolo` di ciascuna relazione
+   migrata di quel ruolo (sono 0-poche righe; la migrazione le conta).
+4. Collegamenti `PERTINENZA` aperti → un ramo
+   `ABITAZIONE_CON_PERTINENZE` per abitazione, nome = codice
+   dell'abitazione, con abitazione e pertinenze dentro. `PARTE_DI_FONDO`
+   aperti → un ramo `FONDO` col terreno principale e le particelle. I
+   collegamenti chiusi (con data di fine) si perdono: la migrazione li
+   elenca nel log e si ferma se ce ne sono, così si decide prima.
+5. Documenti con `entity_type = PROPRIETARIO` (puntano a
+   `immo_proprietari.id`, che sparisce) passano a `SOGGETTO_ANAGRAFICO` con
+   l'id del soggetto.
+6. Verifica: righe migrate = righe di partenza per diritti e assegnazioni;
+   poi si eliminano `immo_diritti_immobile`, `immo_assegnazioni_conduttore`,
+   `immo_proprietari`, `immo_conduttori` e i provider MODULO di immobili.
+   `scripts/promote.sh` si ferma se una tabella perde righe: le tabelle
+   eliminate gli vengono indicate esplicitamente.
 
-- svuota le tabelle del modulo immobili (unità, terreni, proprietari,
-  diritti, conduttori e assegnazioni, variazioni, spese ricorrenti,
-  certificati energetici, millesimi, condomini e tabelle millesimali) e
-  quelle che vi dipendono negli altri moduli (contratti, spese e incassi di
-  `affitti_lungo`; prenotazioni, soggiorni, blocchi, canali e comunicazioni
-  di `affitti_brevi`);
-- elimina le righe di documenti, scadenze e relazioni degli oggetti
-  azzerati (`entity_type` IMMOBILE, CONDOMINIO, SPESA_RICORRENTE, CONTRATTO,
-  comunicazione); i file restano nello storage (il backup del DB non li
-  copre, così non si perde nulla per sbaglio);
-- crea le tabelle nuove vuote.
+Il core conosce le tabelle degli oggetti (`TABELLE_OGGETTI`, come già per
+`immo_beni`): si aggiunge `immo_raggruppamenti` con lo stesso schema, senza
+rendere registrabili gli `entity_types` (scelta di chi scrive la spec).
+`affitti_lungo` non ha chiavi verso le tabelle eliminate: le riesporta solo
+in `models/__init__.py`, da togliere. Nella fase 3 il `conduttore` si crea a
+mano, come oggi.
 
-Restano: soggetti dell'anagrafica, utenti, configurazioni e tabelle di
-dominio (categorie catastali, tipologie, comuni). Il backup prima della
-migrazione lo fa già `scripts/promote.sh`, che però si ferma se una tabella
-perde righe: per questo rilascio le tabelle azzerate gli vengono indicate
-esplicitamente; prima del rilascio si conferma
-con l'utente che è il momento giusto (nel frattempo non deve caricare
-dati che non vuole perdere).
+Riferimenti da aggiornare: relazioni SQLAlchemy di `SoggettoAnagrafico`
+(`proprietari`, `conduttori`), import di `Proprietario`/`DirittoImmobile`
+in `affitti_lungo/models/__init__.py`, controllo tabelle in
+`anagrafica_italiana/routes/soggetti.py`, `visura_import_service.py`,
+`lettura_documenti/abbinamento.py`, `services/ruoli_bene.py`, dati di
+esempio e tenant di prova (`tenant_test_nuovo`, `tenant_test_evolutivo`).
 
 ## Piano a fasi
 
 Ogni fase si rilascia da sola.
 
-1. **Bene comune**: tabella `immo_beni`, unità come specializzazione,
-   azzeramento dei dati (vedi Dati esistenti), diritti/assegnazioni/variazioni/spese su
-   `bene_id`, relazioni e documenti su `immo_beni`. Per l'utente non cambia
-   nulla (stesse pagine), è il fondamento.
-2. **Terreni come beni**, in due rilasci:
-   - **2a (fatta il 2026-11-13)**: specializzazione terreno, porzioni,
-     scheda comune `/beni/:id` con la parte terreno, API `/beni`,
-     tipologie documentali, cancellazione, lista cliccabile. Migrazione
-     `2026111301_terreni_beni` senza perdita di righe (i terreni del vecchio
-     layout diventano beni con una porzione; superficie sempre in m²).
-     `/beni` mostra le unità con `immobile.view` e i terreni con
-     `terreno.view`.
-   - **2b (fatta il 2026-11-25)**: **collegamenti tra beni** (pertinenze, fabbricato su
-     particella, parte di fondo) e riepilogo "chi paga cosa" (anche per le
-     unità).
-   - Il **selettore unico dei beni** passa alla fase 3, dove ha i primi
-     utilizzatori (contratti, caricamento unico).
-3. **Contratti con più beni** in `affitti_lungo` (anche terreni), con la
-   proposta delle pertinenze dell'abitazione scelta.
-4. **Import visure dei terreni** e caricamento unico dei documenti anche
-   per i terreni (campioni disponibili), con la proposta del collegamento
-   fabbricato ↔ particella dalle visure analitiche.
+1. **Bene comune** (fatta il 2026-11-12).
+2. **Terreni come beni** (2a fatta il 2026-11-13) e **collegamenti + chi
+   paga cosa** (2b fatta il 2026-11-25).
+3. **Relazione unica**: tipi in famiglie nel catalogo, quota in
+   `core_relazioni`, migrazione di diritti e conduttori, nuovi tipi di
+   godimento (comodatario, affittuario agrario) e incarichi sui beni,
+   sezione "Soggetti" della scheda, chi paga cosa dalle relazioni,
+   import visure sulle relazioni, documenti sulla relazione.
+4. **Raggruppamenti**: tabella, albero, scheda del ramo, relazioni e
+   documenti sui rami, eredità, "applica a tutti i beni del ramo" per i
+   diritti reali, migrazione di pertinenze e fondi in rami, selettore unico
+   di beni e rami.
+5. **Import visure dei terreni** e proposta fabbricato ↔ particella.
 
-## Domande ancora aperte
+## Domande aperte
 
-Nessuna. Risolte il 2026-11-12: ripartenza dei dati; la conduzione si
-limita a "chi conduce" (il resto nel modulo affitti); i campioni con
-terreni ci sono; i terreni dell'utente sono a Forlì (foglio 40), nessuna
-regola valdostana da anticipare.
+- Un contratto registrato in `affitti_lungo` deve creare da sé la relazione
+  `conduttore` sul bene (tramite un servizio di immobili, come IMU e TARI
+  col registro costi/ricavi) o restano separati? Da decidere con la
+  pianificazione di `affitti_lungo`.
+- Tecnici di `affitti_lungo` → incarichi di immobili: quando e come.
 
 ## Da verificare con un professionista
 
 Elenco comuni esenti IMU (Circ. MEF 9/1993) per Bologna, Forlì,
-Pré-Saint-Didier, Castiglione della Pescaia; esenzione IRPEF CD/IAP dal 2023 e maggiorazione
-ridotta per CD/IAP; IMU su enfiteusi e superficie (L. 160/2019); regola
-"una pertinenza per categoria" anche per agevolazioni prima casa e
-cedolare secca (qui solo come avviso IMU); forma,
-disdetta e art. 45 della L. 203/1982; regole regionali sulle zone montane;
-diritto di superficie prima dell'ultimazione della costruzione (chi paga
-l'IMU sul suolo); spese straordinarie in enfiteusi (fonti indirette,
-contano le clausole); affitto tra comproprietari del fondo (serve un
-contratto registrato sulla quota altrui); conduttore società di capitali
-(reddito d'impresa, non agrario).
+Pré-Saint-Didier, Castiglione della Pescaia; esenzione IRPEF CD/IAP dal
+2023; IMU su enfiteusi e superficie (L. 160/2019); regola "una pertinenza
+per categoria" anche per prima casa e cedolare secca (qui solo avviso
+IMU); diritto di superficie prima dell'ultimazione della costruzione;
+spese straordinarie in enfiteusi; affitto tra comproprietari del fondo;
+conduttore società di capitali; reddito agrario e spese del comodatario
+di un terreno.
+
+## Storia: azzeramento della fase 1 (2026-11-12)
+
+La fase 1 è partita da zero per scelta dell'utente: le tabelle di immobili
+e quelle dipendenti di `affitti_lungo` e `affitti_brevi` furono svuotate
+(backup `gestione_affitti_prod_20261112_123707.sql`), restarono anagrafiche,
+utenti, configurazioni e tabelle di dominio. Dalla fase 2a in poi le
+migrazioni conservano i dati.
