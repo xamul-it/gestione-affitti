@@ -31,3 +31,7 @@ def test_rifiuta_schema_non_di_prova():
         with pytest.raises(SystemExit):
             tp._controlla_nome(schema)
     tp._controlla_nome("tenant_test_nuovo")
+
+
+def test_non_idempotenti():
+    assert tp.non_idempotenti({"a": 2, "b": 1}, {"a": 2, "b": 3, "c": 1}) == ["b: 1 -> 3", "c: 0 -> 1"]

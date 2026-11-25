@@ -305,10 +305,48 @@ def _migra(engine, schema: str) -> bool:
     return ok
 
 
+def riesegui_esempi(engine, schema: str) -> bool:
+    """Rerun every installed module's example data (they must only add what is missing)."""
+    _, ordine = _moduli(engine)
+    sm.load_all_models(ordine)
+    from app.core.services.tenant_module_service import TenantModuleService
+    with engine.connect() as conn:
+        tenant_id = conn.execute(text("SELECT id FROM public.core_tenants WHERE schema_name = :s"),
+                                 {"s": schema}).scalar()
+        installati = {r[0] for r in conn.execute(text(
+            "SELECT module_id FROM public.core_tenant_modules WHERE tenant_id = :t"), {"t": tenant_id})}
+    ok = True
+    for nome in ordine:
+        if nome not in installati:
+            continue
+        with Session(engine) as db:
+            try:
+                db.execute(text(f'SET search_path TO "{schema}", public'))
+                if TenantModuleService.reseed_test_data_for_tenant(tenant_id, nome, db) is False:
+                    raise RuntimeError("install entry point failed")
+                db.commit()
+            except Exception as exc:
+                db.rollback()
+                log(f"  ERRORE dati di esempio {nome}: {exc}")
+                ok = False
+    return ok
+
+
+def non_idempotenti(prima: dict[str, int], dopo: dict[str, int]) -> list[str]:
+    """Tables that grew when the example data ran a second time."""
+    return [f"{t}: {prima.get(t, 0)} -> {n}" for t, n in sorted(dopo.items()) if n > prima.get(t, 0)]
+
+
 def cmd_nuovo(engine) -> bool:
     log(f"==> {NUOVO}: da zero")
     cancella(engine, NUOVO)
     ok = crea(engine, NUOVO, "Prova: creazione da zero")
+    if ok:
+        prima = conteggi(engine, NUOVO)
+        ok = riesegui_esempi(engine, NUOVO)
+        for riga in non_idempotenti(prima, conteggi(engine, NUOVO)):
+            log(f"  ESEMPI NON IDEMPOTENTI {riga}")
+            ok = False
     manifests, ordine = _moduli(engine)
     sm.load_all_models(ordine)
     ok &= stampa_differenze(confronta_schema(engine, NUOVO, manifests))
@@ -351,6 +389,12 @@ def cmd_evolutivo(engine, perdita_consentita) -> bool:
             log(f"  perdite consentite: {perdita_consentita}")
         if not perse:
             log("  nessuna tabella o riga persa")
+    if ok:
+        # Example data added to the modules since the last run.
+        prima_esempi = conteggi(engine, EVOLUTIVO)
+        ok = riesegui_esempi(engine, EVOLUTIVO)
+        for riga in non_idempotenti(prima_esempi, conteggi(engine, EVOLUTIVO)):
+            log(f"  esempi aggiunti {riga}")
     if ok:
         salva_fotografia(engine, EVOLUTIVO)
         if perdita_consentita:

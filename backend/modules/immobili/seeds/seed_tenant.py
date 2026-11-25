@@ -47,6 +47,96 @@ def seed_terreni_demo(db: Session, tipologia_id: Optional[int]) -> int:
     return creati
 
 
+def _categoria(db: Session, codice: str) -> Optional[int]:
+    return db.execute(text("SELECT id FROM public.immo_categorie_catastali WHERE codice = :c"), {"c": codice}).scalar()
+
+
+def _unita_demo(db: Session, codice: str, tipo: str, categoria: str, indirizzo: str, comune: str) -> int:
+    bene_id = db.execute(text("SELECT id FROM immo_beni WHERE codice = :c"), {"c": codice}).scalar()
+    if bene_id:
+        return bene_id
+    bene_id = db.execute(text(
+        "INSERT INTO immo_beni (tipo_bene, codice, indirizzo, comune) VALUES ('UNITA', :c, :i, :comune) RETURNING id"
+    ), {"c": codice, "i": indirizzo, "comune": comune}).scalar()
+    db.execute(text(
+        "INSERT INTO immo_unita_immobiliari (id, tipo, categoria_catastale_id) VALUES (:id, :tipo, :cat)"
+    ), {"id": bene_id, "tipo": tipo, "cat": _categoria(db, categoria)})
+    return bene_id
+
+
+def _bene_id(db: Session, codice: str) -> Optional[int]:
+    return db.execute(text("SELECT id FROM immo_beni WHERE codice = :c"), {"c": codice}).scalar()
+
+
+def _collega(db: Session, principale: int, collegato: int, tipo: str) -> None:
+    if db.execute(text(
+        "SELECT 1 FROM immo_beni_collegamenti WHERE bene_id = :p AND bene_collegato_id = :c AND tipo = :t"
+    ), {"p": principale, "c": collegato, "t": tipo}).first():
+        return
+    db.execute(text(
+        "INSERT INTO immo_beni_collegamenti (bene_id, bene_collegato_id, tipo, data_inizio) "
+        "VALUES (:p, :c, :t, '2020-01-01')"
+    ), {"p": principale, "c": collegato, "t": tipo})
+
+
+def _diritto(db: Session, bene_id: int, proprietario_id: int, tipo: str, quota: float) -> None:
+    if db.execute(text(
+        "SELECT 1 FROM immo_diritti_immobile WHERE bene_id = :b AND proprietario_id = :p"
+    ), {"b": bene_id, "p": proprietario_id}).first():
+        return
+    db.execute(text(
+        "INSERT INTO immo_diritti_immobile (bene_id, proprietario_id, tipo_diritto, quota_percentuale, data_inizio) "
+        "VALUES (:b, :p, :t, :q, '2020-01-01')"
+    ), {"b": bene_id, "p": proprietario_id, "t": tipo, "q": quota})
+
+
+def _conduttore(db: Session, soggetto_id: int) -> int:
+    conduttore_id = db.execute(text("SELECT id FROM immo_conduttori WHERE soggetto_id = :s"), {"s": soggetto_id}).scalar()
+    if conduttore_id:
+        return conduttore_id
+    return db.execute(text(
+        "INSERT INTO immo_conduttori (soggetto_id, note) VALUES (:s, 'Conduttore di esempio') RETURNING id"
+    ), {"s": soggetto_id}).scalar()
+
+
+def _assegna(db: Session, bene_id: int, conduttore_id: int) -> None:
+    if db.execute(text(
+        "SELECT 1 FROM immo_assegnazioni_conduttore WHERE bene_id = :b AND conduttore_id = :c"
+    ), {"b": bene_id, "c": conduttore_id}).first():
+        return
+    db.execute(text(
+        "INSERT INTO immo_assegnazioni_conduttore (bene_id, conduttore_id, data_inizio) VALUES (:b, :c, '2025-01-01')"
+    ), {"b": bene_id, "c": conduttore_id})
+
+
+def seed_beni_demo(db: Session, soggetto_ids: list, proprietari_ids: list, unita_ids: list) -> dict:
+    """Beni features of phase 1-2b: tenant, usufruct, pertinenza, building on a parcel, recurring cost.
+
+    Needs the demo units (UNITA-*) and land parcels (TER-*) already created.
+    """
+    box = _unita_demo(db, "BOX-001", "Box", "C/6", "Via Roma 1", "Milano")
+    fabbricato = _unita_demo(db, "FAB-001", "Fabbricato rurale", "A/3", "Località Campi", "Milano")
+    _diritto(db, box, proprietari_ids[0], "PROPRIETARIO", 100)
+    _diritto(db, fabbricato, proprietari_ids[2], "PROPRIETARIO", 100)
+    _collega(db, unita_ids[0], box, "PERTINENZA")
+    terreno, area = _bene_id(db, "TER-001"), _bene_id(db, "TER-002")
+    if area:
+        _collega(db, area, fabbricato, "FABBRICATO_SU_PARTICELLA")
+    conduttore = _conduttore(db, soggetto_ids[3])
+    _assegna(db, unita_ids[1], conduttore)
+    if terreno:
+        # Nudo proprietario + usufruttuario + tenant farming the land.
+        _diritto(db, terreno, proprietari_ids[1], "NUDA_PROPRIETA", 100)
+        _diritto(db, terreno, proprietari_ids[2], "USUFRUTTUARIO", 100)
+        _assegna(db, terreno, conduttore)
+    if not db.execute(text("SELECT 1 FROM immo_spese_ricorrenti WHERE bene_id = :b"), {"b": unita_ids[0]}).first():
+        db.execute(text(
+            "INSERT INTO immo_spese_ricorrenti (bene_id, tipo_spesa, responsabile, periodo, rata, importo, data_scadenza) "
+            "VALUES (:b, 'IMU', 'PROPRIETARIO', '2026', 'ACCONTO', 420.50, '2026-06-16')"
+        ), {"b": unita_ids[0]})
+    return {"immo_beni_collegamenti": 2, "immo_assegnazioni_conduttore": 2, "immo_spese_ricorrenti": 1}
+
+
 def seed_tenant_data(
     db: Session,
     tenant_id: Optional[int] = None,
@@ -118,6 +208,7 @@ def seed_tenant_data(
             _get_or_create_soggetto(f"{base_cf}0001", "Mario", "Rossi", f"mario.rossi+{tenant_id or 0}@example.test"),
             _get_or_create_soggetto(f"{base_cf}0002", "Lucia", "Bianchi", f"lucia.bianchi+{tenant_id or 0}@example.test"),
             _get_or_create_soggetto(f"{base_cf}0003", "Paolo", "Verdi", f"paolo.verdi+{tenant_id or 0}@example.test"),
+            _get_or_create_soggetto(f"{base_cf}0004", "Giulia", "Neri", f"giulia.neri+{tenant_id or 0}@example.test"),
         ]
         results["anag_soggetti_anagrafici"] = len(soggetto_ids)
 
@@ -372,10 +463,15 @@ def seed_tenant_data(
         results["immo_tabelle_millesimali"] = 4
         results["immo_millesimi_unita"] = 8
 
+        results.update(seed_beni_demo(db, soggetto_ids, proprietari_ids, unita_ids))
+
         db.commit()
     except Exception as exc:
+        # Example data that fail must fail the install: the test tenants
+        # (scripts/tenant_prova.py) rely on them.
         db.rollback()
-        logger.warning("[IMMO] Test data seed failed: %s", exc)
+        logger.error("[IMMO] Test data seed failed: %s", exc)
+        raise
 
     logger.info(f"[IMMO] Tenant seed completed: {results}")
     return results
