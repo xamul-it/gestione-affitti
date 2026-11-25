@@ -151,7 +151,7 @@ Spec: `2026-11-10-relazioni-ruoli-soggetti-design.md`.
     `RelazioneService` (crea, aggiorna, rinnova, elimina), con eventuale
     scadenza e promemoria;
   - **MODULO**: ricavate dalle tabelle del modulo tramite un provider (es.
-    proprietari da `immo_diritti_immobile`); nessuna doppia scrittura.
+    il tipo MODULO di `affitti_lungo`, ricavato dai contratti); nessuna doppia scrittura.
 - **Famiglie e quote**: ogni tipo può dichiarare `famiglia` (raggruppamento,
   es. `diritti_reali`, `godimento`, `incarichi`), `ammette_quota` (la relazione
   può avere una quota) e `solo_beni` (il tipo vale solo per i beni). La quota è
@@ -285,7 +285,13 @@ Pagina di debug per gli amministratori: `/admin/document-parsing-debug`.
   azzeramento deciso dall'utente si lancia
   `PROMOTE_PERDITA_CONSENTITA="tab1 tab2 …" scripts/promote.sh`: solo quelle
   tabelle (nomi senza schema) possono perdere righe, riportate come
-  "azzerata (consentito)"; in un terminale chiede conferma. Test del
+  "azzerata (consentito)"; in un terminale chiede conferma.
+  Una modifica che **elimina volutamente tabelle** (migrazione che le droppa)
+  o righe di piattaforma (es. permessi) si rilascia elencando i nomi, senza
+  schema, nella stessa variabile: una tabella sparita ma elencata è riportata
+  come "eliminata (consentito)", una non elencata blocca il rilascio
+  ("PERSA tabella"). La variabile arriva a `confronta_snapshot.awk` tramite
+  `awk -v consentite=…`. Test del
   confronto: `scripts/tests/test_confronta_snapshot.sh`.
 - Agenti e pipeline: `docs/guides/SVILUPPO_CON_AGENTI_E_RAG.md`.
 

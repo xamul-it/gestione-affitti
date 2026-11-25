@@ -19,4 +19,14 @@ out="$(awk -v consentite="immo_beni immo_proprietari" -f "$AWK" "$T/before" "$T/
 out="$(awk -v consentite="immo_proprietari" -f "$AWK" "$T/before" "$T/after_bad")"; rc=$?
 [ $rc -ne 0 ] && grep -q "RIGHE PERSE tenant_x.anag_soggetti_anagrafici" <<<"$out" && check ok "tabella non elencata blocca comunque" || check ko "tabella non elencata blocca comunque"
 
+printf 'tenant_x.anag_soggetti_anagrafici rows=3\ntenant_x.immo_beni rows=0\n' > "$T/after_drop"
+out="$(awk -v consentite="immo_proprietari" -f "$AWK" "$T/before" "$T/after_drop")"; rc=$?
+[ $rc -eq 0 ] && grep -q "eliminata (consentito) tenant_x.immo_proprietari" <<<"$out" && check ok "tabella eliminata ed elencata: consentita" || check ko "tabella eliminata ed elencata ($out)"
+
+out="$(awk -v consentite="tenant_x.immo_proprietari" -f "$AWK" "$T/before" "$T/after_drop")"; rc=$?
+[ $rc -eq 0 ] && grep -q "eliminata (consentito)" <<<"$out" && check ok "tabella eliminata, nome con schema: consentita" || check ko "tabella eliminata, nome con schema ($out)"
+
+out="$(awk -v consentite="immo_beni" -f "$AWK" "$T/before" "$T/after_drop")"; rc=$?
+[ $rc -ne 0 ] && grep -q "PERSA tabella tenant_x.immo_proprietari" <<<"$out" && check ok "tabella eliminata non elencata blocca" || check ko "tabella eliminata non elencata blocca ($out)"
+
 exit $fail
