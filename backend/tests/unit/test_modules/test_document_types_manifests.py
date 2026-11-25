@@ -22,6 +22,7 @@ IMMOBILI_CODES = {
     "ATTO_PROVENIENZA", "CONFORMITA_IMPIANTO", "LIBRETTO_IMPIANTO", "AGIBILITA",
     "TITOLO_EDILIZIO", "POLIZZA_FABBRICATO", "ALTRO_IMMOBILE",
     "ESTRATTO_MAPPA", "CDU", "CONTRATTO_AFFITTO_AGRARIO",
+    "CONTRATTO_COMODATO", "DELEGA_TERZO_RESPONSABILE",
 }
 
 
@@ -54,7 +55,16 @@ def test_visura_owned_by_immobili():
 def test_immobili_types():
     types = {t["codice"]: t for t in immobili_manifest["document_types"]}
     assert set(types) == IMMOBILI_CODES
-    assert all(t["entity_types"] == ["IMMOBILE"] for t in types.values())
+    # Deeds and agrarian leases also attach to a relation (a right, a tenancy).
+    both = {"ATTO_PROVENIENZA", "CONTRATTO_AFFITTO_AGRARIO"}
+    only_relation = {"CONTRATTO_COMODATO", "DELEGA_TERZO_RESPONSABILE"}
+    for codice, t in types.items():
+        if codice in both:
+            assert t["entity_types"] == ["IMMOBILE", "RELAZIONE"]
+        elif codice in only_relation:
+            assert t["entity_types"] == ["RELAZIONE"]
+        else:
+            assert t["entity_types"] == ["IMMOBILE"]
     assert types["APE"]["regime"] == "SOSTITUTIVO"
     assert types["APE"]["scadenza"] == {"mesi": 120, "da": "data_riferimento"}
     assert types["APE"]["form"] == "immobili.ape"

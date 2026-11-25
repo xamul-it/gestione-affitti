@@ -5,6 +5,8 @@ Conforme agli standard di architettura moduli v1.0
 """
 
 IMMOBILE = ["IMMOBILE"]
+RELAZIONE = ["RELAZIONE"]
+IMMOBILE_E_RELAZIONE = ["IMMOBILE", "RELAZIONE"]
 
 manifest = {
     # Campi obbligatori
@@ -85,7 +87,7 @@ manifest = {
          "scadenza": {"mesi": 120, "da": "data_riferimento"}, "promemoria_giorni": [90, 30],
          "form": "immobili.ape"},
         {"codice": "ATTO_PROVENIENZA", "nome": "Atto di provenienza",
-         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "CUMULATIVO",
+         "categoria": "immobiliare", "entity_types": IMMOBILE_E_RELAZIONE, "regime": "CUMULATIVO",
          "sottotipi": ["COMPRAVENDITA", "SUCCESSIONE", "DONAZIONE"]},
         {"codice": "CONFORMITA_IMPIANTO", "nome": "Dichiarazione di conformità impianto",
          "descrizione": "DM 37/2008",
@@ -111,7 +113,13 @@ manifest = {
          "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "SOSTITUTIVO",
          "scadenza": {"mesi": 12, "da": "data_riferimento"}, "promemoria_giorni": [30]},
         {"codice": "CONTRATTO_AFFITTO_AGRARIO", "nome": "Contratto di affitto agrario",
-         "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "CUMULATIVO"},
+         "categoria": "immobiliare", "entity_types": IMMOBILE_E_RELAZIONE, "regime": "CUMULATIVO"},
+        # Documents attached to a relation (a right, a tenancy): entity_type RELAZIONE.
+        {"codice": "CONTRATTO_COMODATO", "nome": "Contratto di comodato",
+         "categoria": "immobiliare", "entity_types": RELAZIONE, "regime": "CUMULATIVO"},
+        {"codice": "DELEGA_TERZO_RESPONSABILE", "nome": "Delega di terzo responsabile",
+         "descrizione": "Delega della gestione dell'impianto termico a un terzo responsabile",
+         "categoria": "immobiliare", "entity_types": RELAZIONE, "regime": "CUMULATIVO"},
         {"codice": "ALTRO_IMMOBILE", "nome": "Altro documento",
          "categoria": "immobiliare", "entity_types": IMMOBILE, "regime": "CUMULATIVO"},
     ],

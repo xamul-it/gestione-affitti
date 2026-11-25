@@ -97,7 +97,7 @@ Tipologie dichiarate nel manifest (spec
 | `PLANIMETRIA_CATASTALE` | sostitutivo | — | — |
 | `VARIAZIONE_CATASTALE` | cumulativo | — | sottotipi DOCFA, voltura, frazionamento, fusione, tipo mappale |
 | `APE` | sostitutivo | 10 anni dall'emissione | form `immobili.ape`: classe, EPgl,nren, codice, tecnico, decadenza |
-| `ATTO_PROVENIENZA` | cumulativo | — | sottotipi compravendita, successione, donazione |
+| `ATTO_PROVENIENZA` | cumulativo | — | sottotipi compravendita, successione, donazione; anche su RELAZIONE |
 | `CONFORMITA_IMPIANTO` | sostitutivo per sottotipo | — | elettrico, gas, termico, idrico |
 | `LIBRETTO_IMPIANTO` | cumulativo | manuale | — |
 | `AGIBILITA` | sostitutivo | — | — |
@@ -105,9 +105,17 @@ Tipologie dichiarate nel manifest (spec
 | `POLIZZA_FABBRICATO` | sostitutivo | manuale | — |
 | `ESTRATTO_MAPPA` | sostitutivo | — | terreni |
 | `CDU` | sostitutivo | 12 mesi dal rilascio (L. 47/1985 art. 18), promemoria a 30 giorni | certificato di destinazione urbanistica |
-| `CONTRATTO_AFFITTO_AGRARIO` | cumulativo | — | — |
+| `CONTRATTO_AFFITTO_AGRARIO` | cumulativo | — | anche su RELAZIONE |
+| `CONTRATTO_COMODATO` | cumulativo | — | solo su RELAZIONE |
+| `DELEGA_TERZO_RESPONSABILE` | cumulativo | — | solo su RELAZIONE (impianto termico) |
 | `ALTRO_IMMOBILE` | cumulativo | — | — |
 
+- Oggetto `RELAZIONE`: un documento può essere collegato a una relazione del
+  core (`entity_id` = `core_relazioni.id`), per esempio un diritto o un
+  affitto. Una tipologia non ammessa per l'oggetto viene rifiutata dall'upload
+  (HTTP 422, come ogni altra regola di tipologia). Eliminando la relazione si
+  eliminano anche i suoi documenti; i file restano nello storage, come per
+  l'eliminazione di un bene.
 - Per i sostitutivi è in vigore il documento con la data di riferimento più
   recente; un documento più vecchio caricato dopo va direttamente in storico.
 - APE: la vecchia tabella `immo_certificati_energetici` è stata migrata a

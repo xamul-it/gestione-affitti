@@ -17,7 +17,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.models import RuoloDisponibile
-from app.core.platform.models import Relazione, StatoScadenza
+from app.core.platform.models import Documento, EntityType, Relazione, StatoScadenza
+from app.core.platform_services.documento_service import DocumentoService
 from app.core.platform_services.relazioni_moduli import verifica_modulo_attivo
 from app.core.platform_services.scadenze_collegate import apri_o_aggiorna, chiudi, utente_sistema
 
@@ -262,5 +263,12 @@ class RelazioneService:
     def elimina(self, relazione_id: int) -> None:
         rel = self._get(relazione_id)
         chiudi(self.db, rel.scadenza_id, StatoScadenza.CANCELLATA, f"Relazione {rel.id} eliminata", self._user())
+        # Documents point to the relation without a FK: remove them with it (files stay in
+        # storage, as when a bene is deleted).
+        documenti = DocumentoService(self.db, self.tenant_schema, self._user_id)
+        for (documento_id,) in self.db.query(Documento.id).filter(
+            Documento.entity_type == EntityType.RELAZIONE, Documento.entity_id == rel.id
+        ).all():
+            documenti.elimina(documento_id)
         self.db.delete(rel)
         self.db.flush()
