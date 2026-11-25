@@ -11,6 +11,7 @@ from ..schemas.immobili import (
     UnitaImmobiliareCreate, UnitaImmobiliareUpdate, UnitaImmobiliareResponse,
 )
 from ..services.ape import classi_da_ape
+from ..services.collegamenti_beni import ruoli_pertinenza
 from ..services.codici_beni import verifica_codice_libero
 from ..services.elimina_bene import elimina_bene
 from ..services.variazioni_catastali import registra_variazioni
@@ -20,8 +21,11 @@ router = APIRouter(prefix="/unita-immobiliari", tags=["Unità Immobiliari"])
 
 def _risposte(db: Session, unita: List[UnitaImmobiliare]) -> List[UnitaImmobiliareResponse]:
     """Responses with the energy class of the current APE."""
-    classi = classi_da_ape(db, [u.id for u in unita])
-    return [UnitaImmobiliareResponse.model_validate(u).model_copy(update={"classe_energetica": classi.get(u.id)})
+    ids = [u.id for u in unita]
+    classi = classi_da_ape(db, ids)
+    ruoli = ruoli_pertinenza(db, ids)
+    return [UnitaImmobiliareResponse.model_validate(u).model_copy(update={
+                "classe_energetica": classi.get(u.id), "ruolo_pertinenza": ruoli.get(u.id)})
             for u in unita]
 
 

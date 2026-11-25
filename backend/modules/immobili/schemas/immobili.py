@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, field_validator
-from typing import Optional, List
+from typing import Literal, Optional, List
 from datetime import date, datetime
 
 from .categoria_catastale import CategoriaCatastale
@@ -115,6 +115,8 @@ class UnitaImmobiliareResponse(UnitaImmobiliareBase):
     indirizzo_parsed_warnings: Optional[List[str]] = None
     # From the current APE (services/ape.py), never from the old column.
     classe_energetica: Optional[str] = None
+    # Open PERTINENZA links (services/collegamenti_beni.ruoli_pertinenza).
+    ruolo_pertinenza: Optional[Literal["PERTINENZA", "CON_PERTINENZE"]] = None
 
     model_config = ConfigDict(from_attributes=True)
 

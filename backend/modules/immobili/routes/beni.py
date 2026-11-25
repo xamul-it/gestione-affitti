@@ -4,9 +4,10 @@ and search, detail, cadastral changes. Creating and editing the specific
 data stays on /unita-immobiliari and /terreni.
 """
 import re
+from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -14,8 +15,15 @@ from app.core.auth.dependencies import get_current_active_user
 from app.core.auth.models import User
 from app.core.database import get_db
 
-from ..models import Bene, VariazioneCatastale
+from ..models import Bene, CollegamentoBeni, VariazioneCatastale
 from ..schemas.bene import BeneResponse
+from ..schemas.collegamento_beni import (
+    CollegamentiBeneResponse, CollegamentoCreate, CollegamentoOut, CollegamentoUpdate,
+)
+from ..services.collegamenti_beni import (
+    TIPI_COLLEGAMENTO, CollegamentoNonValido, aggiorna_collegamento, avvisi_collegamenti,
+    crea_collegamento,
+)
 from ..schemas.immobili import VariazioneCatastaleResponse
 
 router = APIRouter(prefix="/beni", tags=["Beni"])
@@ -24,6 +32,7 @@ _FOGLIO_PARTICELLA = re.compile(r"^\s*0*(\w+)\s*/\s*0*(\w+)\s*$")
 
 # Units are seen with immobile.view, land parcels with terreno.view.
 _PERMESSO_PER_TIPO = {"UNITA": "immobile.view", "TERRENO": "terreno.view"}
+_PERMESSO_MODIFICA = {"UNITA": "immobile.edit", "TERRENO": "terreno.edit"}
 
 
 def _tipi_visibili(utente) -> set:
@@ -104,3 +113,124 @@ def get_variazioni_catastali(
         .order_by(VariazioneCatastale.created_at.desc(), VariazioneCatastale.id.desc())
         .all()
     )
+
+
+# --- Links between beni (phase 2b) -------------------------------------------
+
+def _puo_modificare(utente, bene: Bene) -> None:
+    if getattr(utente, "is_superuser", False):
+        return
+    if _PERMESSO_MODIFICA[bene.tipo_bene] not in utente.get_permissions():
+        raise HTTPException(status_code=403, detail="Permessi insufficienti")
+
+
+def _out(collegamento: CollegamentoBeni, bene_id: int) -> CollegamentoOut:
+    principale = collegamento.bene_id == bene_id
+    tipo = TIPI_COLLEGAMENTO.get(collegamento.tipo, {})
+    etichetta = tipo.get("etichetta_principale" if principale else "etichetta_collegato", collegamento.tipo)
+    return CollegamentoOut(
+        id=collegamento.id,
+        tipo=collegamento.tipo,
+        questo_e="PRINCIPALE" if principale else "COLLEGATO",
+        etichetta=etichetta,
+        altro_bene=BeneResponse.model_validate(
+            collegamento.bene_collegato if principale else collegamento.bene
+        ),
+        data_inizio=collegamento.data_inizio,
+        data_fine=collegamento.data_fine,
+        note=collegamento.note,
+        aperto=collegamento.aperto,
+    )
+
+
+def _collegamento_del_bene(db: Session, bene_id: int, collegamento_id: int, utente) -> CollegamentoBeni:
+    """Writable link touching the bene; the other bene must be visible too."""
+    bene = _bene_visibile(db, bene_id, utente)
+    _puo_modificare(utente, bene)
+    collegamento = db.get(CollegamentoBeni, collegamento_id)
+    if not collegamento or bene_id not in (collegamento.bene_id, collegamento.bene_collegato_id):
+        raise HTTPException(status_code=404, detail="Collegamento non trovato")
+    altro_id = collegamento.bene_collegato_id if collegamento.bene_id == bene_id else collegamento.bene_id
+    altro = db.get(Bene, altro_id)
+    if altro.tipo_bene not in _tipi_visibili(utente):
+        raise HTTPException(status_code=404, detail="Collegamento non trovato")
+    return collegamento
+
+
+@router.get("/{bene_id}/collegamenti", response_model=CollegamentiBeneResponse)
+def get_collegamenti(
+    bene_id: int,
+    storico: bool = Query(False, description="Anche i collegamenti chiusi"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Beni collegati in entrambe le direzioni; quelli non visibili all'utente spariscono."""
+    _bene_visibile(db, bene_id, current_user)
+    tipi = _tipi_visibili(current_user)
+    query = db.query(CollegamentoBeni).filter(
+        or_(CollegamentoBeni.bene_id == bene_id, CollegamentoBeni.bene_collegato_id == bene_id)
+    )
+    if not storico:
+        query = query.filter(CollegamentoBeni.data_fine.is_(None))
+    righe = sorted(
+        query.all(),
+        key=lambda c: (not c.aperto, -(c.data_fine.toordinal() if c.data_fine else 0), c.id),
+    )
+    collegamenti = [_out(c, bene_id) for c in righe]
+    return CollegamentiBeneResponse(
+        collegamenti=[c for c in collegamenti if c.altro_bene.tipo_bene in tipi],
+        avvisi=avvisi_collegamenti(db, bene_id, date.today()),
+    )
+
+
+@router.post("/{bene_id}/collegamenti", response_model=CollegamentoOut, status_code=201)
+def create_collegamento(
+    bene_id: int,
+    dati: CollegamentoCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    bene = _bene_visibile(db, bene_id, current_user)
+    _puo_modificare(current_user, bene)
+    _bene_visibile(db, dati.altro_bene_id, current_user)
+    principale, collegato = (bene_id, dati.altro_bene_id) if dati.questo_e == "PRINCIPALE" \
+        else (dati.altro_bene_id, bene_id)
+    try:
+        collegamento = crea_collegamento(db, principale, collegato, dati.tipo, dati.data_inizio, dati.note)
+    except CollegamentoNonValido as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    db.commit()
+    return _out(collegamento, bene_id)
+
+
+@router.put("/{bene_id}/collegamenti/{collegamento_id}", response_model=CollegamentoOut)
+def update_collegamento(
+    bene_id: int,
+    collegamento_id: int,
+    dati: CollegamentoUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Periodo e note; chiudere = data di fine, riaprire = data di fine vuota."""
+    collegamento = _collegamento_del_bene(db, bene_id, collegamento_id, current_user)
+    valori = {"data_inizio": collegamento.data_inizio, "data_fine": collegamento.data_fine,
+              "note": collegamento.note, **dati.model_dump(exclude_unset=True)}
+    try:
+        aggiorna_collegamento(db, collegamento, valori["data_inizio"], valori["data_fine"], valori["note"])
+    except CollegamentoNonValido as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    db.commit()
+    return _out(collegamento, bene_id)
+
+
+@router.delete("/{bene_id}/collegamenti/{collegamento_id}", status_code=204)
+def delete_collegamento(
+    bene_id: int,
+    collegamento_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    collegamento = _collegamento_del_bene(db, bene_id, collegamento_id, current_user)
+    db.delete(collegamento)
+    db.commit()
+    return Response(status_code=204)

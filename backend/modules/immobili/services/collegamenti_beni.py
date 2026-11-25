@@ -217,3 +217,18 @@ def avvisi_collegamenti(db: Session, bene_id: int, oggi: date) -> list[str]:
         if titolari and suoi and suoi != titolari:
             avvisi.append(_avviso_titolari(come_pertinenza.bene_collegato.codice))
     return avvisi
+
+
+def ruoli_pertinenza(db: Session, bene_ids: list[int]) -> dict[int, str]:
+    """bene_id -> "PERTINENZA" | "CON_PERTINENZE" for open pertinenze, one query."""
+    if not bene_ids:
+        return {}
+    ruoli: dict[int, str] = {}
+    for principale, collegato in db.query(CollegamentoBeni.bene_id, CollegamentoBeni.bene_collegato_id).filter(
+        CollegamentoBeni.tipo == "PERTINENZA",
+        CollegamentoBeni.data_fine.is_(None),
+        or_(CollegamentoBeni.bene_id.in_(bene_ids), CollegamentoBeni.bene_collegato_id.in_(bene_ids)),
+    ):
+        ruoli[collegato] = "PERTINENZA"
+        ruoli.setdefault(principale, "CON_PERTINENZE")
+    return ruoli
