@@ -102,6 +102,19 @@ def _quota_conduttori(righe: list) -> list[Soggetto]:
                      ruolo="CONDUTTORE", quota=quota) for a in righe]
 
 
+def _quote_distinte(godimento: list, piena: list) -> bool:
+    """True when full owners hold other shares than the rights of enjoyment.
+
+    E.g. succession: usufruct 50 on the deceased's half, co-owner 50 in full:
+    the co-owner keeps enjoying his half. With overlapping rights (owner 100
+    and enfiteusi 100) or missing shares the owner is the burdened one.
+    """
+    if not godimento or not piena:
+        return False
+    quote = [x.quota_percentuale for x in godimento + piena]
+    return all(q is not None for q in quote) and sum(Decimal(q) for q in quote) <= CENTO
+
+
 def ruoli_da_righe(diritti: Iterable, assegnazioni: Iterable, d: date) -> RuoliBene:
     """Roles from right and tenant-assignment rows valid on day d; no DB access."""
     giorno = d.isoformat()
@@ -114,7 +127,8 @@ def ruoli_da_righe(diritti: Iterable, assegnazioni: Iterable, d: date) -> RuoliB
 
     godimento = [x for x in validi if _tipo(x) in GODIMENTO]
     usufrutto = bool(godimento)
-    titolari_righe = godimento or [x for x in validi if _tipo(x) in PIENA_PROPRIETA]
+    piena = [x for x in validi if _tipo(x) in PIENA_PROPRIETA]
+    titolari_righe = (godimento + piena) if _quote_distinte(godimento, piena) else (godimento or piena)
     titolari = _gruppo(titolari_righe, "titolari del godimento", avvisi)
     proprieta_righe = [x for x in validi if _tipo(x) in PROPRIETA]
     # Without a separate right of enjoyment the owners are the holders: one check only.

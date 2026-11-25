@@ -152,3 +152,16 @@ def test_uso_abitazione_straordinarie_al_proprietario(tipo):
     voci, _ = _voci([_diritto(p, "PROPRIETARIO", 100), _diritto(titolare, tipo, 100)], [], "UNITA")
     assert _chi(voci["SPESE_STRAORDINARIE"]) == [("Proprietario", Decimal(100))]
     assert _chi(voci["SPESE_ORDINARIE"]) == [("Titolare", Decimal(100))]
+
+
+def test_usufrutto_su_una_quota_e_piena_proprieta_sull_altra():
+    """Succession: spouse has usufruct on the deceased's half, the co-owner keeps his half in full."""
+    coniuge, figlio, comproprietario = _soggetto("Coniuge"), _soggetto("Figlio"), _soggetto("Compro")
+    voci, ruoli = _voci([
+        _diritto(coniuge, "USUFRUTTUARIO", 50), _diritto(figlio, "NUDA_PROPRIETA", 50),
+        _diritto(comproprietario, "COMPROPRIETARIO", 50),
+    ], [], "UNITA")
+    assert _chi(voci["IMU"]) == [("Coniuge", Decimal(50)), ("Compro", Decimal(50))]
+    assert _chi(voci["RENDITA"]) == [("Coniuge", Decimal(50)), ("Compro", Decimal(50))]
+    assert _chi(voci["SPESE_STRAORDINARIE"]) == [("Figlio", Decimal(50)), ("Compro", Decimal(50))]
+    assert ruoli.avvisi == []
