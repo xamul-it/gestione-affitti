@@ -279,3 +279,7 @@ corretti):
   immuni da backtracking;
 - interfaccia: stile delle caselle da spuntare da allineare al design system;
   la riga "Caricato" resta raggiungibile da tastiera ma non fa nulla.
+
+### Migrazione diritti e conduttori nella relazione unica (2026112501_relazione_unica)
+
+La migrazione di modulo sposta `immo_diritti_immobile`/`immo_proprietari` e `immo_assegnazioni_conduttore`/`immo_conduttori` in `core_relazioni` (entity_type `IMMOBILE`) e poi elimina le quattro tabelle; il ritorno e' dal backup (`downgrade` non supportato). Tipi secondo la mappa `tipo_diritto` (PROPRIETARIO/COMPROPRIETARIO -> `proprieta`, ...); le quote percentuali diventano frazioni (denominatore massimo 24, altrimenti `p*100/10000` con riga "quota da ricontrollare" nel log); `note_proprietario` va in `dati.note_ruolo`; i documenti `PROPRIETARIO` passano al soggetto. Si ferma senza scrivere se trova due diritti aperti (stesso soggetto+tipo+bene dopo la mappatura, anche con `data_fine` futura) o date non `YYYY-MM-DD`. Va eseguita solo tramite `scripts/sync_modules.py` dopo `alembic -x schema=all upgrade head` (servono colonne quota e tipi di relazione sincronizzati).
