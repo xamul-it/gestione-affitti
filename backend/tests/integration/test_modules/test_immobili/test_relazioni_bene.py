@@ -171,10 +171,10 @@ def test_permessi_per_tipo_di_bene(ctx, bene, vista, modifica):
     _as("soggetto.view")
     assert client.get(url).status_code == 403
     assert _post(client, obj, a, "proprieta", quota="1/2").status_code == 403
-    _as(vista)
+    _as(vista, "soggetto.view")
     assert client.get(url).status_code == 200
     assert _post(client, obj, a, "proprieta", quota="1/2").status_code == 403
-    _as(vista, modifica)
+    _as(vista, modifica, "soggetto.view", "soggetto.edit")
     assert _post(client, obj, a, "proprieta", quota="1/2").status_code == 201
 
 
@@ -206,3 +206,16 @@ def test_scrittura_generica_per_tipo_di_bene(ctx):
     assert client.post("/api/v1/relazioni/", json=corpo).status_code == 201
     assert client.put(f"/api/v1/relazioni/{r_terreno}", json={"note": "x"}).status_code == 200
     assert client.delete(f"/api/v1/relazioni/{r_terreno}").status_code == 204
+
+
+def test_rotte_del_bene_richiedono_permessi_soggetto(ctx):
+    """Same gate as the generic /relazioni API: soggetto.view to read, soggetto.edit to write."""
+    client, unita, _, (a, *_), _ = ctx
+    url = f"/api/v1/beni/{unita.id}/relazioni"
+    _as("immobile.view")
+    assert client.get(url).status_code == 403
+    _as("immobile.view", "immobile.edit", "soggetto.view")
+    assert client.get(url).status_code == 200
+    assert _post(client, unita, a, "proprieta", quota="1/2").status_code == 403
+    _as("immobile.view", "immobile.edit", "soggetto.view", "soggetto.edit")
+    assert _post(client, unita, a, "proprieta", quota="1/2").status_code == 201

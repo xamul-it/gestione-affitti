@@ -267,16 +267,19 @@ def delete_collegamento(
 
 def _bene_per_relazioni(db: Session, bene_id: int, utente, scrittura: bool = False) -> Bene:
     """The bene, if the user may see it (403 otherwise, as the generic relations API) and,
-    for writes, edit it (immobile.edit for units, terreno.edit for land parcels)."""
+    for writes, edit it (immobile.edit for units, terreno.edit for land parcels). Like the generic
+    API, reading needs soggetto.view and writing soggetto.edit."""
     bene = db.get(Bene, bene_id)
     if bene is None:
         raise HTTPException(status_code=404, detail="Bene non trovato")
     if getattr(utente, "is_superuser", False):
         return bene
     permessi = utente.get_permissions()
-    if _PERMESSO_PER_TIPO[bene.tipo_bene] not in permessi:
-        raise HTTPException(status_code=403, detail="Permessi insufficienti")
-    if scrittura and _PERMESSO_MODIFICA[bene.tipo_bene] not in permessi:
+    # Same gate as the generic /relazioni API: soggetto.view to read, soggetto.edit to write.
+    richiesti = [_PERMESSO_PER_TIPO[bene.tipo_bene], "soggetto.view"]
+    if scrittura:
+        richiesti += [_PERMESSO_MODIFICA[bene.tipo_bene], "soggetto.edit"]
+    if any(p not in permessi for p in richiesti):
         raise HTTPException(status_code=403, detail="Permessi insufficienti")
     return bene
 

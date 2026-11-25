@@ -94,7 +94,8 @@ dipende dal tipo del bene (hook `object_permissions`,
 Rotte del bene: `GET /beni/{id}/relazioni?solo_correnti=` (raggruppate per
 famiglia) e `POST /beni/{id}/relazioni` (`soggetto_id`, `tipo`, `quota`,
 `data_inizio`, `data_fine`, `note`, `dati`) che restituisce la relazione e gli
-avvisi. Modifica, chiusura ed eliminazione restano su `/relazioni/{id}`. I
+avvisi. Come l'API generica, la lettura richiede anche `soggetto.view` e la
+scrittura `soggetto.edit`. Modifica, chiusura ed eliminazione restano su `/relazioni/{id}`. I
 dati non validi danno 422. Se la somma delle quote aperte di uno stesso tipo
 supera l'intero (somma esatta, mai arrotondata) la relazione viene creata e
 la risposta porta l'avviso. Il comodatario salva gli estremi di registrazione
