@@ -105,6 +105,7 @@ CATENA_TENANT = (
     "2026110902_ape_migrato",
     "2026111201_beni",
     "2026111301_terreni_beni",
+    "2026111401_collegamenti_beni",
 )
 
 
@@ -165,6 +166,11 @@ def test_installazione_su_tenant_nuovo(db_session):
     terreni = colonne("immo_terreni")
     assert "superficie_mq" in terreni and "comune" not in terreni
     assert "qualita" in colonne("immo_terreni_porzioni")
+    assert "bene_collegato_id" in colonne("immo_beni_collegamenti")
+    indici = {r[0] for r in conn.execute(text(
+        "SELECT indexname FROM pg_indexes WHERE schemaname = :s AND tablename = 'immo_beni_collegamenti'"
+    ), {"s": schema})}
+    assert {"uq_immo_beni_collegamenti_aperto", "uq_immo_beni_pertinenza_aperta"} <= indici
 
 
 def test_azzera_toglie_documenti_di_tutti_gli_oggetti_svuotati(db_session, migrazione):

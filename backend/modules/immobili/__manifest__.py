@@ -127,6 +127,7 @@ manifest = {
         "immo_terreni",
         "immo_terreni_porzioni",
         "immo_beni",
+        "immo_beni_collegamenti",
         "immo_unita_immobiliari",
         "immo_condomini",
         "immo_proprietari",
@@ -147,6 +148,7 @@ manifest = {
     "tenant_tables": [
         "immo_condomini",
         "immo_beni",
+        "immo_beni_collegamenti",
         "immo_unita_immobiliari",
         "immo_proprietari",
         "immo_diritti_immobile",

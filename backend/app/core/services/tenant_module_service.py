@@ -47,6 +47,7 @@ class TenantModuleService:
         "immobili": [
             "immo_condomini",
             "immo_beni",
+            "immo_beni_collegamenti",
             "immo_unita_immobiliari",
             "immo_proprietari",
             "immo_diritti_immobile",

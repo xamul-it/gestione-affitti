@@ -63,6 +63,8 @@ EXCLUDED_TABLES = {
     "immo_variazioni_catastali",
     # Created by 2026111301_terreni_beni, after immo_terreni has its new layout.
     "immo_terreni_porzioni",
+    # Created by 2026111401_collegamenti_beni (partial unique indexes).
+    "immo_beni_collegamenti",
 }
 
 

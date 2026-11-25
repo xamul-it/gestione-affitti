@@ -34,6 +34,8 @@ TABELLE_AZZERATE = (
     "immo_tabelle_millesimali",
     "immo_proprietari",
     "immo_conduttori",
+    # Exists only from 2026111401 on (see the note below).
+    "immo_beni_collegamenti",
     # Exists only from 2026111301 on; listed so azzera() still works on a
     # schema migrated past it (tables that are missing are skipped).
     "immo_terreni_porzioni",

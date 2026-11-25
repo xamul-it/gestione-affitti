@@ -36,9 +36,11 @@ from .tipologia_terreno_override import TipologiaTerrenoOverride
 from .terreno import Terreno
 from .terreno_porzione import TerrenoPorzione
 from .variazioni_catastali import VariazioneCatastale
+from .collegamento_beni import CollegamentoBeni
 
 __all__ = [
     "Bene",
+    "CollegamentoBeni",
     "VariazioneCatastale",
     # Cadastral data
     "CategoriaCatastale",
