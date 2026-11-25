@@ -28,11 +28,14 @@
 - Codice e commenti in inglese, testi a video in italiano; commit in inglese con `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Aggiornare `docs/modules/immobili.md` e `docs/piattaforma.md` nello stesso commit del codice che descrivono.
 - Dati di esempio e test autoconsistenti per modulo; tenant di prova `tenant_test_nuovo` e `tenant_test_evolutivo` devono migrare puliti.
+- Permessi: i permessi di scrittura del modulo sono `immobile.edit` / `terreno.edit` (non esiste `*.update`). La visibilità di una relazione su un bene dipende dal tipo del bene: `immobile.view` per `UNITA`, `terreno.view` per `TERRENO` (`_PERMESSO_PER_TIPO` in `routes/beni.py`), non solo dal `permesso_oggetto` del tipo. I permessi `proprietario.*` e `conduttore.*` spariscono (Task 7).
+- **Branch rosso a metà strada (previsto)**: dal Task 3 al Task 8 il backend non ha più i tipi MODULO `proprietario`/`conduttore` né i loro provider, mentre il frontend li usa ancora. I test frontend e alcuni test backend sulle vecchie rotte possono fallire fino al Task 7/8: **non correggerli nei task intermedi**. Ogni task fa passare solo i test che nomina; la suite intera (`./run_tests.sh`, `npm run test:run`) deve essere verde dal Task 7 (backend) e dal Task 8 (frontend). `verifica-test` si lancia solo nel Task 9.
 
 ## Review Focus
 
 1. **Visura reimportata** dopo la migrazione: un soggetto che ha già `proprieta` aperta sul bene non deve ricevere un doppione né far fallire l'import (oggi si salta; deve restare così). → test in Task 5.
-2. **`PROPRIETARIO` + `COMPROPRIETARIO` dello stesso soggetto sullo stesso bene** (dati storici): la migrazione deve fermarsi con l'elenco, non creare due `proprieta` (il core le rifiuterebbe a metà). → test in Task 6.
+2. **`PROPRIETARIO` + `COMPROPRIETARIO` dello stesso soggetto sullo stesso bene** (dati storici): la migrazione deve fermarsi con l'elenco, non creare due `proprieta`. La migrazione scrive con `INSERT … SELECT` senza passare da `RelazioneService` e `core_relazioni` non ha vincoli di unicità: senza il controllo preventivo il doppione verrebbe creato in silenzio, e poi ogni modifica di quelle relazioni fallirebbe in `_verifica_duplicati`. "Aperto" = stessa regola di `RelazioneService._aperte`: `data_fine IS NULL OR data_fine >= CURRENT_DATE`. → test in Task 6.
+6. **Permesso per tipo di bene**: chi ha solo `terreno.view` vede le relazioni dei terreni e non quelle delle unità; chi ha solo `immobile.view` il contrario, sia su `/beni/{id}/relazioni` sia sull'API generica `/relazioni`. → test in Task 3.
 3. **Quota su un tipo che non la ammette** (es. `conduttore` con quota 50) dall'API generica `/relazioni`: errore 400 chiaro, non salvataggio silenzioso. → test in Task 1.
 4. **Cancellazione di un'anagrafica** che ha solo relazioni di immobili: deve essere bloccata come oggi per le relazioni CORE (`conta_per_soggetto`), non lasciare relazioni orfane. → test in Task 3.
 5. **Modulo immobili disattivato nel tenant**: le relazioni dei nuovi tipi spariscono dalle liste e "chi paga cosa" non è raggiungibile; riattivando tornano. → test in Task 3.
@@ -47,6 +50,8 @@ Backend
 - `app/core/platform/models/relazione.py`, `app/core/platform_services/relazione_service.py`, `app/core/routes/relazioni.py`, `app/core/schemas/relazioni.py` — `quota_percentuale`, filtro `famiglia`.
 - `app/core/platform/models/documento.py` — `EntityType.RELAZIONE`.
 - `alembic/versions/2026112501_relazioni_famiglie_quota.py` — colonne + `ALTER TYPE … ADD VALUE 'RELAZIONE'`.
+- `alembic/versions/2026112502_permessi_proprietario_conduttore.py` — ruoli utente: da `proprietario.*`/`conduttore.*` a `immobile.*`/`terreno.*` (Task 7).
+- `app/core/routes/relazioni.py` — controllo per oggetto tramite hook del modulo (Task 3).
 - `modules/immobili/__manifest__.py` — nuovi `relation_types`, via i provider.
 - `modules/immobili/services/relazioni_bene.py` (nuovo) — regole del bene, elenco per famiglia.
 - `modules/immobili/routes/beni.py` — `GET/POST /beni/{id}/relazioni`.
@@ -127,9 +132,12 @@ Frontend (`frontend/src/modules/immobili/`)
   - `test_relazioni_raggruppate_per_famiglia`.
   - `test_anagrafica_con_relazioni_non_eliminabile` (Review Focus 4): `DELETE` dell'anagrafica → bloccato.
   - `test_modulo_disattivato_nasconde` (Review Focus 5): disattivato immobili nel tenant, `GET /relazioni/?famiglia=diritti_reali` vuoto; riattivato, torna.
-  - permessi: senza `immobile.view` → 403 su entrambe le rotte; scrittura con `immobile.update`.
+  - permessi: su un'unità, senza `immobile.view` → 403 su entrambe le rotte, scrittura con `immobile.edit`; su un terreno, `terreno.view` / `terreno.edit`.
+  - `test_relazioni_filtrate_per_tipo_di_bene` (Review Focus 6): una relazione su un'unità e una su un terreno; utente con solo `terreno.view` → `GET /relazioni/?entity_type=IMMOBILE` restituisce solo quella del terreno, `POST /beni/{unita}/relazioni` → 403; con solo `immobile.view` il contrario.
 - [ ] **Step 2:** eseguire → FAIL.
-- [ ] **Step 3:** implementare; la validazione `dati` per `comodatario` sta in `relazioni_bene.py`; il servizio chiama `RelazioneService.crea` e non duplica le sue regole.
+- [ ] **Step 3:** implementare; la validazione `dati` per `comodatario` sta in `relazioni_bene.py`; il servizio chiama `RelazioneService.crea` e non duplica le sue regole. Permessi per tipo di bene:
+  - rotte `/beni/{id}/relazioni`: lettura con `_bene_visibile`; scrittura con il permesso `.edit` corrispondente a `_PERMESSO_PER_TIPO[bene.tipo]`;
+  - API generica `/relazioni` (lettura, scrittura, chiusura, eliminazione): il controllo sul `permesso_oggetto` del tipo non basta. Per `entity_type == "IMMOBILE"` aggiungere un controllo sul tipo del bene, esposto dal modulo immobili come hook di piattaforma (per esempio un `object_permission_resolver` nel manifest: `(db, entity_id) -> permesso view`). La rotta core non deve importare immobili: se l'hook manca, vale `permesso_oggetto`. Nelle liste si scartano le righe dei beni che l'utente non può vedere.
 - [ ] **Step 4:** eseguire → PASS.
 - [ ] **Step 5:** `docs/modules/immobili.md` §3 (tabella tipi per famiglia); commit `feat(immobili): relation types by family on beni`.
 
@@ -182,11 +190,12 @@ Frontend (`frontend/src/modules/immobili/`)
   - `test_note_ruolo_in_dati`: `note_proprietario` → `dati["note_ruolo"]` di ogni relazione di quel soggetto.
   - `test_documenti_proprietario_al_soggetto`.
   - `test_doppione_ferma` (Review Focus 2): stesso soggetto PROPRIETARIO + COMPROPRIETARIO aperti sullo stesso bene → `RuntimeError` che elenca bene e soggetto; nessuna riga scritta in `core_relazioni`.
+  - `test_doppione_con_fine_futura_ferma`: come sopra ma uno dei due ha `data_fine` fra un anno → si ferma (aperto come in `RelazioneService._aperte`); con `data_fine` passata → migra entrambi.
   - `test_data_malformata_ferma`: `data_inizio = '01/02/2020'` → `RuntimeError` con l'id del diritto.
   - `test_conteggi_ruoli_senza_bene`.
   - `test_idempotente_su_schema_nuovo`: schema senza le vecchie tabelle (tenant creato da zero) → nessun errore, conteggi zero.
 - [ ] **Step 2:** eseguire → FAIL.
-- [ ] **Step 3:** implementare in SQL (`INSERT … SELECT`), controlli prima di qualunque scrittura, `DROP TABLE` solo dopo il confronto dei conteggi (righe migrate = diritti + assegnazioni).
+- [ ] **Step 3:** implementare in SQL (`INSERT … SELECT`), controlli prima di qualunque scrittura (il controllo dei doppioni è l'unica difesa: l'INSERT non passa dalle regole del servizio), `DROP TABLE` solo dopo il confronto dei conteggi (righe migrate = diritti + assegnazioni).
 - [ ] **Step 4:** eseguire → PASS; poi `alembic -x schema=tenant_test_evolutivo upgrade head` e `-x schema=tenant_test_nuovo` senza errori.
 - [ ] **Step 5:** commit `feat(immobili): migrate rights and tenants to core relations`.
 
@@ -194,12 +203,18 @@ Frontend (`frontend/src/modules/immobili/`)
 
 **Files:**
 - Delete: `backend/modules/immobili/models/{proprietari,conduttore,assegnazione_conduttore,diritti_immobile}.py`, `routes/{proprietari,conduttori,assegnazioni_conduttore,diritti_immobile}.py`, schemi omonimi in `schemas/`, `modules/immobili/relations.py`, `tests/integration/test_modules/test_immobili/test_proprietari.py` (i casi utili sono già in Task 3), `test_conduttori_spese_ricorrenti.py` per la parte conduttori
-- Modify: `models/__init__.py`, `models/bene.py` (via `diritti`, `assegnazioni_conduttore`), `routes/__init__.py`, `services/elimina_bene.py` (non tocca più le tabelle tolte; le relazioni le toglie già `RelazioneService.elimina_per_oggetto`), `anagrafica_italiana/models/soggetto_anagrafico.py` (via `proprietari`, `conduttori`), `anagrafica_italiana/routes/soggetti.py:41`, `anagrafica_italiana/routes/soggetti_v2.py:21-27` (via le due voci), `affitti_lungo/models/__init__.py:12-13,45-46`, `app/core/services/role_registry.py` se registra ancora `proprietario`, `seeds/seed_tenant.py` (dati di esempio come relazioni: stessi soggetti, beni e quote di oggi, idempotenti), `app/core/tenant_tables.py` se elenca le tabelle tolte
+- Modify: `models/__init__.py`, `models/bene.py` (via `diritti`, `assegnazioni_conduttore`), `routes/__init__.py`, `services/elimina_bene.py` (non tocca più le tabelle tolte; le relazioni le toglie già `RelazioneService.elimina_per_oggetto`), `anagrafica_italiana/models/soggetto_anagrafico.py` (via `proprietari`, `conduttori`), `anagrafica_italiana/routes/soggetti.py:41`, `anagrafica_italiana/routes/soggetti_v2.py:21-27` (via le due voci), `affitti_lungo/models/__init__.py:12-13,45-46`, `app/core/services/role_registry.py` se registra ancora `proprietario`, `seeds/seed_tenant.py` (dati di esempio come relazioni: stessi soggetti, beni e quote di oggi, idempotenti), `app/core/tenant_tables.py` se elenca le tabelle tolte, `affitti_lungo/__manifest__.py:18` (commento della dipendenza)
+- Permessi `proprietario.*` e `conduttore.*` (otto voci), da togliere da:
+  - `modules/immobili/__manifest__.py` (`permissions`) e `modules/immobili/__init__.py:108` (voce di menu);
+  - `frontend/src/modules/immobili/manifest.js:99,115,189-200` (menu Proprietari/Conduttori → `immobile.view`; il frontend dichiara anche `*.update`, da allineare a `*.edit`);
+  - `routes/beni.py:121` `_PERMESSI_RIEPILOGO`: il riepilogo "chi paga cosa" si vede con il permesso di vista del bene (`_bene_visibile`), senza altri permessi;
+  - i ruoli utente (tabelle `Role`/`Permission` in `public`): una migrazione core (`alembic/versions/2026112502_permessi_proprietario_conduttore.py`, `target_schema = "public"`) dà `immobile.view` e `terreno.view` a ogni ruolo che aveva `proprietario.view` o `conduttore.view`, poi `immobile.edit`/`terreno.edit` a chi aveva i corrispondenti `create`/`edit`/`delete`, poi toglie le otto voci; idempotente, stampa l'elenco dei ruoli toccati. Prima del rilascio contare in produzione i ruoli che le hanno.
 - Test: `test_seed_esempio.py`, `test_elimina_bene.py`, `test_unita_immobiliare_cascade_delete.py`, `test_soggetti_v2_ruoli.py`
 
 **Interfaces:**
 - Consumes: Task 3-6.
-- Produces: nessun riferimento a `Proprietario`, `Conduttore`, `DirittoImmobile`, `AssegnazioneConduttore` (`grep -rn` vuoto fuori da `migrations/`); il seed crea relazioni con `crea_relazione_bene`.
+- Produces: nessun riferimento a `Proprietario`, `Conduttore`, `DirittoImmobile`, `AssegnazioneConduttore` (`grep -rn` vuoto fuori da `migrations/`); il seed crea relazioni con `crea_relazione_bene`; nessun permesso `proprietario.*`/`conduttore.*` (`grep -rnE "(proprietario|conduttore)\.(view|create|edit|update|delete)" backend frontend/src` vuoto fuori dalle migrazioni).
+- Test aggiuntivi: `test_migrazione_permessi_ruoli` (ruolo con `proprietario.view` → dopo la migrazione ha `immobile.view` e `terreno.view` e non ha più `proprietario.view`; seconda esecuzione senza cambiamenti); `test_riepilogo_api.py` adattato (basta il permesso di vista del bene).
 
 - [ ] **Step 1:** adattare `test_seed_esempio.py` (le relazioni di esempio esistono e la seconda esecuzione non ne aggiunge) e i test di cancellazione (cancellare un bene toglie le sue relazioni).
 - [ ] **Step 2:** eseguire → FAIL.
@@ -236,4 +251,4 @@ Comportamento della sezione (decisioni del piano):
 - [ ] **Step 2:** revisione del codice del branch (Sonnet); correggere.
 - [ ] **Step 3:** agente `verifica-test` → VERDE.
 - [ ] **Step 4:** spec: segnare la fase 3 come fatta con la data; memoria `project_beni_catastali.md` aggiornata.
-- [ ] **Step 5:** contare le righe delle quattro tabelle in ogni schema di produzione (atteso 0 in `tenant_produzione` al 2026-11-25); agente `rilascio` con l'elenco esplicito delle tabelle eliminate per `promote.sh`; backup in `~/apps/gestione-affitti-backups`; verificare che tutti gli schema di produzione siano migrati.
+- [ ] **Step 5:** contare le righe delle quattro tabelle in ogni schema di produzione (atteso 0 in `tenant_produzione` al 2026-11-25) e i ruoli che hanno permessi `proprietario.*`/`conduttore.*`; agente `rilascio` con l'elenco esplicito delle tabelle eliminate per `promote.sh`; backup in `~/apps/gestione-affitti-backups`; verificare che tutti gli schema di produzione siano migrati.
