@@ -81,9 +81,13 @@ def _collega(db: Session, principale: int, collegato: int, tipo: str) -> int:
     return 1
 
 
-def _relazione(db: Session, tenant_schema: Optional[str], bene_id: int, soggetto_id: int, tipo: str,
+def _relazione(db: Session, bene_id: int, soggetto_id: int, tipo: str,
                quota: Optional[str] = None, data_inizio: date = date(2020, 1, 1)) -> int:
-    """Example relation on a bene, skipped when the same one is already open."""
+    """Example relation on a bene, skipped when the same one is already open.
+
+    No tenant schema is passed on purpose: the install hook runs before the tenant's
+    TenantModule row of immobili is enabled, and the module gate of the relation
+    service (verifica_modulo_attivo) would refuse. The gate stays on for the API."""
     from immobili.services.relazioni_bene import crea_relazione_bene
     esiste = db.execute(text(
         "SELECT 1 FROM core_relazioni r JOIN core_ruoli_disponibili t ON t.id = r.ruolo_id "
@@ -92,11 +96,11 @@ def _relazione(db: Session, tenant_schema: Optional[str], bene_id: int, soggetto
     ), {"b": bene_id, "s": soggetto_id, "t": tipo}).first()
     if esiste:
         return 0
-    crea_relazione_bene(db, tenant_schema, None, bene_id, soggetto_id, tipo, quota=quota, data_inizio=data_inizio)
+    crea_relazione_bene(db, None, None, bene_id, soggetto_id, tipo, quota=quota, data_inizio=data_inizio)
     return 1
 
 
-def seed_beni_demo(db: Session, tenant_schema: Optional[str], soggetto_ids: list, unita_ids: list) -> dict:
+def seed_beni_demo(db: Session, soggetto_ids: list, unita_ids: list) -> dict:
     """Beni features of phase 1-2b: tenant, usufruct, pertinenza, building on a parcel, recurring cost.
 
     Needs the demo units (UNITA-*) and land parcels (TER-*) already created.
@@ -104,18 +108,18 @@ def seed_beni_demo(db: Session, tenant_schema: Optional[str], soggetto_ids: list
     relazioni = collegamenti = spese = 0
     box = _unita_demo(db, "BOX-001", "Box", "C/6", "Via Roma 1", "Milano")
     fabbricato = _unita_demo(db, "FAB-001", "Fabbricato rurale", "A/3", "Località Campi", "Milano")
-    relazioni += _relazione(db, tenant_schema, box, soggetto_ids[0], "proprieta", "1/1")
-    relazioni += _relazione(db, tenant_schema, fabbricato, soggetto_ids[2], "proprieta", "1/1")
+    relazioni += _relazione(db, box, soggetto_ids[0], "proprieta", "1/1")
+    relazioni += _relazione(db, fabbricato, soggetto_ids[2], "proprieta", "1/1")
     collegamenti += _collega(db, unita_ids[0], box, "PERTINENZA")
     terreno, area = _bene_id(db, "TER-001"), _bene_id(db, "TER-002")
     if area:
         collegamenti += _collega(db, area, fabbricato, "FABBRICATO_SU_PARTICELLA")
-    relazioni += _relazione(db, tenant_schema, unita_ids[1], soggetto_ids[3], "conduttore", data_inizio=date(2025, 1, 1))
+    relazioni += _relazione(db, unita_ids[1], soggetto_ids[3], "conduttore", data_inizio=date(2025, 1, 1))
     if terreno:
         # Nudo proprietario + usufruttuario + tenant farming the land.
-        relazioni += _relazione(db, tenant_schema, terreno, soggetto_ids[1], "nuda_proprieta", "1/1")
-        relazioni += _relazione(db, tenant_schema, terreno, soggetto_ids[2], "usufrutto", "1/1")
-        relazioni += _relazione(db, tenant_schema, terreno, soggetto_ids[3], "conduttore", data_inizio=date(2025, 1, 1))
+        relazioni += _relazione(db, terreno, soggetto_ids[1], "nuda_proprieta", "1/1")
+        relazioni += _relazione(db, terreno, soggetto_ids[2], "usufrutto", "1/1")
+        relazioni += _relazione(db, terreno, soggetto_ids[3], "conduttore", data_inizio=date(2025, 1, 1))
     if not db.execute(text("SELECT 1 FROM immo_spese_ricorrenti WHERE bene_id = :b"), {"b": unita_ids[0]}).first():
         db.execute(text(
             "INSERT INTO immo_spese_ricorrenti (bene_id, tipo_spesa, responsabile, periodo, rata, importo, data_scadenza) "
@@ -282,7 +286,7 @@ def seed_tenant_data(
             (unita_ids[1], soggetto_ids[2], "1/1"),
             (unita_ids[2], soggetto_ids[0], "1/1"),
         ):
-            _relazione(db, tenant_schema, unita, soggetto, "proprieta", quota, date(2025, 1, 1))
+            _relazione(db, unita, soggetto, "proprieta", quota, date(2025, 1, 1))
         results["core_relazioni_diritti"] = 4
 
         def _ensure_certificato(unita_id: int, tecnico_id: int, classe: str, protocollo: str):
@@ -404,7 +408,7 @@ def seed_tenant_data(
         results["immo_tabelle_millesimali"] = 4
         results["immo_millesimi_unita"] = 8
 
-        results.update(seed_beni_demo(db, tenant_schema, soggetto_ids, unita_ids))
+        results.update(seed_beni_demo(db, soggetto_ids, unita_ids))
 
         db.commit()
     except Exception as exc:

@@ -58,3 +58,16 @@ def test_dati_di_esempio_idempotenti(db_session):
     prima = (conta("immo_beni_collegamenti"), conta("core_relazioni"))
     seed_tenant_data(db_session, tenant_id=0, tenant_schema=None, seed_test_data=True)
     assert (conta("immo_beni_collegamenti"), conta("core_relazioni")) == prima
+
+
+def test_dati_di_esempio_durante_l_installazione_del_modulo(db_session, monkeypatch):
+    """The install hook runs before the tenant's TenantModule row of immobili is enabled:
+    the example relations must still be created (the module gate stays on for the API)."""
+    from app.core.platform_services import relazioni_moduli
+    from tests.integration.conftest import TEST_TENANT
+
+    # Real behaviour for a known tenant whose module is not enabled yet: empty set.
+    monkeypatch.setattr(relazioni_moduli, "moduli_attivi", lambda db, schema: set() if schema else None)
+    seed_tenant_data(db_session, tenant_id=0, tenant_schema=TEST_TENANT, seed_test_data=True)
+    assert _relazioni(db_session, "UNITA-001", "proprieta") == 2
+    assert _relazioni(db_session, "UNITA-002", "conduttore") == 1
