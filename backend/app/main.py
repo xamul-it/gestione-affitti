@@ -77,24 +77,8 @@ log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
 logger = logging.getLogger(__name__)
 
-# Tables prefixed "core_" that are tenant-scoped business data (like any
-# module's tables), NOT shared platform data. They must be created only
-# inside each tenant schema via a dedicated Alembic migration
-# (target_schema="tenant"), never here. create_core_tables() must never
-# recreate them in `public` — that was the root cause of a tenant-isolation
-# bug where core_scadenze ended up as a single table shared by every
-# tenant (see docs/superpowers/plans/2026-09-18-notification-service.md).
-TENANT_ONLY_CORE_TABLES = {
-    "core_scadenze",
-    "core_scadenza_destinatari",
-    "core_scadenza_log",
-    "core_notifiche",
-    "core_documenti",
-    "core_documenti_files",
-    "core_tipi_documento_overrides",
-    "core_stati_documento_overrides",
-    "core_relazioni",
-}
+# Tenant-only core tables: see app/core/tenant_tables.py.
+from app.core.tenant_tables import TENANT_ONLY_CORE_TABLES  # noqa: E402
 
 
 def create_core_tables():

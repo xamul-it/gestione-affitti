@@ -22,6 +22,7 @@ Uso (dalla cartella backend, con il venv attivo):
 Exit code 0 = VERDE, 1 = ROSSO.
 """
 import argparse
+import contextlib
 import json
 import subprocess
 import sys
@@ -37,6 +38,7 @@ from sqlalchemy.dialects import postgresql  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
+from app.core.tenant_tables import TENANT_ONLY_CORE_TABLES  # noqa: E402
 
 PREFISSO = "tenant_test_"
 NUOVO = "tenant_test_nuovo"
@@ -61,11 +63,63 @@ DIFFERENZE_NOTE: dict[tuple[str, str, str], str] = {
     ("immo_spese_ricorrenti", "tipo", "responsabile: db VARCHAR(20), modello ENUM"): _ENUM_TESTO,
     ("pec_audit_accessi", "tipo", "dettagli: db JSONB, modello JSON"): _JSONB,
     ("pec_messaggi", "tipo", "allegati_meta: db JSONB, modello JSON"): _JSONB,
+    ("core_documenti", "tipo", "entity_type: db VARCHAR(50), modello ENUM"): _ENUM_TESTO,
+    ("core_documenti", "tipo", "tipo_documento: db VARCHAR(50), modello ENUM"): _ENUM_TESTO,
+    ("core_documenti", "nullabilità", "tipo_documento: db False, modello True"): _TS.replace("timestamp", "tipo_documento"),
+    ("core_documenti", "nullabilità", "created_at: db False, modello True"): _TS,
 }
 
 
 def log(msg: str = "") -> None:
     print(msg, flush=True)
+
+
+def controlla_db(url: str) -> None:
+    """Never on the production database (gestione_affitti_prod)."""
+    nome = url.rsplit("/", 1)[-1].split("?", 1)[0]
+    if nome.endswith("_prod"):
+        raise SystemExit(f"Database di produzione ({nome}): i tenant di prova vivono solo in sviluppo")
+
+
+@contextlib.contextmanager
+def spia_fallback():
+    """Collect the tables the installer creates from the models because a migration did not.
+
+    install_module_for_tenant falls back to the SQLAlchemy metadata when a
+    manifest table is missing after the migrations: the schema would then
+    match the models by construction and hide the broken migration.
+    """
+    from app.core.services.tenant_module_service import TenantModuleService
+    originale = TenantModuleService._create_module_tables_from_metadata
+    create: list[str] = []
+
+    def spia(module_id, *args, **kwargs):
+        tabelle = originale(module_id, *args, **kwargs)
+        create.extend(f"{module_id}: {t}" for t in tabelle or [])
+        return tabelle
+
+    TenantModuleService._create_module_tables_from_metadata = staticmethod(spia)
+    try:
+        yield create
+    finally:
+        TenantModuleService._create_module_tables_from_metadata = staticmethod(originale)
+
+
+def _installa(engine, tenant_id: int, nome_modulo: str, motivo: str) -> bool:
+    from app.core.services.tenant_module_service import TenantModuleService
+    log(f"  installa {nome_modulo} ({motivo})")
+    with spia_fallback() as create, Session(engine) as db:
+        try:
+            TenantModuleService.install_module_for_tenant(
+                tenant_id, nome_modulo, db, run_migrations=True, seed_test_data=True)
+            db.commit()
+        except Exception as exc:  # report every module, then fail
+            db.rollback()
+            log(f"  ERRORE installazione {nome_modulo}: {exc}")
+            return False
+    for t in create:
+        log(f"  ERRORE tabella creata dai modelli, la migrazione non la crea: {t}")
+    return not create
 
 
 def _controlla_nome(schema: str) -> None:
@@ -132,16 +186,7 @@ def crea(engine, schema: str, nome: str) -> bool:
         return False
     ok = True
     for nome_modulo in ordine:
-        log(f"  installa {nome_modulo} (dati di esempio)")
-        with Session(engine) as db:
-            try:
-                TenantModuleService.install_module_for_tenant(
-                    tenant_id, nome_modulo, db, run_migrations=True, seed_test_data=True)
-                db.commit()
-            except Exception as exc:  # report every module, then fail
-                db.rollback()
-                log(f"  ERRORE installazione {nome_modulo}: {exc}")
-                ok = False
+        ok &= _installa(engine, tenant_id, nome_modulo, "dati di esempio")
     return ok
 
 
@@ -215,7 +260,15 @@ def confronta_schema(engine, schema: str, manifests: dict) -> list[tuple[str, st
         differenze.append((t, "tabella mancante", "dichiarata dal manifest"))
 
     for nome, tabella in sorted(Base.metadata.tables.items()):
-        if tabella.schema is not None or nome not in presenti:
+        if tabella.schema is not None:
+            continue
+        if nome not in presenti:
+            # Every module is installed here: a tenant model without its table
+            # is a table no migration creates in a new tenant. core_* models
+            # without a schema are platform tables (public) unless listed.
+            di_tenant = not nome.startswith("core_") or nome in TENANT_ONLY_CORE_TABLES
+            if di_tenant and nome not in attese:
+                differenze.append((nome, "tabella del modello mancante", "nessuna migrazione la crea"))
             continue
         db_col = {c["name"]: c for c in insp.get_columns(nome, schema=schema)}
         for col in tabella.columns:
@@ -264,14 +317,19 @@ def perdite(prima: dict[str, int], dopo: dict[str, int]) -> list[str]:
     out = []
     for t, n in sorted(prima.items()):
         if t not in dopo:
-            out.append(f"{t}: tabella sparita ({n} righe)")
+            if n:
+                out.append(f"{t}: tabella sparita ({n} righe)")
         elif dopo[t] < n:
             out.append(f"{t}: {n} -> {dopo[t]} righe")
     return out
 
 
-def _migra(engine, schema: str) -> bool:
-    """Core chain, module chains and modules not installed yet (with example data)."""
+def tabelle_vuote_sparite(prima: dict[str, int], dopo: dict[str, int]) -> list[str]:
+    return [t for t, n in sorted(prima.items()) if t not in dopo and not n]
+
+
+def _migra(engine, schema: str) -> tuple[bool, list[str]]:
+    """Core chain and module chains; returns the modules not installed yet."""
     manifests, ordine = _moduli(engine)
     log(f"  migrazioni core -> {schema}")
     ok = _alembic_core(schema)
@@ -285,23 +343,20 @@ def _migra(engine, schema: str) -> bool:
             ok &= sm.run_module_alembic(nome, m, schema, False)
         else:
             da_installare.append(nome)
-    if da_installare:
-        sm.load_all_models(ordine)
-        from app.core.services.tenant_module_service import TenantModuleService
-        with engine.connect() as conn:
-            tenant_id = conn.execute(text("SELECT id FROM public.core_tenants WHERE schema_name = :s"),
-                                     {"s": schema}).scalar()
-        for nome in da_installare:
-            log(f"  installa {nome} (nuovo modulo, dati di esempio)")
-            with Session(engine) as db:
-                try:
-                    TenantModuleService.install_module_for_tenant(
-                        tenant_id, nome, db, run_migrations=True, seed_test_data=True)
-                    db.commit()
-                except Exception as exc:
-                    db.rollback()
-                    log(f"  ERRORE installazione {nome}: {exc}")
-                    ok = False
+    return ok, da_installare
+
+
+def _installa_nuovi(engine, schema: str, moduli: list[str]) -> bool:
+    if not moduli:
+        return True
+    _, ordine = _moduli(engine)
+    sm.load_all_models(ordine)
+    with engine.connect() as conn:
+        tenant_id = conn.execute(text("SELECT id FROM public.core_tenants WHERE schema_name = :s"),
+                                 {"s": schema}).scalar()
+    ok = True
+    for nome in moduli:
+        ok &= _installa(engine, tenant_id, nome, "nuovo modulo, dati di esempio")
     return ok
 
 
@@ -367,7 +422,9 @@ def cmd_evolutivo(engine, perdita_consentita) -> bool:
         return ok and stampa_differenze(confronta_schema(engine, EVOLUTIVO, manifests))
 
     precedente = ultima_fotografia(engine, EVOLUTIVO)
-    ok = _migra(engine, EVOLUTIVO)
+    ok, nuovi_moduli = _migra(engine, EVOLUTIVO)
+    # Counted before installing new modules: their example rows must not
+    # cover rows lost by a migration.
     dopo = conteggi(engine, EVOLUTIVO)
     vers_dopo = versioni(engine, EVOLUTIVO)
     if precedente is None:
@@ -379,6 +436,8 @@ def cmd_evolutivo(engine, perdita_consentita) -> bool:
             if vers_prima.get(t) != v:
                 log(f"  {t}: {vers_prima.get(t) or '-'} -> {v}")
         perse = perdite(prima, dopo)
+        for t in tabelle_vuote_sparite(prima, dopo):
+            log(f"  tabella vuota sparita (rinominata o tolta) {t}")
         for t in sorted(set(dopo) - set(prima)):
             log(f"  tabella nuova {t}: {dopo[t]} righe")
         for p in perse:
@@ -389,6 +448,8 @@ def cmd_evolutivo(engine, perdita_consentita) -> bool:
             log(f"  perdite consentite: {perdita_consentita}")
         if not perse:
             log("  nessuna tabella o riga persa")
+    if ok:
+        ok = _installa_nuovi(engine, EVOLUTIVO, nuovi_moduli)
     if ok:
         # Example data added to the modules since the last run.
         prima_esempi = conteggi(engine, EVOLUTIVO)
@@ -425,6 +486,7 @@ def main() -> int:
     parser.add_argument("--perdita-consentita", metavar="MOTIVO",
                         help="evolutivo: accetta righe o tabelle perse, col motivo")
     args = parser.parse_args()
+    controlla_db(settings.DATABASE_URL)
     engine = create_engine(settings.DATABASE_URL)
     if args.comando == "nuovo":
         ok = cmd_nuovo(engine)

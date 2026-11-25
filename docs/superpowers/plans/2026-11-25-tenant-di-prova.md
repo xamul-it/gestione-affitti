@@ -77,3 +77,16 @@ Residui:
   intervento a parte.
 - Le righe di prova aggiunte prima del marcatore "Dato di esempio" (15
   soggetti in più) restano nel tenant evolutivo: non danno fastidio.
+
+Trovati dai tenant di prova e corretti nello stesso ramo:
+- `esem_002`: nessuna migrazione creava `elementi_esempio` nei tenant
+  (esisteva solo grazie al fallback dell'installatore, ora intercettato).
+- anagrafica `2026112501`: in un tenant nuovo le tabelle documenti
+  restavano `anag_*` (la rinomina core gira prima che esistano) e il
+  codice, che usa `core_documenti`, non le trovava: i documenti di un tenant
+  creato da zero non funzionavano.
+
+Trovato e non corretto: i tenant esistenti (principale, produzione,
+qa_test) non hanno 24 chiavi esterne che un tenant nuovo ha (spese,
+ripartizioni, tecnici, PEC, ...). Da valutare con una migrazione apposta
+dopo aver controllato che i dati le rispettino.

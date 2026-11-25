@@ -55,7 +55,19 @@ dominio l'API pubblica del modulo è il confine (spec
     `--perdita-consentita "motivo"`. Poi riceve i dati di esempio aggiunti ai
     moduli nel frattempo.
 
-  Lo script lavora solo su schema `tenant_test_*`. Le differenze tra
+  Se una migrazione dimentica una tabella del manifest, l'installatore la
+  crea dai modelli: lo script lo intercetta e dà ROSSO; dà ROSSO anche una
+  tabella di tenant dei modelli che nessuna migrazione crea. Così sono
+  emersi `esem_002` (`elementi_esempio`) e anagrafica `2026112501` (in un
+  tenant nuovo le tabelle documenti restavano `anag_*`). Una tabella vuota
+  che sparisce (rinomina) è solo un avviso.
+  Limiti: il confronto è sul numero di righe (una colonna svuotata o un
+  delete+insert di pari numero non si vedono: per questo servono i test
+  di integrazione della migrazione); una cancellazione fatta a mano nel
+  tenant evolutivo dà ROSSO fino a `--perdita-consentita`.
+
+  Lo script lavora solo su schema `tenant_test_*` e rifiuta il database di
+  produzione (`*_prod`). Le differenze tra
   migrazioni e modelli che esistevano già il 2026-11-25 sono elencate in
   `DIFFERENZE_NOTE` (segnalate, non bloccanti); una nuova rende ROSSO.
 

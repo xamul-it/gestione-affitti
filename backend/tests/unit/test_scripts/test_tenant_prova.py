@@ -35,3 +35,30 @@ def test_rifiuta_schema_non_di_prova():
 
 def test_non_idempotenti():
     assert tp.non_idempotenti({"a": 2, "b": 1}, {"a": 2, "b": 3, "c": 1}) == ["b: 1 -> 3", "c: 0 -> 1"]
+
+
+def test_rifiuta_il_db_di_produzione():
+    for url in ("postgresql://u:p@localhost:5433/gestione_affitti_prod",
+                "postgresql+psycopg2://u@h/gestione_affitti_prod?sslmode=disable"):
+        with pytest.raises(SystemExit):
+            tp.controlla_db(url)
+    tp.controlla_db("postgresql://u:p@localhost:5433/gestione_affitti")
+
+
+def test_spia_tabelle_create_dai_modelli():
+    from app.core.services.tenant_module_service import TenantModuleService
+    originale = TenantModuleService._create_module_tables_from_metadata
+    TenantModuleService._create_module_tables_from_metadata = staticmethod(lambda *a, **k: ["t1"])
+    try:
+        with tp.spia_fallback() as create:
+            TenantModuleService._create_module_tables_from_metadata("mod", None, "s", None)
+        assert create == ["mod: t1"]
+        assert TenantModuleService._create_module_tables_from_metadata("x", None, "s", None) == ["t1"]
+    finally:
+        TenantModuleService._create_module_tables_from_metadata = originale
+
+
+def test_tabella_vuota_sparita_non_e_una_perdita():
+    """A rename or drop of an empty table loses no data: reported, not blocking."""
+    assert tp.perdite({"vecchia": 0, "a": 1}, {"a": 1}) == []
+    assert tp.tabelle_vuote_sparite({"vecchia": 0, "a": 1}, {"a": 1}) == ["vecchia"]
