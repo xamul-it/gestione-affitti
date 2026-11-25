@@ -8,7 +8,7 @@ layout, which both parsers rely on.
 import re
 import subprocess
 from datetime import date, datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from typing import Optional, Tuple
 
 from immobili.models.diritti_immobile import TipoDiritto
@@ -69,13 +69,12 @@ def strip_zeros(value: Optional[str]) -> Optional[str]:
     return stripped or ("0" if value.strip() else None)
 
 
-def parse_diritto(testo: str) -> Tuple[TipoDiritto, Optional[Decimal]]:
+def parse_diritto(testo: str) -> Tuple[TipoDiritto, Optional[Tuple[int, int]]]:
+    """Right type and share as written in the visura: (numerator, denominator), never reduced."""
     quota = None
     m = _QUOTA.search(testo)
     if m and int(m.group(2)):
-        quota = (Decimal(m.group(1)) / Decimal(m.group(2)) * 100).quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
+        quota = (int(m.group(1)), int(m.group(2)))
 
     t = testo.lower().replace("à", "a'").strip()
     t = re.sub(r"^diritto di\s+", "", t)
@@ -84,7 +83,7 @@ def parse_diritto(testo: str) -> Tuple[TipoDiritto, Optional[Decimal]]:
     elif "superficiari" in t or t.startswith("superficie"):
         tipo = TipoDiritto.SUPERFICIE
     elif t.startswith("propr"):
-        tipo = TipoDiritto.PROPRIETARIO if quota is None or quota >= 100 else TipoDiritto.COMPROPRIETARIO
+        tipo = TipoDiritto.PROPRIETARIO if quota is None or quota[0] >= quota[1] else TipoDiritto.COMPROPRIETARIO
     elif t.startswith("usufrutt"):
         tipo = TipoDiritto.USUFRUTTUARIO
     elif re.match(r"uso\b", t):
@@ -133,7 +132,7 @@ def build_intestato(
         luogo_nascita=luogo_nascita if not persona_giuridica else None,
         diritto_testo=diritto_testo,
         tipo_diritto=tipo,
-        quota_percentuale=quota,
+        quota=quota,
     )
 
 

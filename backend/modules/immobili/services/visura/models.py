@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from immobili.models.diritti_immobile import TipoDiritto
 
@@ -34,7 +34,7 @@ class IntestatoParsed:
     luogo_nascita: Optional[str]
     diritto_testo: str
     tipo_diritto: TipoDiritto
-    quota_percentuale: Optional[Decimal]
+    quota: Optional[Tuple[int, int]]  # (numerator, denominator) as written
 
 
 @dataclass

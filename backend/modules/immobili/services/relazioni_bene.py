@@ -28,6 +28,20 @@ FAMIGLIE = ("diritti_reali", "godimento", "incarichi")
 # Writes need the ".edit" counterpart (immobile.edit / terreno.edit).
 PERMESSO_PER_TIPO = {"UNITA": "immobile.view", "TERRENO": "terreno.view"}
 
+# Right of the old DirittoImmobile (TipoDiritto name) -> relation type of the diritti_reali family.
+# A co-owner is just an owner with a share.
+MAPPA_TIPO_DIRITTO: Dict[str, str] = {
+    "PROPRIETARIO": "proprieta",
+    "COMPROPRIETARIO": "proprieta",
+    "NUDA_PROPRIETA": "nuda_proprieta",
+    "USUFRUTTUARIO": "usufrutto",
+    "USO": "uso",
+    "ABITAZIONE": "abitazione",
+    "SUPERFICIE": "superficie",
+    "ENFITEUSI": "enfiteusi",
+    "ALTRO": "diritto_reale_altro",
+}
+
 # Registration of a comodato: keys of `dati`.
 _REGISTRAZIONE = ("registrazione_data", "registrazione_ufficio", "registrazione_numero")
 

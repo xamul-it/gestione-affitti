@@ -42,7 +42,8 @@ class DirittoProposta(BaseModel):
     soggetto_key: str
     nominativo: str
     tipo_diritto: TipoDiritto
-    quota_percentuale: Optional[float] = None
+    quota_numeratore: Optional[int] = None
+    quota_denominatore: Optional[int] = None
     note: str
     azione: Literal["crea", "invariato"]
     selezionato: bool = True

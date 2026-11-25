@@ -10,14 +10,15 @@ Matching rules (spec docs/superpowers/specs/2026-10-30-import-visure-catastali-d
 - soggetto: by codice fiscale; without CF, PERSONA_GIURIDICA by
   case-insensitive ragione_sociale
 - unità: by città + foglio + particella + subalterno (leading zeros ignored)
-- diritto: same unità + same soggetto's Proprietario + same tipo_diritto
+- diritto: same unità + same soggetto + same relation type (open relations of the
+  diritti_reali family; co-owner and owner are both 'proprieta')
 """
 import io
 import logging
 import re
 import unicodedata
 from dataclasses import dataclass, field
-from decimal import Decimal
+from fractions import Fraction
 from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy import func, or_
@@ -30,8 +31,6 @@ from app.core.platform_services.documento_service import DocumentoService, FileI
 
 from ..models import (
     CategoriaCatastale,
-    DirittoImmobile,
-    Proprietario,
     TipoImmobileCategoriaMap,
     UnitaImmobiliare,
 )
@@ -45,6 +44,7 @@ from ..schemas.visura_import import (
 from .codice_generator_service import CodiceGeneratorService
 from .visura.models import FabbricatoParsed, IntestatoParsed, VisuraParsed
 from .visura.text import strip_zeros
+from .relazioni_bene import MAPPA_TIPO_DIRITTO, crea_relazione_bene, relazioni_del_bene
 from .variazioni_catastali import registra_variazioni
 
 logger = logging.getLogger(__name__)
@@ -231,14 +231,22 @@ def _float(value) -> Optional[float]:
     return float(value) if value is not None else None
 
 
-def _diritti_esistenti(db: Session, unita_id: int) -> List[Tuple[DirittoImmobile, int]]:
-    """(diritto, soggetto_id) pairs for a unit."""
-    return (
-        db.query(DirittoImmobile, Proprietario.soggetto_id)
-        .join(Proprietario, DirittoImmobile.proprietario_id == Proprietario.id)
-        .filter(DirittoImmobile.bene_id == unita_id)
-        .all()
-    )
+def _tipo_relazione(tipo_diritto) -> str:
+    return MAPPA_TIPO_DIRITTO[tipo_diritto.name]
+
+
+def _diritti_esistenti(db: Session, unita_id: int) -> List[Tuple[dict, int]]:
+    """(open relation, soggetto_id) pairs of the diritti_reali of a unit."""
+    righe = relazioni_del_bene(db, None, unita_id, solo_correnti=True)["diritti_reali"]
+    return [(r, r["soggetto_id"]) for r in righe]
+
+
+def _frazione(numeratore: Optional[int], denominatore: Optional[int]) -> Optional[Fraction]:
+    return Fraction(numeratore, denominatore) if numeratore and denominatore else None
+
+
+def _testo_quota(numeratore: Optional[int], denominatore: Optional[int]) -> str:
+    return f"{numeratore}/{denominatore}" if numeratore is not None and denominatore else "-"
 
 
 def _data_visura_corrente(db: Session, unit_id: int):
@@ -317,33 +325,36 @@ def build_proposal(db: Session, visura: VisuraParsed) -> VisuraProposta:
         visti = set()
         for i in f.intestati:
             sp = soggetti_by_key[_intestato_key(i)]
-            visti.add((sp.soggetto_id, i.tipo_diritto))
+            tipo_rel = _tipo_relazione(i.tipo_diritto)
+            visti.add((sp.soggetto_id, tipo_rel))
             azione = "crea"
             if sp.soggetto_id is not None:
                 for d, soggetto_id in esistenti:
-                    if soggetto_id == sp.soggetto_id and d.tipo_diritto == i.tipo_diritto:
+                    if soggetto_id == sp.soggetto_id and d["tipo"] == tipo_rel:
                         azione = "invariato"
-                        quota_sistema = _float(d.quota_percentuale)
-                        quota_visura = _float(i.quota_percentuale)
+                        quota_visura = _frazione(*i.quota) if i.quota else None
+                        quota_sistema = _frazione(d["quota_numeratore"], d["quota_denominatore"])
                         if quota_visura is not None and quota_sistema != quota_visura:
                             avvisi.append(
                                 f"Quota diversa per {i.nominativo}: sistema "
-                                f"{quota_sistema if quota_sistema is not None else '-'}%, visura {quota_visura}%"
+                                f"{_testo_quota(d['quota_numeratore'], d['quota_denominatore'])}, "
+                                f"visura {_testo_quota(*i.quota)}"
                             )
                         break
             diritti.append(DirittoProposta(
                 soggetto_key=sp.key,
                 nominativo=i.nominativo,
                 tipo_diritto=i.tipo_diritto,
-                quota_percentuale=_float(i.quota_percentuale),
+                quota_numeratore=i.quota[0] if i.quota else None,
+                quota_denominatore=i.quota[1] if i.quota else None,
                 note=i.diritto_testo,
                 azione=azione,
             ))
         for d, soggetto_id in esistenti:
-            if (soggetto_id, d.tipo_diritto) not in visti:
+            if (soggetto_id, d["tipo"]) not in visti:
                 s = db.get(SoggettoAnagrafico, soggetto_id)
                 nome = _soggetto_display(s) if s else f"soggetto {soggetto_id}"
-                avvisi.append(f"Diritto {d.tipo_diritto.value} di {nome} presente a sistema ma non in visura")
+                avvisi.append(f"Diritto {d['tipo_nome']} di {nome} presente a sistema ma non in visura")
 
         if existing is None:
             azione = "crea"
@@ -493,17 +504,6 @@ def _create_soggetto(s: SoggettoProposta) -> SoggettoAnagrafico:
     )
 
 
-def _proprietario_for(db: Session, soggetto_id: int, cache: Dict[int, Proprietario]) -> Proprietario:
-    if soggetto_id not in cache:
-        p = db.query(Proprietario).filter(Proprietario.soggetto_id == soggetto_id).order_by(Proprietario.id).first()
-        if p is None:
-            p = Proprietario(soggetto_id=soggetto_id)
-            db.add(p)
-            db.flush()
-        cache[soggetto_id] = p
-    return cache[soggetto_id]
-
-
 def _visura_esistente(db: Session, unit_id: int, numero: str) -> Optional[Documento]:
     docs = db.query(Documento).filter(
         Documento.entity_type == EntityType.IMMOBILE, Documento.entity_id == unit_id
@@ -576,7 +576,6 @@ def apply_proposal(
                 result.soggetti_aggiornati += int(changed)
 
         generator = CodiceGeneratorService(db)
-        proprietari: Dict[int, Proprietario] = {}
         service = DocumentoService(db, tenant_schema, user_id)
 
         for u in proposta.unita:
@@ -620,24 +619,21 @@ def apply_proposal(
                     changed = True
                 if changed:
                     result.unita_aggiornate.append(unit.id)
-            esistenti = {(sid, d.tipo_diritto) for d, sid in _diritti_esistenti(db, unit.id)}
+            esistenti = {(sid, d["tipo"]) for d, sid in _diritti_esistenti(db, unit.id)}
 
             diritti_aggiunti = 0
             for d in u.diritti:
                 soggetto_id = soggetto_ids.get(d.soggetto_key)
                 if not d.selezionato or d.azione != "crea" or soggetto_id is None:
                     continue
-                if (soggetto_id, d.tipo_diritto) in esistenti:
+                tipo_rel = _tipo_relazione(d.tipo_diritto)
+                if (soggetto_id, tipo_rel) in esistenti:
                     continue
-                proprietario = _proprietario_for(db, soggetto_id, proprietari)
-                db.add(DirittoImmobile(
-                    bene_id=unit.id,
-                    proprietario_id=proprietario.id,
-                    tipo_diritto=d.tipo_diritto,
-                    quota_percentuale=Decimal(str(d.quota_percentuale)) if d.quota_percentuale is not None else None,
-                    note=d.note[:500],
-                ))
-                esistenti.add((soggetto_id, d.tipo_diritto))
+                quota = (d.quota_numeratore, d.quota_denominatore) if d.quota_numeratore and d.quota_denominatore else None
+                crea_relazione_bene(
+                    db, tenant_schema, user_id, unit.id, soggetto_id, tipo_rel, quota=quota, note=d.note[:500],
+                )
+                esistenti.add((soggetto_id, tipo_rel))
                 diritti_aggiunti += 1
             result.diritti_creati += diritti_aggiunti
             if diritti_aggiunti and u.azione != "crea" and unit.id not in result.unita_aggiornate:

@@ -71,7 +71,7 @@ function DirittiList({ unita, onToggle }) {
                 onChange={(e) => onToggle(idx, e.target.checked)}
               />
               {' '}{d.nominativo}: {TIPO_DIRITTO_LABELS[d.tipo_diritto] || d.tipo_diritto}
-              {d.quota_percentuale != null ? ` ${d.quota_percentuale}%` : ''}
+              {d.quota_numeratore != null ? ` ${d.quota_numeratore}/${d.quota_denominatore}` : ''}
             </label>
           ) : (
             <span className="visura-muted">

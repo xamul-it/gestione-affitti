@@ -25,7 +25,7 @@ const proposta = {
       key: 'u0', azione: 'crea', unita_id: null, foglio: '99', particella: '666', subalterno: '30',
       tipo: null, indirizzo: 'VIA EMILIA PONENTE n. 1', citta: 'Bologna', provincia: 'BO',
       piano: 'T', categoria: 'D/1', rendita_catastale: 100, note_catastali: '', modifiche: [],
-      diritti: [{ soggetto_key: 's0', nominativo: 'ZANDERIGHI Luigi', tipo_diritto: 'PROPRIETARIO', quota_percentuale: 100, note: "Proprieta' 1/1", azione: 'crea', selezionato: true }],
+      diritti: [{ soggetto_key: 's0', nominativo: 'ZANDERIGHI Luigi', tipo_diritto: 'PROPRIETARIO', quota_numeratore: 1, quota_denominatore: 1, note: "Proprieta' 1/1", azione: 'crea', selezionato: true }],
       avvisi: [], selezionato: true,
     },
     {

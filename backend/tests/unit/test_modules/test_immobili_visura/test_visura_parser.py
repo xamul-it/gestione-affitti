@@ -75,11 +75,11 @@ def test_sintetica_unit_592_2(sintetica):
     assert u.indirizzo == "VIA EMILIA PONENTE n. 2"
     assert u.piano == "T"
     assert [
-        (i.nominativo, i.codice_fiscale, i.persona_giuridica, i.tipo_diritto, i.quota_percentuale)
+        (i.nominativo, i.codice_fiscale, i.persona_giuridica, i.tipo_diritto, i.quota)
         for i in u.intestati
     ] == [
-        ("DEMANIO DELLO STATO - RAMO FERROVIA", None, True, TipoDiritto.PROPRIETARIO, Decimal("100.00")),
-        ("ZANDERIGHI Luigi Matteo Massimiliano", "ZNDLMT73E17F205F", False, TipoDiritto.USO, Decimal("100.00")),
+        ("DEMANIO DELLO STATO - RAMO FERROVIA", None, True, TipoDiritto.PROPRIETARIO, (1, 1)),
+        ("ZANDERIGHI Luigi Matteo Massimiliano", "ZNDLMT73E17F205F", False, TipoDiritto.USO, (1, 1)),
     ]
     luigi = u.intestati[1]
     assert luigi.cognome == "ZANDERIGHI"
@@ -115,12 +115,12 @@ def test_sintetica_unit_666_19(sintetica):
 
 
 @pytest.mark.parametrize("testo,tipo,quota", [
-    ("Proprieta' 1/1", TipoDiritto.PROPRIETARIO, Decimal("100.00")),
-    ("Proprieta' 1/2", TipoDiritto.COMPROPRIETARIO, Decimal("50.00")),
-    ("Nuda proprieta' 1/1", TipoDiritto.NUDA_PROPRIETA, Decimal("100.00")),
-    ("Usufrutto 1/3", TipoDiritto.USUFRUTTUARIO, Decimal("33.33")),
-    ("Uso 1/1 in regime di separazione dei beni", TipoDiritto.USO, Decimal("100.00")),
-    ("Diritto del concedente 1/1", TipoDiritto.ALTRO, Decimal("100.00")),
+    ("Proprieta' 1/1", TipoDiritto.PROPRIETARIO, (1, 1)),
+    ("Proprieta' 1/2", TipoDiritto.COMPROPRIETARIO, (1, 2)),
+    ("Nuda proprieta' 1/1", TipoDiritto.NUDA_PROPRIETA, (1, 1)),
+    ("Usufrutto 1/3", TipoDiritto.USUFRUTTUARIO, (1, 3)),
+    ("Uso 1/1 in regime di separazione dei beni", TipoDiritto.USO, (1, 1)),
+    ("Diritto del concedente 1/1", TipoDiritto.ALTRO, (1, 1)),
 ])
 def test_parse_diritto(testo, tipo, quota):
     assert parse_diritto(testo) == (tipo, quota)
@@ -143,7 +143,7 @@ def _signature(visura):
     return {
         (f.foglio, f.particella, f.subalterno): (
             f.categoria, f.classe, f.rendita, f.indirizzo, f.piano,
-            [(i.codice_fiscale, i.tipo_diritto, i.quota_percentuale) for i in f.intestati],
+            [(i.codice_fiscale, i.tipo_diritto, i.quota) for i in f.intestati],
         )
         for f in visura.fabbricati
     }
@@ -211,7 +211,7 @@ def test_immobile_tabellare_unit(immobile_tabellare):
     assert i.data_nascita == date(1973, 5, 17)
     assert i.luogo_nascita == "MILANO"
     assert i.tipo_diritto == TipoDiritto.PROPRIETARIO
-    assert i.quota_percentuale == Decimal("100.00")
+    assert i.quota == (1, 1)
 
 
 def test_immobile_attuale_header(immobile_attuale):
@@ -240,7 +240,7 @@ def test_immobile_attuale_unit(immobile_attuale):
     assert cfs == ["BRSSFN72L45F205G", "ZNDLMT73E17F205F"]
     for i in u.intestati:
         assert i.tipo_diritto == TipoDiritto.COMPROPRIETARIO
-        assert i.quota_percentuale == Decimal("50.00")
+        assert i.quota == (1, 2)
 
 
 # --- Analitica per soggetto with bulleted identificativi ("• Foglio ...") -----

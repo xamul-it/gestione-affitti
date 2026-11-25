@@ -17,6 +17,7 @@ from app.core.platform_services.document_type_sync import sync_document_types
 from immobili.__manifest__ import manifest as immobili_manifest
 
 from immobili.models import DirittoImmobile, Proprietario, UnitaImmobiliare
+from immobili.services.relazioni_bene import crea_relazione_bene, relazioni_del_bene
 from immobili.models.diritti_immobile import TipoDiritto
 from immobili.services.visura import parse_visura
 from immobili.services.visura_import_service import (
@@ -183,28 +184,40 @@ def test_unit_matched_shows_diff(pg_session, sintetica):
     assert not any(m.campo in ("tipo", "classe_energetica", "superficie_mq", "indirizzo") for m in u.modifiche)
 
 
-def test_quota_mismatch_warning(pg_session, sintetica):
-    s = _soggetto(
-        pg_session, tipo_soggetto=TipoSoggetto.PERSONA_GIURIDICA,
-        ragione_sociale="DEMANIO DELLO STATO - RAMO FERROVIA",
-    )
-    p = Proprietario(soggetto_id=s.id)
+def _unita_592(pg_session):
     unit = UnitaImmobiliare(
         codice="TEST-VIS-592", tipo="Magazzino", indirizzo="VIA EMILIA PONENTE n. 2",
         citta="Bologna", foglio="99", particella="592", subalterno="2",
     )
-    pg_session.add_all([p, unit])
+    pg_session.add(unit)
     pg_session.flush()
-    pg_session.add(DirittoImmobile(
-        bene_id=unit.id, proprietario_id=p.id,
-        tipo_diritto=TipoDiritto.PROPRIETARIO, quota_percentuale=Decimal("50"),
-    ))
+    return unit
+
+
+def _demanio(pg_session):
+    return _soggetto(
+        pg_session, tipo_soggetto=TipoSoggetto.PERSONA_GIURIDICA,
+        ragione_sociale="DEMANIO DELLO STATO - RAMO FERROVIA",
+    )
+
+
+def _quota_demanio(pg_session, sintetica, quota):
+    s, unit = _demanio(pg_session), _unita_592(pg_session)
+    crea_relazione_bene(pg_session, TENANT, None, unit.id, s.id, "proprieta", quota=quota)
     pg_session.flush()
-    proposta = build_proposal(pg_session, sintetica)
-    u = _unita(proposta, "99", "592", "2")
-    assert any("Quota diversa" in a for a in u.avvisi)
+    return _unita(build_proposal(pg_session, sintetica), "99", "592", "2")
+
+
+def test_quota_mismatch_warning(pg_session, sintetica):
+    u = _quota_demanio(pg_session, sintetica, "1/3")
+    assert any("Quota diversa" in a and "1/3" in a and "1/1" in a for a in u.avvisi)
     demanio_diritto = next(d for d in u.diritti if d.tipo_diritto == TipoDiritto.PROPRIETARIO)
     assert demanio_diritto.azione == "invariato"
+
+
+def test_quota_equivalente_nessun_avviso(pg_session, sintetica):
+    u = _quota_demanio(pg_session, sintetica, "2/2")
+    assert not any("Quota diversa" in a for a in u.avvisi)
 
 
 # --- Task 5: apply_proposal -------------------------------------------------
@@ -258,8 +271,9 @@ def test_apply_creates_everything(pg_session, storage, sintetica, pdf_sintetica)
     luigi = pg_session.query(SoggettoAnagrafico).filter_by(codice_fiscale="ZNDLMT73E17F205F").one()
     assert (luigi.cognome, luigi.nome) == ("ZANDERIGHI", "Luigi Matteo Massimiliano")
     u592 = _find_unit(pg_session, "592", "2")
-    tipi = sorted(d.tipo_diritto.value for d in u592.diritti)
-    assert tipi == ["PROPRIETARIO", "USO"]
+    tipi = sorted(r["tipo"] for r in relazioni_del_bene(pg_session, TENANT, u592.id)["diritti_reali"])
+    assert tipi == ["proprieta", "uso"]
+    assert not pg_session.query(Proprietario).count()
 
 
 def test_reimport_is_noop(pg_session, storage, sintetica, pdf_sintetica):
@@ -603,3 +617,67 @@ def test_older_visura_changes_deselected(pg_session, storage, sintetica, pdf_sin
     rendita = next(m for m in u.modifiche if m.campo == "rendita_catastale")
     assert rendita.selezionato is False
     assert any("più recente" in a for a in u.avvisi)
+
+
+# --- Relations instead of Proprietario/DirittoImmobile ---------------------
+
+def _diritti(pg_session, unita_id):
+    return relazioni_del_bene(pg_session, TENANT, unita_id)["diritti_reali"]
+
+
+def test_reimport_non_duplica(pg_session, storage, sintetica, pdf_sintetica):
+    r1 = _apply(pg_session, build_proposal(pg_session, sintetica), pdf_sintetica)
+    u592 = _find_unit(pg_session, "592", "2")
+    prima = _diritti(pg_session, u592.id)
+    # Force the second import to try again every right.
+    proposta = build_proposal(pg_session, sintetica)
+    for u in proposta.unita:
+        for d in u.diritti:
+            d.azione = "crea"
+    r2 = apply_proposal(pg_session, proposta, pdf_sintetica, "visura.pdf", TENANT)
+    assert r1.diritti_creati == 18 and r2.diritti_creati == 0
+    assert len(_diritti(pg_session, u592.id)) == len(prima)
+    assert len([r for r in prima if r["tipo"] == "proprieta"]) == 1
+
+
+def test_comproprietario_diventa_proprieta(pg_session, storage, sintetica, pdf_sintetica):
+    proposta = build_proposal(pg_session, sintetica)
+    u = next(x for x in proposta.unita if x.diritti)
+    for altro in proposta.unita:
+        altro.selezionato = altro is u
+    d = next(x for x in u.diritti if x.tipo_diritto == TipoDiritto.PROPRIETARIO)
+    d.tipo_diritto, d.quota_numeratore, d.quota_denominatore = TipoDiritto.COMPROPRIETARIO, 1, 2
+    _apply(pg_session, proposta, pdf_sintetica)
+    unit = _find_unit(pg_session, u.particella, u.subalterno)
+    r = next(x for x in _diritti(pg_session, unit.id) if x["tipo"] == "proprieta")
+    assert (r["quota_numeratore"], r["quota_denominatore"]) == (1, 2)
+
+
+def test_quota_della_visura_come_frazione(pg_session):
+    from immobili.services.visura.text import parse_diritto
+    assert parse_diritto("Proprieta' per 1/3") == (TipoDiritto.COMPROPRIETARIO, (1, 3))
+    assert parse_diritto("Proprieta' per 2/4") == (TipoDiritto.COMPROPRIETARIO, (2, 4))
+    assert parse_diritto("Proprieta' 1/1") == (TipoDiritto.PROPRIETARIO, (1, 1))
+
+
+def test_quota_salvata_non_ridotta(pg_session, storage, sintetica, pdf_sintetica):
+    proposta = build_proposal(pg_session, sintetica)
+    u = next(x for x in proposta.unita if x.diritti)
+    d = u.diritti[0]
+    d.quota_numeratore, d.quota_denominatore = 2, 4
+    for altro in proposta.unita:
+        altro.selezionato = altro is u
+    _apply(pg_session, proposta, pdf_sintetica)
+    unit = _find_unit(pg_session, u.particella, u.subalterno)
+    r = next(x for x in _diritti(pg_session, unit.id))
+    assert (r["quota_numeratore"], r["quota_denominatore"]) == (2, 4)
+
+
+def test_reimport_quota_cambiata(pg_session, sintetica):
+    s, unit = _demanio(pg_session), _unita_592(pg_session)
+    crea_relazione_bene(pg_session, TENANT, None, unit.id, s.id, "proprieta", quota="1/2")
+    pg_session.flush()
+    u = _unita(build_proposal(pg_session, sintetica), "99", "592", "2")
+    assert any("Quota diversa" in a and "1/2" in a for a in u.avvisi)
+    assert len(_diritti(pg_session, unit.id)) == 1
+    assert _diritti(pg_session, unit.id)[0]["quota_denominatore"] == 2

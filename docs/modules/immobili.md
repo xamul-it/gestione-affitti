@@ -162,7 +162,14 @@ Spec: `2026-10-30-import-visure-catastali-design.md`.
   aggiungere o aggiornare (campo per campo), diritti da aggiungere.
 - Abbinamento: soggetto per codice fiscale (enti senza CF per ragione
   sociale); unità per comune + foglio + particella + subalterno (zeri
-  iniziali ignorati); diritto per unità + proprietario + tipo.
+  iniziali ignorati); diritto per unità + soggetto + tipo di relazione.
+- I diritti entrano come relazioni dei diritti reali (`core_relazioni`), non
+  più come proprietari: comproprietario e proprietario sono entrambi
+  `proprieta`, con la quota. La quota è quella scritta in visura come
+  frazione, non ridotta (2/4 resta 2/4). Alla riesecuzione dell'import una
+  relazione aperta dello stesso soggetto e tipo non viene ricreata; se la
+  quota differisce (confronto tra frazioni: 2/4 = 1/2) compare l'avviso
+  "Quota diversa" e nulla viene modificato.
 - Alla conferma tutto in una transazione; il PDF viene riletto lato server e
   allegato a ogni unità creata o aggiornata.
 - Le modifiche ai campi catastali (da visura o a mano) vanno nel registro
