@@ -128,8 +128,10 @@ def get_riepilogo(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Chi paga cosa: a chi spetta ciascuna voce alla data, senza importi."""
+    """Chi paga cosa: a chi spetta ciascuna voce alla data, senza importi.
+    Mostra i nomi delle anagrafiche: come le relazioni del bene serve anche soggetto.view."""
     bene = _bene_visibile(db, bene_id, current_user)
+    _bene_per_relazioni(db, bene_id, current_user)  # soggetto.view too, 403 otherwise
     return riepilogo_bene(db, bene, data or date.today())
 
 

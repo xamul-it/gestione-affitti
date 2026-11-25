@@ -69,19 +69,20 @@ def _bene_id(db: Session, codice: str) -> Optional[int]:
     return db.execute(text("SELECT id FROM immo_beni WHERE codice = :c"), {"c": codice}).scalar()
 
 
-def _collega(db: Session, principale: int, collegato: int, tipo: str) -> None:
+def _collega(db: Session, principale: int, collegato: int, tipo: str) -> int:
     if db.execute(text(
         "SELECT 1 FROM immo_beni_collegamenti WHERE bene_id = :p AND bene_collegato_id = :c AND tipo = :t"
     ), {"p": principale, "c": collegato, "t": tipo}).first():
-        return
+        return 0
     db.execute(text(
         "INSERT INTO immo_beni_collegamenti (bene_id, bene_collegato_id, tipo, data_inizio) "
         "VALUES (:p, :c, :t, '2020-01-01')"
     ), {"p": principale, "c": collegato, "t": tipo})
+    return 1
 
 
 def _relazione(db: Session, tenant_schema: Optional[str], bene_id: int, soggetto_id: int, tipo: str,
-               quota: Optional[str] = None, data_inizio: date = date(2020, 1, 1)) -> None:
+               quota: Optional[str] = None, data_inizio: date = date(2020, 1, 1)) -> int:
     """Example relation on a bene, skipped when the same one is already open."""
     from immobili.services.relazioni_bene import crea_relazione_bene
     esiste = db.execute(text(
@@ -90,8 +91,9 @@ def _relazione(db: Session, tenant_schema: Optional[str], bene_id: int, soggetto
         "AND t.codice = :t AND t.modulo_id = 'immobili' AND r.data_fine IS NULL"
     ), {"b": bene_id, "s": soggetto_id, "t": tipo}).first()
     if esiste:
-        return
+        return 0
     crea_relazione_bene(db, tenant_schema, None, bene_id, soggetto_id, tipo, quota=quota, data_inizio=data_inizio)
+    return 1
 
 
 def seed_beni_demo(db: Session, tenant_schema: Optional[str], soggetto_ids: list, unita_ids: list) -> dict:
@@ -99,26 +101,28 @@ def seed_beni_demo(db: Session, tenant_schema: Optional[str], soggetto_ids: list
 
     Needs the demo units (UNITA-*) and land parcels (TER-*) already created.
     """
+    relazioni = collegamenti = spese = 0
     box = _unita_demo(db, "BOX-001", "Box", "C/6", "Via Roma 1", "Milano")
     fabbricato = _unita_demo(db, "FAB-001", "Fabbricato rurale", "A/3", "Località Campi", "Milano")
-    _relazione(db, tenant_schema, box, soggetto_ids[0], "proprieta", "1/1")
-    _relazione(db, tenant_schema, fabbricato, soggetto_ids[2], "proprieta", "1/1")
-    _collega(db, unita_ids[0], box, "PERTINENZA")
+    relazioni += _relazione(db, tenant_schema, box, soggetto_ids[0], "proprieta", "1/1")
+    relazioni += _relazione(db, tenant_schema, fabbricato, soggetto_ids[2], "proprieta", "1/1")
+    collegamenti += _collega(db, unita_ids[0], box, "PERTINENZA")
     terreno, area = _bene_id(db, "TER-001"), _bene_id(db, "TER-002")
     if area:
-        _collega(db, area, fabbricato, "FABBRICATO_SU_PARTICELLA")
-    _relazione(db, tenant_schema, unita_ids[1], soggetto_ids[3], "conduttore", data_inizio=date(2025, 1, 1))
+        collegamenti += _collega(db, area, fabbricato, "FABBRICATO_SU_PARTICELLA")
+    relazioni += _relazione(db, tenant_schema, unita_ids[1], soggetto_ids[3], "conduttore", data_inizio=date(2025, 1, 1))
     if terreno:
         # Nudo proprietario + usufruttuario + tenant farming the land.
-        _relazione(db, tenant_schema, terreno, soggetto_ids[1], "nuda_proprieta", "1/1")
-        _relazione(db, tenant_schema, terreno, soggetto_ids[2], "usufrutto", "1/1")
-        _relazione(db, tenant_schema, terreno, soggetto_ids[3], "conduttore", data_inizio=date(2025, 1, 1))
+        relazioni += _relazione(db, tenant_schema, terreno, soggetto_ids[1], "nuda_proprieta", "1/1")
+        relazioni += _relazione(db, tenant_schema, terreno, soggetto_ids[2], "usufrutto", "1/1")
+        relazioni += _relazione(db, tenant_schema, terreno, soggetto_ids[3], "conduttore", data_inizio=date(2025, 1, 1))
     if not db.execute(text("SELECT 1 FROM immo_spese_ricorrenti WHERE bene_id = :b"), {"b": unita_ids[0]}).first():
         db.execute(text(
             "INSERT INTO immo_spese_ricorrenti (bene_id, tipo_spesa, responsabile, periodo, rata, importo, data_scadenza) "
             "VALUES (:b, 'IMU', 'PROPRIETARIO', '2026', 'ACCONTO', 420.50, '2026-06-16')"
         ), {"b": unita_ids[0]})
-    return {"immo_beni_collegamenti": 2, "core_relazioni": 5, "immo_spese_ricorrenti": 1}
+        spese = 1
+    return {"immo_beni_collegamenti": collegamenti, "core_relazioni": relazioni, "immo_spese_ricorrenti": spese}
 
 
 def seed_tenant_data(
