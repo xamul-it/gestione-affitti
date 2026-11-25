@@ -49,3 +49,31 @@ deve far fallire l'installazione, non essere ignorato.
 Vincoli: mai toccare `tenant_produzione`, `tenant_principale` e
 `tenant_qa_test`. Lo script rifiuta qualunque schema che non inizia per
 `tenant_test_`.
+
+## Stato al 2026-11-25
+
+Fatti i passi 1-5:
+- `tenant_prova.py` con `nuovo`, `evolutivo` e `stato`, più il controllo di
+  idempotenza dei dati di esempio;
+- dati di esempio di immobili (beni), affitti_lungo, affitti_brevi e
+  gestione_pec; i soggetti di esempio dell'anagrafica si creano una volta
+  sola;
+- `verifica.sh` esegue i tenant di prova;
+- documentazione aggiornata.
+
+Residui:
+- Tabelle ancora senza dati di esempio (16):
+  - piattaforma: `core_relazioni`, `core_scadenze`, `core_scadenza_log`,
+    `core_scadenza_destinatari`, `core_notifiche`;
+  - override di dominio: `anag_*_overrides`,
+    `immo_tipologie_terreno_overrides`;
+  - anagrafica: `anag_documenti`, `anag_documenti_files`,
+    `anag_ruoli_azienda`;
+  - immobili: `immo_variazioni_catastali`,
+    `immo_tipo_immobile_categoria_map`;
+  - esempio_componenti: `elementi_esempio`.
+- 9 differenze note tra migrazioni e modelli (`DIFFERENZE_NOTE`): enum del
+  modello salvati come testo, JSON/JSONB, timestamp. Da allineare con un
+  intervento a parte.
+- Le righe di prova aggiunte prima del marcatore "Dato di esempio" (15
+  soggetti in più) restano nel tenant evolutivo: non danno fastidio.

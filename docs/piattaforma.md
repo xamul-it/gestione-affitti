@@ -37,6 +37,27 @@ dominio l'API pubblica del modulo è il confine (spec
 - Richieste senza utente (richiamate dei servizi esterni) devono impostare da
   sé lo schema del tenant a cui appartiene il dato (es. la richiamata di
   lettura documenti usa il tenant del lavoro).
+- Fuori da `get_db()` (installazione dei moduli, script) il `search_path` non
+  viene riapplicato: dopo un `commit()` la connessione successiva può non
+  avere più lo schema del tenant. Un seed che fa commit e poi continua deve
+  reimpostarlo (`SET search_path TO "<tenant>", public`).
+- **Tenant di prova delle migrazioni** (solo sviluppo, dal 2026-11-25),
+  gestiti da `backend/scripts/tenant_prova.py`:
+  - `tenant_test_nuovo` si cancella e si ricrea a ogni esecuzione: migrazioni
+    core, tutti i moduli registrati con i loro dati di esempio
+    (`seed_test_data=True`), confronto dello schema con i modelli SQLAlchemy
+    (colonne, nullabilità, tipi, chiavi esterne, indici) e controllo che
+    rilanciare i dati di esempio non aggiunga righe;
+  - `tenant_test_evolutivo` non si azzera mai: riceve solo le migrazioni
+    nuove e i moduli nuovi, come la produzione. Si ferma se una tabella
+    sparisce o perde righe rispetto alla fotografia dell'esecuzione
+    precedente (`zz_prova_fotografia` nello schema), salvo
+    `--perdita-consentita "motivo"`. Poi riceve i dati di esempio aggiunti ai
+    moduli nel frattempo.
+
+  Lo script lavora solo su schema `tenant_test_*`. Le differenze tra
+  migrazioni e modelli che esistevano già il 2026-11-25 sono elencate in
+  `DIFFERENZE_NOTE` (segnalate, non bloccanti); una nuova rende ROSSO.
 
 ## 3. Moduli
 

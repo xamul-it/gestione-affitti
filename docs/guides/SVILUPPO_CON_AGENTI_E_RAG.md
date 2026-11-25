@@ -62,9 +62,17 @@ creati o modificati. C'è anche la skill `/rilascio` per un rilascio manuale.
 
 ## 4. Strumenti
 
-- **`scripts/verifica.sh [all|backend|frontend]`**: suite backend completa
-  (unitari + integrazione su PostgreSQL), vitest, build. È **ROSSO** anche se i
-  test lasciano righe nel DB di sviluppo o file in `backend/storage`. Al
+- **`scripts/verifica.sh [all|backend|frontend|migrazioni]`**: suite backend
+  completa (unitari + integrazione su PostgreSQL), tenant di prova delle
+  migrazioni, vitest, build. È **ROSSO** anche se i test lasciano righe nel DB
+  di sviluppo o file in `backend/storage`, se un tenant nuovo non si installa,
+  se lo schema prodotto dalle migrazioni non coincide con i modelli, o se il
+  tenant evolutivo perde righe.
+- **`backend/scripts/tenant_prova.py nuovo|evolutivo|stato`** (dal
+  2026-11-25): `tenant_test_nuovo` ricreato da zero con i dati di esempio di
+  tutti i moduli; `tenant_test_evolutivo` tenuto nel tempo, riceve solo le
+  migrazioni nuove e confronta i conteggi con l'esecuzione precedente.
+  Dettagli in `docs/piattaforma.md` §2. Al
   2026-11-09: 223 test backend (2 saltati), 33 frontend. Non ci sono
   fallimenti "noti" tollerati.
 - **`scripts/promote.sh`** (produzione):
@@ -135,6 +143,13 @@ dati.
 3. Scegliere il percorso (piccola, media o grande); per le grandi far
    approvare la spec.
 4. TDD: test che fallisce → codice → test verde.
+   - Una migrazione o una tabella nuova arriva con i **dati di esempio** del
+     modulo (`seed_tenant`/`install` con `seed_test_data=True`): idempotenti
+     (rilanciati non aggiungono nulla) e con almeno una riga nelle tabelle
+     nuove, così il tenant evolutivo prova la migrazione successiva su dati
+     veri. Se la migrazione trasforma dati, un test di integrazione controlla
+     la trasformazione; `tenant_prova.py evolutivo` controlla che non si
+     perda nulla.
 5. Aggiornare `docs/piattaforma.md` e/o `docs/modules/<modulo>.md` (crearlo se è
    il primo lavoro sul modulo) con requisiti e comportamento implementato.
 6. `revisione-ux` se c'è interfaccia; revisione per medie e grandi.

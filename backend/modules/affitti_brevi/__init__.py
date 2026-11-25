@@ -22,6 +22,7 @@ Architecture:
 from typing import Optional
 import logging
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from .__manifest__ import manifest
@@ -77,6 +78,13 @@ def install(
 
     try:
         result["seeds"]["canali"] = seed_canali(db)
+        if seed_test_data:
+            from .seeds.seed_esempi import seed_esempi
+            if tenant_schema:
+                # seed_canali commits: the next connection has lost the tenant path.
+                db.execute(text(f'SET search_path TO "{tenant_schema}", public'))
+            result["seeds"]["esempi"] = seed_esempi(db)
+            db.commit()
     except Exception as exc:
         logger.error("[AFFITTI_BREVI] install failed: %s", exc)
         result["status"] = "error"
