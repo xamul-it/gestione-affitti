@@ -16,6 +16,8 @@ import TerrenoForm from '../Terreni/TerrenoForm';
 import VariazioniCatastali from './VariazioniCatastali';
 import DatiUnita from './DatiUnita';
 import DatiTerreno from './DatiTerreno';
+import CollegamentiSection from './CollegamentiSection';
+import RiepilogoSection from './RiepilogoSection';
 import './BeneScheda.css';
 
 function Sezione({ id, title, children }) {
@@ -121,6 +123,13 @@ export default function BeneScheda() {
 
       <Sezione id="scheda-dati" title="Dati">
         <Dati bene={bene} />
+      </Sezione>
+
+      <Sezione id="scheda-collegamenti">
+        <CollegamentiSection beneId={beneId} bene={{ ...bene, tipo_bene: tipo }} />
+      </Sezione>
+      <Sezione id="scheda-riepilogo">
+        <RiepilogoSection key={versione} beneId={beneId} />
       </Sezione>
 
       <Sezione id="scheda-documenti">

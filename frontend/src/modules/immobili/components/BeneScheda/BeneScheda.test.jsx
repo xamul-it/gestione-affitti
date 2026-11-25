@@ -13,6 +13,8 @@ vi.mock('../../../../core/components/Documenti/DocumentiPanel', () => ({
   default: ({ entityType, entityId }) => <div>Pannello documenti {entityType} {entityId}</div>,
 }));
 vi.mock('./VariazioniCatastali', () => ({ default: ({ beneId }) => <div>Variazioni {beneId}</div> }));
+vi.mock('./CollegamentiSection', () => ({ default: ({ beneId, bene }) => <div>Collegamenti {beneId} {bene.tipo_bene}</div> }));
+vi.mock('./RiepilogoSection', () => ({ default: ({ beneId }) => <div>Riepilogo {beneId}</div> }));
 vi.mock('../DirittiImmobile/DirittiImmobileSection', () => ({ default: () => <div>Diritti</div> }));
 vi.mock('../Conduttori/AssegnazioneConduttoreSection', () => ({ default: () => <div>Conduttori</div> }));
 vi.mock('../SpeseRicorrenti/SpeseRicorrentiSection', () => ({ default: () => <div>Spese</div> }));
@@ -69,6 +71,8 @@ describe('BeneScheda', () => {
     expect(screen.getByText('€ 821,17')).toBeInTheDocument();
     expect(screen.getByText('Pannello documenti IMMOBILE 5')).toBeInTheDocument();
     expect(screen.getByText('Variazioni 5')).toBeInTheDocument();
+    expect(screen.getByText('Collegamenti 5 UNITA')).toBeInTheDocument();
+    expect(screen.getByText('Riepilogo 5')).toBeInTheDocument();
     expect(unitaImmobiliariAPI.getById).toHaveBeenCalledWith('5');
     expect(terreniAPI.getById).not.toHaveBeenCalled();
     expect(screen.getByRole('link', { name: /unità immobiliari/i })).toHaveAttribute('href', '/unita-immobiliari');

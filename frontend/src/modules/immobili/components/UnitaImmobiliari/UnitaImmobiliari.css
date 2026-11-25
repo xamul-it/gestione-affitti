@@ -106,3 +106,12 @@
   color: var(--color-brand);
   font-weight: 600;
 }
+
+.unita-pertinenza {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--gray-700);
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+}

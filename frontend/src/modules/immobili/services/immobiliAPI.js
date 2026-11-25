@@ -67,6 +67,13 @@ export const beniAPI = {
   getById: (id) => api.get(`/beni/${id}`),
   // Catastal changes log (from visure and manual edits), newest first.
   getVariazioni: (id) => api.get(`/beni/${id}/variazioni-catastali`),
+  // Links to other beni, both directions (pertinenze, building on a parcel, farm parcels).
+  getCollegamenti: (id, storico = false) => api.get(`/beni/${id}/collegamenti`, { params: { storico } }),
+  creaCollegamento: (id, dati) => api.post(`/beni/${id}/collegamenti`, dati),
+  aggiornaCollegamento: (id, cid, dati) => api.put(`/beni/${id}/collegamenti/${cid}`, dati),
+  eliminaCollegamento: (id, cid) => api.delete(`/beni/${id}/collegamenti/${cid}`),
+  // Who pays what at a date (YYYY-MM-DD, default today): who, never how much.
+  getRiepilogo: (id, data) => api.get(`/beni/${id}/riepilogo`, { params: data ? { data } : {} }),
 };
 
 // Proprietari API

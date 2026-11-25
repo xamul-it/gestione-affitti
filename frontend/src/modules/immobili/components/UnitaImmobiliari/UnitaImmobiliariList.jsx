@@ -14,6 +14,22 @@ const unitaTableConfig = {
   emptyMessage: 'Non ci sono unita immobiliari. Clicca su "Nuova Unita Immobiliare" per iniziare.',
   addButtonLabel: 'Nuova Unita Immobiliare',
   columns: [
+    {
+      // Open PERTINENZA links (dwelling with its box/cellar), icon only.
+      field: 'ruolo_pertinenza',
+      label: 'Pertinenze',
+      sortable: false,
+      render: (value) => {
+        if (!value) return null;
+        const testo = value === 'PERTINENZA' ? "Pertinenza di un'abitazione" : 'Ha pertinenze';
+        return (
+          <span className="unita-pertinenza" title={testo}>
+            {renderIcon('link', { size: 16 })}
+            <span>{value === 'PERTINENZA' ? 'È pertinenza' : 'Ne ha'}</span>
+          </span>
+        );
+      },
+    },
     { field: 'codice', label: 'Codice', sortable: true, filterable: true },
     { field: 'tipo', label: 'Tipo', sortable: true, filterable: true },
     {

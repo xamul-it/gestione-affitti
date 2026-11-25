@@ -193,3 +193,196 @@
 .scheda-porzioni th {
   font-weight: 600;
 }
+
+/* Beni collegati + Chi paga cosa (phase 2b) */
+.immobile-scheda .collegamenti__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.immobile-scheda .collegamenti__head .scheda-card__title {
+  margin-bottom: 0;
+}
+
+.immobile-scheda .collegamenti__head .ds-btn svg {
+  vertical-align: -3px;
+}
+
+.immobile-scheda .scheda-avvisi {
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-5);
+  border-left: 4px solid var(--color-warning);
+  background: var(--gray-100);
+  border-radius: var(--radius-md);
+}
+
+.immobile-scheda .collegamenti__gruppo {
+  margin-top: var(--space-3);
+}
+
+.immobile-scheda .collegamenti__etichetta {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.immobile-scheda .collegamenti__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.immobile-scheda .collegamenti__lista li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.immobile-scheda .collegamenti__lista li.is-chiuso .collegamenti__bene {
+  color: var(--gray-600);
+}
+
+.immobile-scheda .collegamenti__bene a {
+  color: var(--color-brand);
+  font-weight: 600;
+}
+
+.immobile-scheda .collegamenti__azioni,
+.immobile-scheda .collegamenti__chiusura {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.immobile-scheda .collegamenti__storico,
+.immobile-scheda .riepilogo__data {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  min-height: 44px;
+  font-size: var(--font-size-small);
+}
+
+.immobile-scheda .riepilogo__data {
+  margin-top: 0;
+}
+
+.collegamento-opzione {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+
+.collegamento-risultati {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+}
+
+.collegamento-risultati button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.collegamento-risultati button:hover,
+.collegamento-risultati button:focus-visible {
+  background: var(--gray-100);
+}
+
+.collegamento-risultati button.is-selected {
+  background: var(--gray-200);
+  font-weight: 600;
+}
+
+.collegamento-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.collegamento-form__campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.collegamento-form__campo legend,
+.collegamento-form__campo > label {
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.collegamento-form__campo input[type="search"],
+.collegamento-form__campo input[type="date"],
+.collegamento-form__campo textarea {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--gray-400);
+  border-radius: var(--radius-md);
+  font: inherit;
+  color: var(--color-ink);
+  background: var(--color-surface);
+}
+
+.collegamento-form__errore {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-danger-bg);
+  border-radius: var(--radius-md);
+}
+
+.collegamento-form__errore,
+.collegamento-form__errore-campo {
+  color: var(--color-danger-dark);
+  font-size: var(--font-size-small);
+  margin: 0;
+}
+
+.collegamento-form__azioni {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* The modal's global form styles stretch radios and whiten buttons. */
+.collegamento-form .collegamento-opzione input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  flex: none;
+  accent-color: var(--color-brand);
+}
+
+.collegamento-form .collegamento-risultati button {
+  color: var(--color-ink);
+  border-radius: 0;
+  box-shadow: none;
+}
