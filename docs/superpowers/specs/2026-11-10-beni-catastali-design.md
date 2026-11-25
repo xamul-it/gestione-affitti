@@ -162,8 +162,12 @@ Ogni relazione è una riga di `core_relazioni`:
   **`RAGGRUPPAMENTO`** (nuovo) + id del ramo;
 - `data_inizio`, `data_fine`, `note`, `dati`, scadenza se il tipo la
   prevede;
-- **quota** (nuova colonna `quota_percentuale`, Numeric 5,2, nullable): solo
-  per i tipi che la ammettono.
+- **quota** come **frazione**, come la scrive l'Agenzia delle Entrate nelle
+  visure ("Proprieta' per 1/2"): due colonne nuove `quota_numeratore` e
+  `quota_denominatore` (interi, nullable insieme, `0 < num <= den`), solo
+  per i tipi che la ammettono. Si salva come scritta, senza ridurla; somme e
+  confronti sono esatti (tre terzi fanno 1). La percentuale si ricava solo
+  dove un modello la chiede (decisione dell'utente del 2026-11-25).
 
 Il catalogo guadagna tre campi nei `relation_types` (sincronizzati in
 `core_ruoli_disponibili` come gli altri): `famiglia`, `ammette_quota`,
@@ -184,7 +188,7 @@ Il catalogo guadagna tre campi nei `relation_types` (sincronizzati in
   reale, quota e date, e il servizio crea la stessa relazione su ogni bene
   contenuto (anche nei sotto-rami). Prima mostra l'elenco dei beni e salta,
   segnalandoli, quelli dove il soggetto ha già quel diritto aperto o dove le
-  quote supererebbero 100. Le relazioni create sono normali relazioni dei
+  quote supererebbero l'intero. Le relazioni create sono normali relazioni dei
   beni: nessun legame col ramo resta dopo.
 - Il **titolo** del godimento è il tipo stesso (locazione, affitto agrario,
   comodato). Per il comodato scritto la relazione può portare in `dati` gli
@@ -209,8 +213,8 @@ Il catalogo guadagna tre campi nei `relation_types` (sincronizzati in
 
 - un tipo `solo_beni` su un ramo → errore;
 - quota ammessa solo se `ammette_quota`; per i diritti reali le quote
-  aperte dello stesso tipo sullo stesso bene non superano 100 (**avviso**,
-  come oggi);
+  aperte dello stesso tipo sullo stesso bene non superano l'intero
+  (**avviso**, come oggi);
 - duplicati: come le relazioni del core (stesso soggetto, tipo, oggetto
   aperti → errore).
 

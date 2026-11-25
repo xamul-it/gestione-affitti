@@ -4,7 +4,7 @@
 
 **Goal:** diritti reali, godimenti (conduttore, comodatario, affittuario agrario) e incarichi sui beni diventano relazioni CORE in `core_relazioni`, con tipi divisi in famiglie; spariscono `immo_proprietari`, `immo_conduttori`, `immo_diritti_immobile`, `immo_assegnazioni_conduttore`.
 
-**Architecture:** il catalogo `core_ruoli_disponibili` guadagna `famiglia`, `ammette_quota`, `solo_beni`; `core_relazioni` guadagna `quota_percentuale`. Immobili dichiara i nuovi tipi nel manifest e un suo servizio (`services/relazioni_bene.py`) applica le regole del bene sopra `RelazioneService`. Chi paga cosa e import visure leggono/scrivono relazioni. Una migrazione di modulo sposta i dati e toglie le tabelle vecchie. Il frontend sostituisce le due sezioni della scheda con una sezione "Soggetti".
+**Architecture:** il catalogo `core_ruoli_disponibili` guadagna `famiglia`, `ammette_quota`, `solo_beni`; `core_relazioni` guadagna la quota come frazione (`quota_numeratore`, `quota_denominatore`). Immobili dichiara i nuovi tipi nel manifest e un suo servizio (`services/relazioni_bene.py`) applica le regole del bene sopra `RelazioneService`. Chi paga cosa e import visure leggono/scrivono relazioni. Una migrazione di modulo sposta i dati e toglie le tabelle vecchie. Il frontend sostituisce le due sezioni della scheda con una sezione "Soggetti".
 
 **Tech Stack:** FastAPI, SQLAlchemy, Alembic multi-schema (core in `backend/alembic/versions`, moduli in `backend/modules/<m>/migrations`), PostgreSQL, React + Vite, Vitest, pytest.
 
@@ -19,7 +19,10 @@
   - `incarichi` (quota no): `manutentore`, `terzo_responsabile_impianto`, `responsabile_impianto`, `tecnico_incaricato`, `incarico_altro`.
 - Tutti `fonte: "CORE"`, `entity_types: ["IMMOBILE"]`, `permesso_oggetto: "immobile.view"`.
 - Mappa migrazione `tipo_diritto` → tipo: `PROPRIETARIO`, `COMPROPRIETARIO` → `proprieta`; `NUDA_PROPRIETA` → `nuda_proprieta`; `USUFRUTTUARIO` → `usufrutto`; `USO`, `ABITAZIONE`, `SUPERFICIE`, `ENFITEUSI` → omonimi minuscoli; `ALTRO` → `diritto_reale_altro`.
-- `quota_percentuale`: `NUMERIC(5,2)`, nullable, solo per tipi `ammette_quota`; somma delle quote aperte dei diritti reali di un bene > 100 → **avviso**, non errore.
+- **Quota come frazione, come la scrive l'Agenzia delle Entrate** ("Proprieta' per 1/2", "Usufrutto per 1/1"): due colonne `quota_numeratore INTEGER`, `quota_denominatore INTEGER`, entrambe nulle o entrambe valorizzate, `0 < numeratore <= denominatore` (CHECK a DB). La frazione si salva **come scritta, senza ridurla** (2/4 resta 2/4: è il dato dell'atto). Ammessa solo per tipi `ammette_quota`. La quota si riferisce al diritto (usufrutto per 1/2 = metà dell'usufrutto).
+  - Somme e confronti con `fractions.Fraction`, quindi senza arrotondamenti: tre quote da 1/3 fanno esattamente 1. Somma delle quote aperte dello stesso tipo su un bene > 1 → **avviso**, non errore.
+  - Testo a video e nelle API: `quota` = `"1/2"` (stringa derivata, sola lettura). In input l'API accetta `quota: "n/d"` oppure i due interi; il form ha un solo campo "Quota" (es. `1/2`), vuoto = non indicata.
+  - La percentuale serve solo dove un modello la chiede (es. il 730 usa la "quota di possesso in percentuale"): `Soggetto.quota` di `ruoli_bene` resta una percentuale `Decimal` derivata (nome stabile per il registro costi/ricavi), affiancata da `Soggetto.quota_frazione: Optional[str]`.
 - Comodato: estremi di registrazione in `dati` con chiavi `registrazione_data` (ISO), `registrazione_ufficio`, `registrazione_numero`.
 - Migrazione: si ferma ed elenca (nessuna scrittura) se trova due diritti aperti stesso soggetto+tipo+bene dopo la mappatura, o date diritti non `YYYY-MM-DD`; nessun azzeramento.
 - Documenti `entity_type = PROPRIETARIO` → `SOGGETTO_ANAGRAFICO` con `entity_id` = `immo_proprietari.soggetto_id`.
@@ -47,7 +50,7 @@
 Backend
 - `app/core/platform_services/relation_type_registry.py` — campi `famiglia`, `ammette_quota`, `solo_beni` nella definizione.
 - `app/core/platform_services/relation_type_sync.py`, `app/core/models/ruoli.py` — nuove colonne del catalogo.
-- `app/core/platform/models/relazione.py`, `app/core/platform_services/relazione_service.py`, `app/core/routes/relazioni.py`, `app/core/schemas/relazioni.py` — `quota_percentuale`, filtro `famiglia`.
+- `app/core/platform/models/relazione.py`, `app/core/platform_services/relazione_service.py`, `app/core/routes/relazioni.py`, `app/core/schemas/relazioni.py` — quota (numeratore/denominatore, `quota` testuale), filtro `famiglia`.
 - `app/core/platform/models/documento.py` — `EntityType.RELAZIONE`.
 - `alembic/versions/2026112501_relazioni_famiglie_quota.py` — colonne + `ALTER TYPE … ADD VALUE 'RELAZIONE'`.
 - `alembic/versions/2026112502_permessi_proprietario_conduttore.py` — ruoli utente: da `proprietario.*`/`conduttore.*` a `immobile.*`/`terreno.*` (Task 7).
@@ -73,18 +76,18 @@ Frontend (`frontend/src/modules/immobili/`)
 
 **Files:**
 - Modify: `backend/app/core/platform_services/relation_type_registry.py`, `relation_type_sync.py`, `backend/app/core/models/ruoli.py`, `backend/app/core/platform/models/relazione.py`, `backend/app/core/platform_services/relazione_service.py`, `backend/app/core/routes/relazioni.py`, `backend/app/core/schemas/relazioni.py`, `backend/app/core/platform/models/documento.py`
-- Create: `backend/alembic/versions/2026112501_relazioni_famiglie_quota.py` (public: colonne `famiglia VARCHAR(30)`, `ammette_quota BOOLEAN NOT NULL DEFAULT false`, `solo_beni BOOLEAN NOT NULL DEFAULT false` su `core_ruoli_disponibili`; `ALTER TYPE public.entitytype ADD VALUE IF NOT EXISTS 'RELAZIONE'` — verificare il nome del tipo con `\dT public.*`; tenant: `quota_percentuale NUMERIC(5,2)` su `core_relazioni`). `target_schema = "both"`, idempotente (`IF NOT EXISTS`).
+- Create: `backend/alembic/versions/2026112501_relazioni_famiglie_quota.py` (public: colonne `famiglia VARCHAR(30)`, `ammette_quota BOOLEAN NOT NULL DEFAULT false`, `solo_beni BOOLEAN NOT NULL DEFAULT false` su `core_ruoli_disponibili`; `ALTER TYPE public.entitytype ADD VALUE IF NOT EXISTS 'RELAZIONE'` — verificare il nome del tipo con `\dT public.*`; tenant: `quota_numeratore INTEGER`, `quota_denominatore INTEGER` su `core_relazioni` con `CHECK ((quota_numeratore IS NULL) = (quota_denominatore IS NULL) AND (quota_numeratore IS NULL OR (quota_numeratore > 0 AND quota_numeratore <= quota_denominatore)))`). `target_schema = "both"`, idempotente (`IF NOT EXISTS`).
 - Test: `backend/tests/unit/test_core/test_relation_type_registry.py`, `backend/tests/integration/test_core/test_relazione_service.py` (estendere gli esistenti o crearli accanto)
 
 **Interfaces:**
-- Produces: `RelationTypeDefinition(famiglia: Optional[str], ammette_quota: bool = False, solo_beni: bool = False)`; `RuoloDisponibile.famiglia/ammette_quota/solo_beni`; `Relazione.quota_percentuale: Optional[Decimal]`; `RelazioneService.crea(..., quota_percentuale: Optional[Decimal] = None)`; `aggiorna` accetta `quota_percentuale`; `GET /relazioni/?famiglia=…` e `GET /relazioni/tipi?famiglia=…`; risposte con `quota_percentuale`, `famiglia`; `EntityType.RELAZIONE`.
+- Produces: `RelationTypeDefinition(famiglia: Optional[str], ammette_quota: bool = False, solo_beni: bool = False)`; `RuoloDisponibile.famiglia/ammette_quota/solo_beni`; `Relazione.quota_numeratore/quota_denominatore: Optional[int]` e proprietà `Relazione.quota_frazione -> Optional[Fraction]`; helper `parse_quota("1/2") -> tuple[int, int]` in `app/core/platform_services/quote.py` (accetta anche `"1 / 2"`, rifiuta `"0/3"`, `"3/2"`, `"50%"`, testo); `RelazioneService.crea(..., quota: Optional[tuple[int, int]] = None)`; `aggiorna` accetta `quota`; `GET /relazioni/?famiglia=…` e `GET /relazioni/tipi?famiglia=…`; risposte con `quota_numeratore`, `quota_denominatore`, `quota` (`"1/2"`), `famiglia`; `EntityType.RELAZIONE`.
 
 - [ ] **Step 1: test che falliscono**
   - `test_definizione_famiglia_e_quota`: `RelationTypeDefinition(codice="x", nome="X", modulo="m", famiglia="godimento", ammette_quota=True).ammette_quota is True`; `famiglia` non stringa → `ValueError`.
   - `test_sync_scrive_famiglia`: dopo `sync_relation_types` un tipo dichiarato con `famiglia="diritti_reali", ammette_quota=True, solo_beni=True` ha le tre colonne valorizzate.
-  - `test_crea_con_quota`: tipo con `ammette_quota` → `rel.quota_percentuale == Decimal("50.00")`.
-  - `test_quota_rifiutata_se_non_ammessa`: tipo senza `ammette_quota` e `quota_percentuale=50` → `ValueError("Il tipo '…' non ammette una quota")`; via API → 400.
-  - `test_quota_fuori_intervallo`: `0` o `100.01` → `ValueError`.
+  - `test_crea_con_quota`: tipo con `ammette_quota` e `quota="2/4"` → `(2, 4)` salvati così, risposta `quota == "2/4"`.
+  - `test_quota_rifiutata_se_non_ammessa`: tipo senza `ammette_quota` e `quota="1/2"` → `ValueError("Il tipo '…' non ammette una quota")`; via API → 400.
+  - `test_parse_quota`: `"1/3"` → `(1, 3)`; `"0/3"`, `"4/3"`, `"1/0"`, `"50%"`, `"metà"` → `ValueError`; a DB il CHECK rifiuta un numeratore senza denominatore.
   - `test_list_filtra_per_famiglia`: due relazioni di famiglie diverse, `GET /relazioni/?famiglia=godimento` ne restituisce una.
 - [ ] **Step 2:** `pytest tests/unit/test_core/test_relation_type_registry.py tests/integration/test_core/test_relazione_service.py -v` → FAIL.
 - [ ] **Step 3:** implementare; la quota va in `_CAMPI_MODIFICABILI`; il filtro `famiglia` sulle relazioni MODULO si applica sul tipo del catalogo come gli altri filtri di `relazioni_query`.
@@ -118,15 +121,16 @@ Frontend (`frontend/src/modules/immobili/`)
 - Consumes: Task 1.
 - Produces:
   - `FAMIGLIE = ("diritti_reali", "godimento", "incarichi")` in `relazioni_bene.py`;
-  - `crea_relazione_bene(db, tenant_schema, user_id, bene_id: int, soggetto_id: int, tipo: str, *, quota_percentuale=None, data_inizio=None, data_fine=None, note=None, dati=None) -> tuple[Relazione, list[str]]` (relazione + avvisi);
-  - `relazioni_del_bene(db, tenant_schema, bene_id: int, solo_correnti: bool = False) -> dict[str, list[dict]]` (chiave = famiglia; ogni riga: `id, tipo, tipo_nome, soggetto_id, soggetto_nome, quota_percentuale, data_inizio, data_fine, note, dati`);
-  - `somma_quote_aperte(db, bene_id: int, tipo: str) -> Decimal`;
-  - `GET /api/v1/beni/{id}/relazioni?solo_correnti=` → `{"diritti_reali": [...], "godimento": [...], "incarichi": [...]}`; `POST /api/v1/beni/{id}/relazioni` body `{soggetto_id, tipo, quota_percentuale?, data_inizio?, data_fine?, note?, dati?}` → `{"relazione": {...}, "avvisi": [...]}`. Modifica/chiusura/eliminazione restano su `/relazioni/{id}`.
+  - `crea_relazione_bene(db, tenant_schema, user_id, bene_id: int, soggetto_id: int, tipo: str, *, quota=None, data_inizio=None, data_fine=None, note=None, dati=None) -> tuple[Relazione, list[str]]` (relazione + avvisi);
+  - `relazioni_del_bene(db, tenant_schema, bene_id: int, solo_correnti: bool = False) -> dict[str, list[dict]]` (chiave = famiglia; ogni riga: `id, tipo, tipo_nome, soggetto_id, soggetto_nome, quota_numeratore, quota_denominatore, quota, data_inizio, data_fine, note, dati`);
+  - `somma_quote_aperte(db, bene_id: int, tipo: str) -> Fraction`;
+  - `GET /api/v1/beni/{id}/relazioni?solo_correnti=` → `{"diritti_reali": [...], "godimento": [...], "incarichi": [...]}`; `POST /api/v1/beni/{id}/relazioni` body `{soggetto_id, tipo, quota?, data_inizio?, data_fine?, note?, dati?}` → `{"relazione": {...}, "avvisi": [...]}`. Modifica/chiusura/eliminazione restano su `/relazioni/{id}`.
 
 - [ ] **Step 1:** test
   - `test_manifest_dichiara_famiglie`: ogni tipo di immobili ha `famiglia` in `FAMIGLIE`; i diritti reali hanno `ammette_quota` e `solo_beni`.
-  - `test_crea_diritto_con_quota`: `proprieta` 50 → relazione con quota, avvisi `[]`.
-  - `test_avviso_quote_oltre_cento`: due `proprieta` 60 + 50 di soggetti diversi → seconda creata, avvisi = `["Le quote di Proprietà sul bene superano il 100% (110%)"]`.
+  - `test_crea_diritto_con_quota`: `proprieta` `"1/2"` → relazione con quota, avvisi `[]`.
+  - `test_tre_terzi_senza_avviso`: tre `proprieta` da `"1/3"` di soggetti diversi → nessun avviso (somma esatta = 1).
+  - `test_avviso_quote_oltre_intero`: `proprieta` `"2/3"` + `"1/2"` di soggetti diversi → seconda creata, avvisi = `["Le quote di Proprietà sul bene superano l'intero (7/6)"]`.
   - `test_tipo_di_altro_modulo_rifiutato`: `tipo="amministratore_condominio"` → 400.
   - `test_comodatario_con_registrazione`: `dati={"registrazione_data": "2026-01-10", "registrazione_ufficio": "TNX", "registrazione_numero": "123"}` salvati; `registrazione_data` non ISO → 400.
   - `test_relazioni_raggruppate_per_famiglia`.
@@ -149,12 +153,12 @@ Frontend (`frontend/src/modules/immobili/`)
 
 **Interfaces:**
 - Consumes: Task 3 (relazioni nel DB).
-- Produces (nomi stabili): `ruoli_da_righe(relazioni: Iterable[RigaRelazione], d: date) -> RuoliBene`, dove `RigaRelazione` è un dataclass `(soggetto_id: int, nome: str, tipo: str, quota: Optional[Decimal], data_inizio: Optional[date], data_fine: Optional[date])`; `ruoli_alla_data(db, bene_id, d) -> RuoliBene` invariata come firma; `Soggetto.ruolo` = codice del tipo (`"proprieta"`, `"usufrutto"`, `"conduttore"`, `"comodatario"`…). `RuoliBene.conduttori` = tutti i godimenti personali aperti (conduttore, affittuario_agrario, comodatario, godimento_altro).
+- Produces (nomi stabili): `ruoli_da_righe(relazioni: Iterable[RigaRelazione], d: date) -> RuoliBene`, dove `RigaRelazione` è un dataclass `(soggetto_id: int, nome: str, tipo: str, quota: Optional[Fraction], data_inizio: Optional[date], data_fine: Optional[date])`; `ruoli_alla_data(db, bene_id, d) -> RuoliBene` invariata come firma; `Soggetto.ruolo` = codice del tipo (`"proprieta"`, `"usufrutto"`, `"conduttore"`, `"comodatario"`…). `RuoliBene.conduttori` = tutti i godimenti personali aperti (conduttore, affittuario_agrario, comodatario, godimento_altro).
 - Costanti: `GODIMENTO = ("usufrutto", "uso", "abitazione", "enfiteusi", "superficie")`, `PIENA_PROPRIETA = ("proprieta",)`, `PROPRIETA = ("nuda_proprieta", "proprieta")`, `STRAORDINARIE_AI_PROPRIETARI = ("usufrutto", "uso", "abitazione")`, `GODIMENTO_PERSONALE = ("conduttore", "affittuario_agrario", "comodatario", "godimento_altro")`.
 
 - [ ] **Step 1:** riscrivere i test esistenti sui nuovi codici mantenendo gli stessi casi e attese; aggiungere `test_comodatario_paga_ordinarie` (bene con `proprieta` 100 + `comodatario`: spese ordinarie → comodatario, IMU → proprietario) e `test_incarichi_ignorati` (un `manutentore` non compare in nessuna voce); `diritto_reale_altro` produce l'avviso "ripartizione da decidere a mano" come `ALTRO` oggi.
 - [ ] **Step 2:** eseguire → FAIL.
-- [ ] **Step 3:** implementare leggendo `core_relazioni` (join `core_ruoli_disponibili` per codice e famiglia, `anag_soggetti_anagrafici` per il nome); `_quote_distinte` invariata nella logica.
+- [ ] **Step 3:** implementare leggendo `core_relazioni` (join `core_ruoli_disponibili` per codice e famiglia, `anag_soggetti_anagrafici` per il nome); `_quote_distinte` invariata nella logica ma sulle frazioni; `Soggetto.quota` = percentuale derivata (`Decimal`, 2 decimali, solo per la presentazione e per chi la chiede), `Soggetto.quota_frazione` = `"1/3"`.
 - [ ] **Step 4:** eseguire → PASS, compreso `test_riepilogo_api.py`.
 - [ ] **Step 5:** commit `refactor(immobili): who pays what reads relations`.
 
@@ -168,7 +172,7 @@ Frontend (`frontend/src/modules/immobili/`)
 - Consumes: `crea_relazione_bene` (Task 3); `MAPPA_TIPO_DIRITTO: dict[str, str]` da definire in `relazioni_bene.py` con la mappa della Global Constraints (la usa anche la migrazione, Task 6, che però la copia: le migrazioni non importano codice applicativo).
 - Produces: l'import crea relazioni dei diritti reali; `result.diritti_creati` conta le relazioni create.
 
-- [ ] **Step 1:** adattare i test esistenti; aggiungere `test_reimport_non_duplica` (Review Focus 1): importare due volte la stessa visura → una sola `proprieta` per soggetto e bene, secondo import `diritti_creati == 0`; `test_comproprietario_diventa_proprieta` (visura con `COMPROPRIETARIO` → tipo `proprieta` con la quota).
+- [ ] **Step 1:** adattare i test esistenti; aggiungere `test_reimport_non_duplica` (Review Focus 1): importare due volte la stessa visura → una sola `proprieta` per soggetto e bene, secondo import `diritti_creati == 0`; `test_comproprietario_diventa_proprieta` (visura con `COMPROPRIETARIO` → tipo `proprieta` con la quota); `test_quota_della_visura_come_frazione` ("Proprieta' per 1/3" → `(1, 3)`, "per 2/4" → `(2, 4)` non ridotta); `test_reimport_quota_cambiata` (stessa visura con 1/2 al posto di 1/3 → avviso "Quota diversa" con le frazioni, nessuna modifica automatica; 2/4 contro 1/2 = stesso valore → nessun avviso). `parse_diritto` in `services/visura/text.py` restituisce `(numeratore, denominatore)` invece della percentuale; il confronto con la quota esistente (oggi in `visura_import_service.py:326`) è tra `Fraction`.
 - [ ] **Step 2:** eseguire → FAIL.
 - [ ] **Step 3:** implementare; nessuna creazione di `Proprietario`.
 - [ ] **Step 4:** eseguire → PASS, insieme a `pytest -m parsing`.
@@ -181,11 +185,12 @@ Frontend (`frontend/src/modules/immobili/`)
 - Test: `backend/tests/integration/test_modules/test_immobili/test_migrazione_relazione_unica.py` (stesso schema di `test_migrazione_terreni.py`: schema temporaneo `tenant_pytest_relazioni` col vecchio layout, `converti(conn)` dentro la transazione annullata)
 
 **Interfaces:**
-- Consumes: colonne del Task 1 già presenti (la migrazione di modulo gira dopo `alembic -x schema=all upgrade head` del core; se `core_relazioni.quota_percentuale` manca, `RuntimeError` con messaggio chiaro); tipi del Task 3 già sincronizzati in `core_ruoli_disponibili` (se un codice manca, `RuntimeError` che dice di eseguire `scripts/sync_modules.py`).
+- Consumes: colonne del Task 1 già presenti (la migrazione di modulo gira dopo `alembic -x schema=all upgrade head` del core; se `core_relazioni.quota_numeratore` manca, `RuntimeError` con messaggio chiaro); tipi del Task 3 già sincronizzati in `core_ruoli_disponibili` (se un codice manca, `RuntimeError` che dice di eseguire `scripts/sync_modules.py`).
 - Produces: `converti(conn) -> dict` con i conteggi `{"diritti": n, "assegnazioni": n, "documenti_proprietario": n, "proprietari_senza_diritti": n, "conduttori_senza_assegnazioni": n}`; `upgrade()` chiama `converti` e poi elimina le quattro tabelle; `downgrade()` → `NotImplementedError` (si torna dal backup).
 
 - [ ] **Step 1:** test
-  - `test_diritti_diventano_relazioni`: 3 diritti (PROPRIETARIO 50, COMPROPRIETARIO 50 di un altro soggetto, USUFRUTTUARIO) → 3 relazioni con tipi, quote, date (`'2020-01-01'` → `date(2020,1,1)`), note.
+  - `test_diritti_diventano_relazioni`: 3 diritti (PROPRIETARIO 50, COMPROPRIETARIO 50 di un altro soggetto, USUFRUTTUARIO) → 3 relazioni con tipi, quote (come frazioni), date (`'2020-01-01'` → `date(2020,1,1)`), note.
+  - `test_quota_percentuale_in_frazione`: le vecchie percentuali diventano frazioni: `50.00` → `1/2`, `33.33` → `1/3`, `66.67` → `2/3`, `100` → `1/1`, `12.5` → `1/8`; regola: `Fraction(p/100).limit_denominator(24)` se riporta esattamente a `p` arrotondata a 2 decimali (denominatore massimo 24 per non inventare frazioni come 16/43), altrimenti `p*100/10000` (es. `37.21` → `3721/10000`) e la riga finisce nel log come "quota da ricontrollare".
   - `test_assegnazioni_diventano_conduttore`.
   - `test_note_ruolo_in_dati`: `note_proprietario` → `dati["note_ruolo"]` di ogni relazione di quel soggetto.
   - `test_documenti_proprietario_al_soggetto`.
@@ -234,9 +239,9 @@ Frontend (`frontend/src/modules/immobili/`)
 - Produces: `beniAPI.getRelazioni(beneId, { soloCorrenti })`, `beniAPI.createRelazione(beneId, data)`.
 
 Comportamento della sezione (decisioni del piano):
-- tre blocchi nell'ordine "Diritti reali", "Godimento", "Incarichi"; ogni riga: anagrafica (link `/anagrafiche/:id`), tipo, quota (solo diritti reali, `50%`), periodo, azioni Modifica / Chiudi (data di fine) / Elimina con conferma, e "Documenti" che apre `DocumentiPanel` della relazione;
+- tre blocchi nell'ordine "Diritti reali", "Godimento", "Incarichi"; ogni riga: anagrafica (link `/anagrafiche/:id`), tipo, quota (solo diritti reali, come frazione: `1/2`), periodo, azioni Modifica / Chiudi (data di fine) / Elimina con conferma, e "Documenti" che apre `DocumentiPanel` della relazione;
 - interruttore "Mostra chiuse" (default spento: `solo_correnti`);
-- "Aggiungi" per blocco apre `RelazioneBeneForm` con i tipi di quella famiglia; campo quota solo se `ammette_quota`; per `comodatario` i tre campi di registrazione; gli `avvisi` della risposta come toast di avviso;
+- "Aggiungi" per blocco apre `RelazioneBeneForm` con i tipi di quella famiglia; campo quota (testo `n/d`, validato come `parse_quota`) solo se `ammette_quota`; per `comodatario` i tre campi di registrazione; gli `avvisi` della risposta come toast di avviso;
 - `SoggettoPicker` esistente per l'anagrafica; componenti `Button`, `ConfirmDialog`, `EmptyState` del design system.
 
 - [ ] **Step 1:** test Vitest in `SoggettiSection.test.jsx`: rende i tre blocchi dai dati mock; quota visibile solo nei diritti reali; il form di `conduttore` non mostra la quota, quello di `comodatario` mostra i campi di registrazione; un avviso della risposta appare come toast; "Mostra chiuse" ricarica con `soloCorrenti=false`.
