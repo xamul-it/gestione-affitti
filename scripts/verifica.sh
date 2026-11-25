@@ -1,12 +1,14 @@
 #!/bin/bash
 # Verifica dell'ambiente di sviluppo prima di un rilascio: suite backend
 # completa (unitari + integrazione su PostgreSQL), test e build del frontend,
-# e controllo che i test non lascino righe nel DB di sviluppo.
+# controllo che i test non lascino righe nel DB di sviluppo, e i tenant di
+# prova delle migrazioni (backend/scripts/tenant_prova.py): tenant_test_nuovo
+# ricreato da zero, tenant_test_evolutivo aggiornato senza perdere righe.
 #
 # La regola e' semplice: tutto deve passare e il DB deve restare identico.
 # Non ci sono fallimenti "noti" da ignorare.
 #
-# Uso: scripts/verifica.sh [all|backend|frontend]   (default: all)
+# Uso: scripts/verifica.sh [all|backend|frontend|migrazioni]   (default: all)
 # Exit 0 = VERDE, 1 = ROSSO. I log completi restano nella cartella stampata.
 
 set -uo pipefail
@@ -16,8 +18,8 @@ SCOPE="${1:-all}"
 LOG_DIR="$(mktemp -d -t verifica-XXXXXX)"
 ROSSO=0
 
-case "$SCOPE" in all|backend|frontend) ;; *)
-    echo "Uso: $0 [all|backend|frontend]" >&2; exit 2 ;;
+case "$SCOPE" in all|backend|frontend|migrazioni) ;; *)
+    echo "Uso: $0 [all|backend|frontend|migrazioni]" >&2; exit 2 ;;
 esac
 
 db_snapshot() {
@@ -26,7 +28,7 @@ db_snapshot() {
     psql "$url" -X -q -At -v ON_ERROR_STOP=1 -f "$REPO/scripts/sql/db_snapshot.sql" 2>/dev/null
 }
 
-if [ "$SCOPE" != frontend ]; then
+if [ "$SCOPE" = all ] || [ "$SCOPE" = backend ]; then
     echo "==> Backend (pytest tests/)"
     db_snapshot > "$LOG_DIR/db_before.txt"
     touch "$LOG_DIR/storage_marker"
@@ -56,7 +58,22 @@ if [ "$SCOPE" != frontend ]; then
     fi
 fi
 
-if [ "$SCOPE" != backend ]; then
+if [ "$SCOPE" != frontend ]; then
+    # After the "DB invariato" check: these two tenants change on purpose.
+    for comando in nuovo evolutivo; do
+        echo "==> Tenant di prova: $comando"
+        (cd "$REPO/backend" && venv/bin/python scripts/tenant_prova.py "$comando") > "$LOG_DIR/tenant_$comando.log" 2>&1
+        rc=$?
+        grep -E '^  (DIFFERENZA|PERDITA|ERRORE|nessuna|schema =|tabella nuova|alembic_version|[0-9]+ differenze note|non esiste)' \
+            "$LOG_DIR/tenant_$comando.log" | sed 's/^  /    /'
+        if [ $rc -ne 0 ]; then
+            ROSSO=1
+            echo "    tenant di prova $comando: ROSSO (log $LOG_DIR/tenant_$comando.log)"
+        fi
+    done
+fi
+
+if [ "$SCOPE" = all ] || [ "$SCOPE" = frontend ]; then
     echo "==> Frontend (vitest)"
     (cd "$REPO/frontend" && npx vitest run) > "$LOG_DIR/frontend.log" 2>&1
     rc=$?
