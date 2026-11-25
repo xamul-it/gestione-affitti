@@ -100,7 +100,10 @@ immo_movimenti_quote
 - **Ripartizione**: alla creazione, e quando cambiano i ruoli finché la voce
   non è pagata, le quote si calcolano dai ruoli alla data di competenza:
   quote dei diritti, usufrutto/nuda proprietà, conduttore in corso (come la
-  tabella "Titolari, usufrutto e conduttore" della spec dei beni). Una quota
+  tabella "Titolari, usufrutto e conduttore" della spec dei beni, già
+  implementata da `immobili.services.ruoli_bene.ruoli_alla_data(db, bene_id,
+  data)`, che dà titolari del godimento, proprietari e conduttori con le
+  quote). Una quota
   corretta a mano (`manuale`) non si ricalcola.
 - **Riaddebito**: una quota di un soggetto diverso da chi ha anticipato nasce
   `DA_CHIEDERE`; si porta a `CHIESTO` e `RECUPERATO` a mano o dal modulo

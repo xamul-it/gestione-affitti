@@ -259,7 +259,7 @@ Ogni fase si rilascia da sola.
      layout diventano beni con una porzione; superficie sempre in m²).
      `/beni` mostra le unità con `immobile.view` e i terreni con
      `terreno.view`.
-   - **2b**: **collegamenti tra beni** (pertinenze, fabbricato su
+   - **2b (fatta il 2026-11-25)**: **collegamenti tra beni** (pertinenze, fabbricato su
      particella, parte di fondo) e riepilogo "chi paga cosa" (anche per le
      unità).
    - Il **selettore unico dei beni** passa alla fase 3, dove ha i primi
