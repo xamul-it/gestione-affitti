@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { unitaImmobiliariAPI, condominAPI, proprietariAPI } from '../services/api';
+import { unitaImmobiliariAPI, condominAPI } from '../services/api';
+import { relazioniAPI } from '../services/relazioniAPI';
 import './ImmobiliHome.css';
 
 function ImmobiliHome() {
@@ -22,13 +23,15 @@ function ImmobiliHome() {
       const [unita, condomini, proprietari] = await Promise.all([
         unitaImmobiliariAPI.getAll(),
         condominAPI.getAll(),
-        proprietariAPI.getAll(),
+        // Holders of current rights in rem (needs soggetto.view: without it the count is 0).
+        relazioniAPI.list({ famiglia: 'diritti_reali', entity_type: 'IMMOBILE', solo_correnti: true })
+          .catch(() => ({ data: [] })),
       ]);
 
       setStats({
         unitaImmobiliari: unita.data.length,
         condomini: condomini.data.length,
-        proprietari: proprietari.data.length,
+        proprietari: new Set(proprietari.data.map((r) => r.soggetto_id)).size,
       });
 
       // Get 5 most recent properties
@@ -80,7 +83,7 @@ function ImmobiliHome() {
           <div className="stat-icon">👤</div>
           <div className="stat-content">
             <div className="stat-value">{stats.proprietari}</div>
-            <div className="stat-label">Proprietari</div>
+            <div className="stat-label">Titolari di diritti</div>
           </div>
         </Link>
       </div>
@@ -99,7 +102,7 @@ function ImmobiliHome() {
           </Link>
           <Link to="/proprietari" className="action-card">
             <span className="action-icon">👤</span>
-            <span>Nuovo Proprietario</span>
+            <span>Titolari di diritti</span>
           </Link>
         </div>
       </div>
@@ -169,8 +172,8 @@ function ImmobiliHome() {
 
           <Link to="/proprietari" className="module-card">
             <div className="module-icon">👤</div>
-            <h3>Proprietari</h3>
-            <p>Anagrafica proprietari e diritti immobiliari</p>
+            <h3>Titolari di diritti</h3>
+            <p>Proprietari, usufruttuari e altri titolari di diritti reali</p>
             <div className="module-count">{stats.proprietari} registrati</div>
           </Link>
         </div>

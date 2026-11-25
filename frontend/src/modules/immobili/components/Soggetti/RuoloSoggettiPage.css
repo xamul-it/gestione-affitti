@@ -10,3 +10,27 @@
 .ruolo-oggetti--cessato {
   color: var(--gray-600);
 }
+
+.ruolo-page {
+  padding: var(--space-4);
+}
+
+.ruolo-page__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.ruolo-page__head h2 {
+  margin: 0;
+}
+
+.ruolo-page__cessate {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}

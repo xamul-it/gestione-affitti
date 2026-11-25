@@ -1,142 +1,93 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { OggettoRelazione } from '../../../../core/components/Relazioni/RelazioniSection';
-import SoggettiTable, { nomeSoggetto } from '../../../anagrafica_italiana/components/SoggettiAnagrafici/SoggettiTable';
-import { ConfirmDialog } from '../../../../core/components/common';
-import { useToast } from '../../../../core/hooks';
+import '../../../../core/components/Relazioni/RelazioniSection.css';
+import { nomeSoggetto } from '../../../anagrafica_italiana/components/SoggettiAnagrafici/SoggettiTable';
+import { getSoggettiAnagrafici } from '../../../anagrafica_italiana/services/anagraficaAPI';
+import { EmptyState, ErrorMessage, LoadingSpinner } from '../../../../core/components/common';
+import { formatDate } from '../../../../core/utils/formatters';
 import { relazioniAPI } from '../../../../services/relazioniAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
-import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import './RuoloSoggettiPage.css';
 
-const MAX_OGGETTI = 3;
+const data = (iso) => (iso ? formatDate(iso) : '—');
+
+function periodo(r) {
+  if (!r.data_inizio && !r.data_fine) return '—';
+  if (!r.data_fine) return `dal ${data(r.data_inizio)}`;
+  if (!r.data_inizio) return `fino al ${data(r.data_fine)}`;
+  return `${data(r.data_inizio)} – ${data(r.data_fine)}`;
+}
 
 /**
- * The anagrafiche of one module role (proprietario, conduttore): the shared
- * SoggettiTable prefiltered on the role, plus the objects of each relation,
- * the notes of the module record, and actions on that record only (the
- * anagrafica itself is never deleted from here).
+ * The relations of one family (diritti_reali, godimento…) over the beni, one
+ * row per relation, newest first. Relations are added from the page of the
+ * bene; here they are read, with the anagrafica and the bene linked.
  */
-function RuoloSoggettiPage({
-  ruolo, title, colonnaOggetti, recordsAPI, noteField, FormComponent, formProp,
-  testi, addButtonLabel,
-}) {
-  const navigate = useNavigate();
-  const toast = useToast();
-  const [records, setRecords] = useState({});
-  const [oggetti, setOggetti] = useState({});
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [form, setForm] = useState(null);
-  const [daTogliere, setDaTogliere] = useState(null);
-  const [togliendo, setTogliendo] = useState(false);
+function RuoloSoggettiPage({ famiglia, title, colonnaTipo, conQuota = false, vuoto }) {
+  const [righe, setRighe] = useState(null);
+  const [nomi, setNomi] = useState({});
+  const [error, setError] = useState(null);
+  const [cessate, setCessate] = useState(false);
 
-  const carica = useCallback(async () => {
-    const avvisa = (testo) => () => {
-      toast.error(testo);
-      return { data: [] };
-    };
-    const [rec, rel] = await Promise.all([
-      recordsAPI.getAll().catch(avvisa('Impossibile caricare le note: riprova più tardi')),
-      relazioniAPI.list({ tipo: ruolo }).catch(avvisa(`Impossibile caricare la colonna ${colonnaOggetti}`)),
-    ]);
-    setRecords(Object.fromEntries((rec.data || []).map((r) => [r.soggetto_id, r])));
-    const perSoggetto = {};
-    (rel.data || []).forEach((r) => {
-      if (!r.descrizione) return;
-      (perSoggetto[r.soggetto_id] ||= []).push(r);
-    });
-    setOggetti(perSoggetto);
-  }, [recordsAPI, ruolo, colonnaOggetti]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let attivo = true;
+    setRighe(null);
+    setError(null);
+    Promise.all([
+      relazioniAPI.list({ famiglia, entity_type: 'IMMOBILE', solo_correnti: !cessate }),
+      getSoggettiAnagrafici({ limit: 1000 }).catch(() => []),
+    ]).then(([rel, soggetti]) => {
+      if (!attivo) return;
+      setNomi(Object.fromEntries((soggetti || []).map((s) => [s.id, nomeSoggetto(s)])));
+      setRighe(rel.data || []);
+    }).catch((err) => { if (attivo) setError(formatApiError(err)); });
+    return () => { attivo = false; };
+  }, [famiglia, cessate]);
 
-  useEffect(() => { carica(); }, [carica, refreshKey]);
-
-  const aggiorna = () => setRefreshKey((k) => k + 1);
-
-  const extraColumns = useMemo(() => [
-    {
-      field: `oggetti_${ruolo}`,
-      label: colonnaOggetti,
-      render: (_, row) => {
-        const lista = oggetti[row.id] || [];
-        if (!lista.length) return '-';
-        const visibili = lista.slice(0, MAX_OGGETTI);
-        return (
-          <ul className="ruolo-oggetti">
-            {visibili.map((r, i) => (
-              <li key={i} className={r.corrente ? undefined : 'ruolo-oggetti--cessato'}>
-                <OggettoRelazione r={r} />{r.corrente ? '' : ' (cessato)'}
-              </li>
-            ))}
-            {lista.length > MAX_OGGETTI && (
-              <li><Link to={`/anagrafiche/${row.id}`}>+{lista.length - MAX_OGGETTI} altri</Link></li>
-            )}
-          </ul>
-        );
-      },
-    },
-    { field: `note_${ruolo}`, label: 'Note', render: (_, row) => records[row.id]?.[noteField] || '-' },
-  ], [ruolo, colonnaOggetti, oggetti, records, noteField]);
-
-  const rowActions = useMemo(() => [
-    { id: 'apri', label: 'Apri anagrafica', variant: 'secondary', icon: renderIcon('external-link', { size: 14 }),
-      onClick: (row) => navigate(`/anagrafiche/${row.id}`) },
-    { id: 'note', label: 'Modifica note', variant: 'secondary', icon: renderIcon('pencil', { size: 14 }),
-      onClick: (row) => setForm({ record: records[row.id] || { soggetto_id: row.id } }) },
-    { id: 'togli', label: testi.azione, variant: 'danger', icon: renderIcon('user-minus', { size: 14 }),
-      onClick: (row) => setDaTogliere(row) },
-  ], [navigate, records, testi.azione]);
-
-  const conferma = async () => {
-    const record = records[daTogliere.id];
-    if (!record) {
-      toast.warning('Record non trovato: ricarica la pagina e riprova');
-      setDaTogliere(null);
-      return;
-    }
-    setTogliendo(true);
-    try {
-      await recordsAPI.delete(record.id);
-      toast.success(testi.fatto);
-      setDaTogliere(null);
-      aggiorna();
-    } catch (err) {
-      toast.error(formatApiError(err));
-    } finally {
-      setTogliendo(false);
-    }
-  };
+  const ordinate = useMemo(() => [...(righe || [])].sort((a, b) => (
+    (nomi[a.soggetto_id] || '').localeCompare(nomi[b.soggetto_id] || '', 'it')
+  )), [righe, nomi]);
 
   return (
-    <>
-      <SoggettiTable
-        ruolo={ruolo}
-        title={title}
-        showRuoli={false}
-        extraColumns={extraColumns}
-        rowActions={rowActions}
-        addButtonLabel={addButtonLabel}
-        onAdd={() => setForm({ record: null })}
-        emptyMessage={testi.vuoto}
-        refreshKey={refreshKey}
-      />
-      {form && (
-        <FormComponent
-          {...{ [formProp]: form.record }}
-          onClose={() => { setForm(null); aggiorna(); }}
-        />
+    <div className="ruolo-page">
+      <div className="ruolo-page__head">
+        <h2>{title}</h2>
+        <label className="ruolo-page__cessate">
+          <input type="checkbox" checked={cessate} onChange={(e) => setCessate(e.target.checked)} />
+          Mostra cessate
+        </label>
+      </div>
+      {error && <ErrorMessage message={error} />}
+      {!error && righe === null && <LoadingSpinner message="Caricamento…" />}
+      {righe && righe.length === 0 && <EmptyState title={vuoto} message="Si aggiungono dalla scheda del bene." />}
+      {righe && righe.length > 0 && (
+        <table className="relazioni-tabella">
+          <thead>
+            <tr>
+              <th scope="col">Anagrafica</th>
+              <th scope="col">{colonnaTipo}</th>
+              <th scope="col">Immobile</th>
+              {conQuota && <th scope="col">Quota</th>}
+              <th scope="col">Periodo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ordinate.map((r, i) => (
+              <tr key={`${r.relazione_id ?? r.record_id ?? 'm'}-${i}`} className={r.corrente ? undefined : 'ruolo-oggetti--cessato'}>
+                <td data-label="Anagrafica">
+                  <Link to={`/anagrafiche/${r.soggetto_id}`}>{nomi[r.soggetto_id] || `Anagrafica ${r.soggetto_id}`}</Link>
+                </td>
+                <td data-label={colonnaTipo}>{r.tipo_nome}{r.corrente ? '' : ' (cessato)'}</td>
+                <td data-label="Immobile"><OggettoRelazione r={r} /></td>
+                {conQuota && <td data-label="Quota">{r.quota || '—'}</td>}
+                <td data-label="Periodo">{periodo(r)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
-      <ConfirmDialog
-        isOpen={Boolean(daTogliere)}
-        title={testi.azione}
-        message={daTogliere ? testi.conferma(nomeSoggetto(daTogliere)) : ''}
-        confirmLabel={testi.azione}
-        cancelLabel="Annulla"
-        variant="danger"
-        loading={togliendo}
-        onConfirm={conferma}
-        onCancel={() => setDaTogliere(null)}
-      />
-    </>
+    </div>
   );
 }
 

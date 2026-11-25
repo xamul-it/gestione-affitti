@@ -386,3 +386,21 @@
   border-radius: 0;
   box-shadow: none;
 }
+
+/* Soggetti (phase 3: single relation model) */
+.immobile-scheda .soggetti-bene__blocco {
+  margin-top: var(--space-4);
+}
+
+.immobile-scheda .soggetti-bene__chiuse {
+  margin-top: 0;
+}
+
+.immobile-scheda .soggetti-bene .scheda-table tr.is-chiuso td {
+  color: var(--gray-600);
+}
+
+.immobile-scheda .soggetti-bene .scheda-table a {
+  color: var(--color-brand);
+  font-weight: 600;
+}

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  unitaImmobiliariAPI, proprietariAPI, condominAPI, assegnazioniConduttoreAPI,
-} from '../../services/immobiliAPI';
+import { unitaImmobiliariAPI, condominAPI } from '../../services/immobiliAPI';
+import { relazioniAPI } from '../../../../services/relazioniAPI';
 import '../../../../components/UI/Button.css';
 import { renderIcon } from '../../../../components/Navigation/iconRegistry.jsx';
 import './ImmobiliStatsWidget.css';
@@ -32,23 +31,27 @@ function ImmobiliStatsWidget() {
       setLoading(true);
       setError(null);
 
-      const [immobiliRes, proprietariRes, condominiRes, assegnazioniRes] = await Promise.all([
+      // Relations need soggetto.view: without it the counts degrade to 0.
+      const correnti = (famiglia) => relazioniAPI
+        .list({ famiglia, entity_type: 'IMMOBILE', solo_correnti: true })
+        .catch(() => ({ data: [] }));
+      const [immobiliRes, dirittiRes, condominiRes, godimentoRes] = await Promise.all([
         unitaImmobiliariAPI.getAll(),
-        proprietariAPI.getAll(),
+        correnti('diritti_reali'),
         condominAPI.getAll(),
-        assegnazioniConduttoreAPI.getAll(),
+        correnti('godimento'),
       ]);
 
       const immobili = immobiliRes.data;
-      // A unit is occupied when it has a tenant assignment still in progress.
-      const occupate = new Set(
-        assegnazioniRes.data.filter((a) => !a.data_fine).map((a) => a.bene_id),
-      );
+      // A unit is occupied when it has a current enjoyment relation (tenancy, loan...).
+      const occupate = new Set(godimentoRes.data.map((r) => r.entity_id));
+      // Owners = distinct subjects holding a current right in rem.
+      const titolari = new Set(dirittiRes.data.map((r) => r.soggetto_id));
       const occupati = immobili.filter((i) => occupate.has(i.id)).length;
 
       setStats({
         totale_immobili: immobili.length,
-        totale_proprietari: proprietariRes.data.length,
+        totale_proprietari: titolari.size,
         totale_condomini: condominiRes.data.length,
         immobili_liberi: immobili.length - occupati,
         immobili_occupati: occupati,
@@ -105,7 +108,7 @@ function ImmobiliStatsWidget() {
           </span>
           <span className="stat-content">
             <span className="stat-value">{stats.totale_proprietari}</span>
-            <span className="stat-label">Proprietari</span>
+            <span className="stat-label">Titolari di diritti</span>
           </span>
         </Link>
 

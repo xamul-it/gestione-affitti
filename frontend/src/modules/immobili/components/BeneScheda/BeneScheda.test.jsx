@@ -15,8 +15,7 @@ vi.mock('../../../../core/components/Documenti/DocumentiPanel', () => ({
 vi.mock('./VariazioniCatastali', () => ({ default: ({ beneId }) => <div>Variazioni {beneId}</div> }));
 vi.mock('./CollegamentiSection', () => ({ default: ({ beneId, bene }) => <div>Collegamenti {beneId} {bene.tipo_bene}</div> }));
 vi.mock('./RiepilogoSection', () => ({ default: ({ beneId }) => <div>Riepilogo {beneId}</div> }));
-vi.mock('../DirittiImmobile/DirittiImmobileSection', () => ({ default: () => <div>Diritti</div> }));
-vi.mock('../Conduttori/AssegnazioneConduttoreSection', () => ({ default: () => <div>Conduttori</div> }));
+vi.mock('./SoggettiSection', () => ({ default: ({ beneId }) => <div>Soggetti {beneId}</div> }));
 vi.mock('../SpeseRicorrenti/SpeseRicorrentiSection', () => ({ default: () => <div>Spese</div> }));
 vi.mock('../../../../components/Platform/Scadenze/ScadenzeSection', () => ({ default: () => <div>Scadenze</div> }));
 vi.mock('../UnitaImmobiliari/UnitaImmobiliareForm', () => ({ default: () => <div role="dialog">Form unità</div> }));
@@ -90,7 +89,7 @@ describe('BeneScheda', () => {
     expect(screen.getByText('40 / 154')).toBeInTheDocument();
     expect(screen.getByText('Passaggio a piedi')).toBeInTheDocument();
     expect(screen.getByText('Pannello documenti IMMOBILE 7')).toBeInTheDocument();
-    expect(screen.getByText('Diritti')).toBeInTheDocument();
+    expect(screen.getByText('Soggetti 7')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /terreni/i })).toHaveAttribute('href', '/terreni');
   });
 

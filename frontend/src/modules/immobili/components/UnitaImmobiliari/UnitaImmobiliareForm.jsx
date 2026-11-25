@@ -3,8 +3,6 @@ import { useState, useEffect } from 'react';
 import { unitaImmobiliariAPI, categorieCatastaliAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
 import { Link } from 'react-router-dom';
-import DirittiImmobileSection from '../DirittiImmobile/DirittiImmobileSection';
-import AssegnazioneConduttoreSection from '../Conduttori/AssegnazioneConduttoreSection';
 import SpeseRicorrentiSection from '../SpeseRicorrenti/SpeseRicorrentiSection';
 
 // Mapping categorie catastali a tipi default
@@ -375,8 +373,6 @@ function UnitaImmobiliareForm({ unitaImmobiliare, onClose, showSchedaLink = true
           </div>
         </form>
 
-        <DirittiImmobileSection immobileId={unitaImmobiliare?.id} />
-        <AssegnazioneConduttoreSection unitaImmobiliareId={unitaImmobiliare?.id} />
         <SpeseRicorrentiSection unitaImmobiliareId={unitaImmobiliare?.id} />
         {showSchedaLink && unitaImmobiliare?.id && (
           <p className="unita-form-documenti-link">

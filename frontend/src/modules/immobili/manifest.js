@@ -37,7 +37,7 @@ export const manifest = {
     {
       path: '/proprietari',
       component: 'ProprietariList',
-      label: 'Proprietari',
+      label: 'Titolari di diritti',
       icon: 'user-tie',
     },
     {
@@ -49,7 +49,7 @@ export const manifest = {
     {
       path: '/conduttori',
       component: 'ConduttoriList',
-      label: 'Conduttori',
+      label: 'Godimento',
       icon: 'user-check',
     },
     {
@@ -92,7 +92,7 @@ export const manifest = {
     },
     {
       id: 'immobili.proprietari',
-      label: 'Proprietari',
+      label: 'Titolari di diritti',
       path: '/proprietari',
       icon: 'user-tie',
       order: 20,
@@ -108,7 +108,7 @@ export const manifest = {
     },
     {
       id: 'immobili.conduttori',
-      label: 'Conduttori',
+      label: 'Godimento',
       path: '/conduttori',
       icon: 'user-check',
       order: 25,

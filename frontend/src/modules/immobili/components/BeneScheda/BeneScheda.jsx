@@ -8,8 +8,6 @@ import { ExtensionPoint } from '../../../../core/modules/ExtensionPoint';
 import { Button } from '../../../../components/UI';
 import DocumentiPanel from '../../../../core/components/Documenti/DocumentiPanel';
 import ScadenzeSection from '../../../../components/Platform/Scadenze/ScadenzeSection';
-import DirittiImmobileSection from '../DirittiImmobile/DirittiImmobileSection';
-import AssegnazioneConduttoreSection from '../Conduttori/AssegnazioneConduttoreSection';
 import SpeseRicorrentiSection from '../SpeseRicorrenti/SpeseRicorrentiSection';
 import UnitaImmobiliareForm from '../UnitaImmobiliari/UnitaImmobiliareForm';
 import TerrenoForm from '../Terreni/TerrenoForm';
@@ -18,6 +16,7 @@ import DatiUnita from './DatiUnita';
 import DatiTerreno from './DatiTerreno';
 import CollegamentiSection from './CollegamentiSection';
 import RiepilogoSection from './RiepilogoSection';
+import SoggettiSection from './SoggettiSection';
 import './BeneScheda.css';
 
 function Sezione({ id, title, children }) {
@@ -59,7 +58,7 @@ export function RedirectABene() {
 
 /**
  * Detail page of a bene (/beni/:id), unit or land parcel: data of its type,
- * documents with history, catastal changes, rights, tenants, recurring
+ * documents with history, catastal changes, subjects (rights, tenancies, assignments), recurring
  * expenses and deadlines. Other modules can add sections through the
  * "immobile.detail.sections" extension point.
  */
@@ -140,11 +139,8 @@ export default function BeneScheda() {
         <VariazioniCatastali key={versione} beneId={beneId} />
       </Sezione>
 
-      <Sezione id="scheda-diritti">
-        <DirittiImmobileSection immobileId={beneId} />
-      </Sezione>
-      <Sezione id="scheda-conduttori">
-        <AssegnazioneConduttoreSection unitaImmobiliareId={beneId} />
+      <Sezione id="scheda-soggetti">
+        <SoggettiSection beneId={beneId} onChange={() => setVersione((v) => v + 1)} />
       </Sezione>
       <Sezione id="scheda-spese">
         <SpeseRicorrentiSection unitaImmobiliareId={beneId} />

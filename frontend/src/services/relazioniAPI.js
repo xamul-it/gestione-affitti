@@ -13,8 +13,10 @@ api.interceptors.request.use((config) => {
 // Role relations soggetto -> object of a module (core /relazioni):
 // catalog of relation types, listing (core + module-derived) and core writes.
 export const relazioniAPI = {
-  getTipi: (entityType) => api.get('/relazioni/tipi', { params: entityType ? { entity_type: entityType } : {} }),
-  // Filters: soggetto_id, tipo, entity_type, entity_id, solo_correnti.
+  getTipi: (entityType, famiglia) => api.get('/relazioni/tipi', {
+    params: { ...(entityType ? { entity_type: entityType } : {}), ...(famiglia ? { famiglia } : {}) },
+  }),
+  // Filters: soggetto_id, tipo, entity_type, entity_id, solo_correnti, famiglia.
   list: (params) => api.get('/relazioni/', { params }),
   create: (data) => api.post('/relazioni/', data),
   update: (id, data) => api.put(`/relazioni/${id}`, data),

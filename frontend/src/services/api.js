@@ -49,8 +49,6 @@ export const { soggettiAnagraficiAPI } = anagraficaModule;
 // Re-export from immobili module
 export const {
   unitaImmobiliariAPI,
-  proprietariAPI,
-  dirittiImmobileAPI,
   condominAPI,
   tabelleMillesimaliAPI,
   millesimiImmobileAPI,

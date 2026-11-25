@@ -7,8 +7,6 @@ vi.mock('../../services/immobiliAPI', () => ({
   unitaImmobiliariAPI: { create: vi.fn(), update: vi.fn() },
   categorieCatastaliAPI: { getAll: vi.fn(() => Promise.resolve({ data: [] })) },
 }));
-vi.mock('../DirittiImmobile/DirittiImmobileSection', () => ({ default: () => null }));
-vi.mock('../Conduttori/AssegnazioneConduttoreSection', () => ({ default: () => null }));
 vi.mock('../SpeseRicorrenti/SpeseRicorrentiSection', () => ({ default: () => null }));
 
 describe('UnitaImmobiliareForm', () => {

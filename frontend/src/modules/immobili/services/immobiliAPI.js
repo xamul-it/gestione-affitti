@@ -74,28 +74,10 @@ export const beniAPI = {
   eliminaCollegamento: (id, cid) => api.delete(`/beni/${id}/collegamenti/${cid}`),
   // Who pays what at a date (YYYY-MM-DD, default today): who, never how much.
   getRiepilogo: (id, data) => api.get(`/beni/${id}/riepilogo`, { params: data ? { data } : {} }),
-};
-
-// Proprietari API
-export const proprietariAPI = {
-  getAll: () => api.get('/proprietari/'),
-  getById: (id) => api.get(`/proprietari/${id}`),
-  create: (data) => api.post('/proprietari/', data),
-  update: (id, data) => api.put(`/proprietari/${id}`, data),
-  delete: (id) => api.delete(`/proprietari/${id}`),
-};
-
-// Diritti Immobile API
-export const dirittiImmobileAPI = {
-  getAll: (beneId = null, proprietarioId = null) => api.get('/diritti-immobile/', {
-    params: { bene_id: beneId, proprietario_id: proprietarioId }
-  }),
-  getById: (id) => api.get(`/diritti-immobile/${id}`),
-  getByBene: (beneId) => api.get(`/diritti-immobile/bene/${beneId}`),
-  getByProprietario: (proprietarioId) => api.get(`/diritti-immobile/proprietario/${proprietarioId}`),
-  create: (data) => api.post('/diritti-immobile/', data),
-  update: (id, data) => api.put(`/diritti-immobile/${id}`, data),
-  delete: (id) => api.delete(`/diritti-immobile/${id}`),
+  // Subjects tied to the bene, by family: { diritti_reali, godimento, incarichi }.
+  getRelazioni: (id, { soloCorrenti = true } = {}) => api.get(`/beni/${id}/relazioni`, { params: { solo_correnti: soloCorrenti } }),
+  // Returns { relazione, avvisi }.
+  createRelazione: (id, data) => api.post(`/beni/${id}/relazioni`, data),
 };
 
 // Condomini API
@@ -180,26 +162,6 @@ export const terreniAPI = {
   restore: (id) => api.post(`/terreni/${id}/restore`),
 };
 
-// Conduttori API
-export const conduttoriAPI = {
-  getAll: () => api.get('/conduttori/'),
-  getById: (id) => api.get(`/conduttori/${id}`),
-  create: (data) => api.post('/conduttori/', data),
-  update: (id, data) => api.put(`/conduttori/${id}`, data),
-  delete: (id) => api.delete(`/conduttori/${id}`),
-};
-
-// Assegnazioni Conduttore API
-export const assegnazioniConduttoreAPI = {
-  getAll: (beneId = null, conduttoreId = null) => api.get('/assegnazioni-conduttore/', {
-    params: { bene_id: beneId, conduttore_id: conduttoreId }
-  }),
-  getByBene: (beneId) => api.get(`/assegnazioni-conduttore/bene/${beneId}`),
-  create: (data) => api.post('/assegnazioni-conduttore/', data),
-  update: (id, data) => api.put(`/assegnazioni-conduttore/${id}`, data),
-  delete: (id) => api.delete(`/assegnazioni-conduttore/${id}`),
-};
-
 // Spese Ricorrenti API (IMU, TARI, utenze)
 export const speseRicorrentiAPI = {
   getAll: (beneId = null, condominioId = null, pagato = null) => api.get('/spese-ricorrenti/', {
@@ -217,8 +179,6 @@ export default {
   beniAPI,
   unitaImmobiliariAPI,
   visuraImportAPI,
-  proprietariAPI,
-  dirittiImmobileAPI,
   condominAPI,
   tabelleMillesimaliAPI,
   millesimiImmobileAPI,
@@ -226,7 +186,5 @@ export default {
   categorieCatastaliAPI,
   terreniAPI,
   tipologieTerrenoAPI,
-  conduttoriAPI,
-  assegnazioniConduttoreAPI,
   speseRicorrentiAPI,
 };

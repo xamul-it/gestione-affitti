@@ -69,10 +69,39 @@ bene". Spec `2026-11-10-beni-catastali-design.md`.
 | Categorie catastali | Catalogo (schema `public`). | `categorie-catastali` |
 | Certificati energetici | Sola lettura, ricavati dagli APE (vedi 4). | `certificati-energetici` |
 
-Dashboard del modulo (`/immobili`): widget Immobili (unità, proprietari,
-condomini; **occupate** = unità con un'assegnazione di conduttore in corso,
-libere le altre; i link portano alla lista `/unita-immobiliari`) e widget
-Certificati in scadenza.
+Dashboard del modulo (`/immobili`): widget Immobili (unità, titolari di
+diritti = soggetti distinti con un diritto reale in corso, condomini;
+**occupate** = unità con un godimento in corso, libere le altre; i link
+portano alla lista `/unita-immobiliari`) e widget Certificati in scadenza.
+I conteggi vengono dalle relazioni (`GET /relazioni/?famiglia=…`), quindi
+servono `soggetto.view`: senza, i conteggi dei soggetti restano a 0.
+
+**Interfaccia dei soggetti del bene** (dalla fase 3):
+
+- la scheda del bene (`/beni/:id`) ha una sola sezione **Soggetti** con tre
+  blocchi, "Diritti reali", "Godimento", "Incarichi" (famiglie delle
+  relazioni). Ogni riga: anagrafica (link a `/anagrafiche/:id`), tipo, quota
+  come frazione (solo diritti reali), periodo e azioni Modifica, Chiudi
+  (data di fine), Documenti (pannello documenti della relazione,
+  `entityType="RELAZIONE"`) ed Elimina con conferma. L'interruttore "Mostra
+  chiuse" ricarica con `solo_correnti=false` (di default solo le correnti);
+- "Aggiungi" apre il form con i tipi di quella famiglia
+  (`GET /relazioni/tipi?entity_type=IMMOBILE&famiglia=…`) e il selettore
+  dell'anagrafica. Il campo quota (testo `n/d`, validato come il server: 0 < n
+  <= d, spazi attorno alla `/` ammessi) compare solo per i tipi con
+  `ammette_quota`; per `comodatario` compaiono data, ufficio e numero di
+  registrazione (`dati.registrazione_*`). Gli avvisi della risposta (es. quote
+  oltre il 100%) sono mostrati come avvisi (toast) e non bloccano. I pulsanti
+  di scrittura sono sempre visibili come per le altre sezioni della scheda: il
+  server risponde 403 senza i permessi di modifica del bene;
+- dopo ogni modifica la scheda ricarica "Chi paga cosa";
+- le voci di menu e le pagine `/proprietari` e `/conduttori` si chiamano
+  **Titolari di diritti** (famiglia `diritti_reali`: proprietari,
+  usufruttuari, nudi proprietari, superficiari…, con colonna "Diritto" e
+  quota) e **Godimento** (famiglia `godimento`, colonna "Tipo"): una riga per
+  relazione, con anagrafica e immobile collegati e interruttore "Mostra
+  cessate". Si leggono soltanto: le relazioni si aggiungono dalla scheda del
+  bene.
 
 ## 3. Relazioni (ruoli)
 
@@ -235,14 +264,14 @@ link della dashboard, icone dei documenti schiacciate e pulsanti dei form
 (ora `Button` del design system), nome del conduttore nella scheda, errori
 `CanceledError` nelle liste. Restano da fare (interventi medi):
 
-- dalla pagina Conduttori/Proprietari non si collega il soggetto a un immobile
-  (si può solo dalla scheda dell'unità);
+- dalle pagine Titolari di diritti e Godimento non si aggiunge una relazione
+  (si può solo dalla scheda del bene);
 - il form dell'unità non permette di scegliere il condominio;
 - mancano comune catastale, sezione, classe, consistenza, interno;
 - i condomini non hanno una scheda; tabelle millesimali e millesimi non sono
   nel menu;
-- sezioni Diritti, Conduttori e Spese della scheda nello stile vecchio
-  (`window.confirm`, `alert`); il form dell'unità ripete queste sezioni;
+- la sezione Spese della scheda è nello stile vecchio (`window.confirm`,
+  `alert`) e il form dell'unità la ripete;
 - pagine vecchie `/immobili/home` e `/old-home`;
 - beni catastali (spec `2026-11-10-beni-catastali-design.md`): fatte la
   fase 1, la 2a (terreni come beni) e la 2b (collegamenti tra beni e "chi

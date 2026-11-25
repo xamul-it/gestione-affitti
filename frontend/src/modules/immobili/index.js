@@ -35,7 +35,6 @@ export { default as TerrenoForm } from './components/Terreni/TerrenoForm';
 
 // Proprietari
 export { default as ProprietariList } from './components/Proprietari/ProprietariList';
-export { default as ProprietarioForm } from './components/Proprietari/ProprietarioForm';
 
 // Condomini
 export { default as CondominList } from './components/Condomini/CondominList';
@@ -43,8 +42,6 @@ export { default as CondominioForm } from './components/Condomini/CondominioForm
 
 // Conduttori
 export { default as ConduttoriList } from './components/Conduttori/ConduttoriList';
-export { default as ConduttoreForm } from './components/Conduttori/ConduttoreForm';
-export { default as AssegnazioneConduttoreSection } from './components/Conduttori/AssegnazioneConduttoreSection';
 
 // Spese Ricorrenti (IMU, TARI, utenze)
 export { default as SpeseRicorrentiSection } from './components/SpeseRicorrenti/SpeseRicorrentiSection';
@@ -55,9 +52,6 @@ export { default as DocumentiImmobiliPage } from './components/Documenti/Documen
 // Scheda immobile
 export { default as BeneScheda, RedirectABene } from './components/BeneScheda/BeneScheda';
 
-// DirittiImmobile
-export { default as DirittiImmobileSection } from './components/DirittiImmobile/DirittiImmobileSection';
-export { default as DirittoForm } from './components/DirittiImmobile/DirittoForm';
 
 // MillesimiImmobile
 export { default as MillesimiImmobileList } from './components/MillesimiImmobile/MillesimiImmobileList';
