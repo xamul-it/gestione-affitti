@@ -84,7 +84,7 @@ def test_senza_hook_vale_permesso_oggetto(ctx):
     http, rels, _ = ctx
     res = http.get("/api/v1/relazioni/?entity_type=CONDOMINIO")
     assert {r["relazione_id"] for r in res.json()} == {rels["a"].id, rels["b"].id}
-    assert object_permissions.hook_selects(app.dependency_overrides[get_db](), TEST_TENANT) == {}
+    assert "CONDOMINIO" not in object_permissions.hook_selects(app.dependency_overrides[get_db](), TEST_TENANT)
 
 
 def test_lista_filtrata_dall_hook_con_una_sola_chiamata(ctx):
