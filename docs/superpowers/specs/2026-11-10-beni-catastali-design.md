@@ -1,10 +1,10 @@
 # Beni catastali: beni, raggruppamenti e relazioni con i soggetti — design
 
 Data: 2026-11-10 · aggiornata il 2026-11-12 (collegamenti), il 2026-11-13
-(fase 2a fatta), il 2026-11-25 (fase 2b fatta) e **riscritta il 2026-11-25**
-(perimetro ristretto ai beni; relazione unica; raggruppamenti ad albero).
-Stato: fasi 1, 2a, 2b approvate e rilasciate; la riscrittura del 2026-11-25
-è in attesa di approvazione dell'utente.
+(fase 2a fatta), il 2026-11-25 (fase 2b fatta), **riscritta il 2026-11-25**
+(perimetro ristretto ai beni; relazione unica; raggruppamenti ad albero) e
+aggiornata il 2026-11-25 (fase 3 fatta).
+Stato: fasi 1, 2a, 2b e 3 rilasciate; prossima la fase 4 (raggruppamenti).
 
 ## Perimetro
 
@@ -372,7 +372,7 @@ Ogni fase si rilascia da sola.
 1. **Bene comune** (fatta il 2026-11-12).
 2. **Terreni come beni** (2a fatta il 2026-11-13) e **collegamenti + chi
    paga cosa** (2b fatta il 2026-11-25).
-3. **Relazione unica**: tipi in famiglie nel catalogo, quota in
+3. **Relazione unica** (fatta il 2026-11-25): tipi in famiglie nel catalogo, quota in
    `core_relazioni`, migrazione di diritti e conduttori, nuovi tipi di
    godimento (comodatario, affittuario agrario) e incarichi sui beni,
    sezione "Soggetti" della scheda, chi paga cosa dalle relazioni,
