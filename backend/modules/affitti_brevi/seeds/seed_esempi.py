@@ -1,16 +1,16 @@
 """
-Example data of affitti_brevi (seed_test_data=True) on the immobili example
-unit UNITA-003: a channel calendar (no sync), a booking with its stay and two
-guests, the tourist tax rule of the town with one band and the stay's tax,
-the police communication and a personal-use block.
+Example data of affitti_brevi (seed_test_data=True): a holiday flat of this
+module (AB-ESEMPIO-1, created through the immobili model this module depends
+on, never looked up among the immobili example data), a channel calendar (no
+sync), a booking with its stay and two guests, the tourist tax rule of the
+town with one band and the stay's tax, the police communication and a
+personal-use block.
 
 Idempotent: everything hangs off the booking ESEMPIO-0001 and the rule
-"Milano (esempio)" (scripts/tenant_prova.py reruns it). Without the immobili
-example data nothing is created.
+"Milano (esempio)" (scripts/tenant_prova.py reruns it).
 """
 from datetime import date, datetime, timezone
 
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from ..models import (
@@ -19,16 +19,28 @@ from ..models import (
 )
 
 PRENOTAZIONE = "ESEMPIO-0001"
+UNITA = "AB-ESEMPIO-1"
 COMUNE_TASSA = "Milano (esempio)"
 
 
+def _unita(db: Session) -> int:
+    from immobili.models import UnitaImmobiliare
+    unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.codice == UNITA).first()
+    if not unita:
+        unita = UnitaImmobiliare(codice=UNITA, tipo="Appartamento", indirizzo="Via del Mare 3", citta="Milano",
+                                 provincia="MI", descrizione="Casa vacanze di esempio del modulo affitti_brevi")
+        db.add(unita)
+        db.flush()
+    return unita.id
+
+
 def seed_esempi(db: Session) -> dict:
-    unita_id = db.execute(text("SELECT id FROM immo_beni WHERE codice = 'UNITA-003'")).scalar()
     canale = db.query(Canale).order_by(Canale.id).first()
-    if not unita_id or not canale:
+    if not canale:
         return {}
     if db.query(Prenotazione).filter(Prenotazione.codice_prenotazione == PRENOTAZIONE).first():
         return {}
+    unita_id = _unita(db)
 
     calendario = CalendarioCanale(unita_immobiliare_id=unita_id, canale_id=canale.id,
                                   codice_esterno="ESEMPIO", sync_attiva=False,

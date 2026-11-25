@@ -87,6 +87,18 @@ Trovati dai tenant di prova e corretti nello stesso ramo:
   creato da zero non funzionavano.
 
 Trovato e non corretto: i tenant esistenti (principale, produzione,
-qa_test) non hanno 24 chiavi esterne che un tenant nuovo ha (spese,
-ripartizioni, tecnici, PEC, ...). Da valutare con una migrazione apposta
-dopo aver controllato che i dati le rispettino.
+qa_test) non hanno 24 chiavi esterne che un tenant nuovo ha. Ognuna si
+corregge nella catena del modulo che possiede la tabella, dopo aver
+controllato che i dati la rispettino:
+- immobili (10): certificati energetici, diritti, millesimi, proprietari,
+  tabelle millesimali, mappa tipo/categoria, override tipologie terreno,
+  unità;
+- affitti_lungo (6): incassi, spese, ripartizioni, tecnici;
+- gestione_pec (8): audit accessi e risposte, messaggi, notifiche, utenti
+  abilitati.
+
+Correzione del 2026-11-25 (richiamo dell'utente: "ogni modulo ha una
+propria auto consistenza anche di test"): gli esempi di affitti_lungo e
+affitti_brevi non cercano più quelli di immobili (UNITA-002/003, conduttore
+di esempio), ma creano soggetti e unità propri con i modelli delle
+dipendenze. I loro test chiamano solo il seed del proprio modulo.

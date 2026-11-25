@@ -1,101 +1,116 @@
 """
 Seeds of affitti_lungo. No public data; with seed_test_data=True the tenant
-gets example data on top of the immobili ones (UNITA-001/002, the example
-tenant of UNITA-002, the SP-GEN table): one tenant, one contract with a
-payment, a direct and a condominium expense split by millesimi, a technician.
+gets example data of this module: one tenant, one contract with two
+payments, a direct expense and a condominium expense split by millesimi, a
+technician.
 
-Idempotent: rerunning adds only what is missing (scripts/tenant_prova.py
-checks it). Without the immobili example data nothing is created.
+Self-contained: what the examples need from the modules this one depends on
+(anagrafica_italiana, immobili) is created here through their models, under
+this module's own codes (AL-ESEMPIO-*), never looked up among their example
+data. Idempotent: rerunning adds only what is missing
+(scripts/tenant_prova.py checks it).
 """
-import logging
 from typing import Optional
 
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-logger = logging.getLogger(__name__)
-
 CONTRATTO = "CTR-ESEMPIO-001"
+NOTA_ESEMPIO = "Dato di esempio (affitti_lungo)"
 
 
 def seed_public(db):
     pass
 
 
-def _bene(db: Session, codice: str) -> Optional[int]:
-    return db.execute(text("SELECT id FROM immo_beni WHERE codice = :c"), {"c": codice}).scalar()
+def _soggetto(db: Session, codice_fiscale: str, **campi):
+    from anagrafica_italiana.models import SoggettoAnagrafico
+    soggetto = db.query(SoggettoAnagrafico).filter(SoggettoAnagrafico.codice_fiscale == codice_fiscale).first()
+    if not soggetto:
+        soggetto = SoggettoAnagrafico(codice_fiscale=codice_fiscale, note=NOTA_ESEMPIO, attivo=True, **campi)
+        db.add(soggetto)
+        db.flush()
+    return soggetto
 
 
-def _affittuario(db: Session, soggetto_id: int) -> int:
-    affittuario_id = db.execute(text("SELECT id FROM affittuari WHERE soggetto_id = :s"), {"s": soggetto_id}).scalar()
-    if affittuario_id:
-        return affittuario_id
-    return db.execute(text(
-        "INSERT INTO affittuari (soggetto_id, note_affittuario) VALUES (:s, 'Affittuario di esempio') RETURNING id"
-    ), {"s": soggetto_id}).scalar()
+def _unita(db: Session, codice: str, condominio_id: Optional[int]):
+    from immobili.models import UnitaImmobiliare
+    unita = db.query(UnitaImmobiliare).filter(UnitaImmobiliare.codice == codice).first()
+    if not unita:
+        unita = UnitaImmobiliare(codice=codice, tipo="Appartamento", indirizzo="Via degli Esempi 10",
+                                 citta="Bologna", provincia="BO", condominio_id=condominio_id,
+                                 descrizione="Unità di esempio del modulo affitti_lungo")
+        db.add(unita)
+        db.flush()
+    return unita
 
 
-def _spesa(db: Session, unita_id: int, descrizione: str, categoria: str, importo: float,
-           tabella_id: Optional[int] = None) -> Optional[int]:
-    """Example expense; returns its id only when created now."""
-    if db.execute(text("SELECT 1 FROM spese WHERE descrizione = :d"), {"d": descrizione}).first():
-        return None
-    return db.execute(text(
-        "INSERT INTO spese (unita_immobiliare_id, tabella_millesimale_id, data, importo, categoria, descrizione, "
-        "fornitore, pagata, spesa_condominiale, ripartita) "
-        "VALUES (:u, :t, '2026-03-15', :i, :c, :d, 'Fornitore di esempio', 1, :cond, :cond) RETURNING id"
-    ), {"u": unita_id, "t": tabella_id, "i": importo, "c": categoria, "d": descrizione,
-        "cond": 1 if tabella_id else 0}).scalar()
+def _condominio_e_tabella(db: Session):
+    from immobili.models import Condominio, TabellaMillesimale
+    condominio = db.query(Condominio).filter(Condominio.codice == "AL-ESEMPIO-COND").first()
+    if not condominio:
+        condominio = Condominio(codice="AL-ESEMPIO-COND", nome="Condominio di esempio",
+                                indirizzo="Via degli Esempi 10", citta="Bologna")
+        db.add(condominio)
+        db.flush()
+    tabella = db.query(TabellaMillesimale).filter(TabellaMillesimale.condominio_id == condominio.id,
+                                                  TabellaMillesimale.codice == "AL-GEN").first()
+    if not tabella:
+        tabella = TabellaMillesimale(condominio_id=condominio.id, nome="Spese generali", codice="AL-GEN")
+        db.add(tabella)
+        db.flush()
+    return condominio, tabella
 
 
 def seed_esempi(db: Session) -> dict:
-    risultati = {}
-    unita_1, unita_2 = _bene(db, "UNITA-001"), _bene(db, "UNITA-002")
-    conduttore = db.execute(text(
-        "SELECT c.soggetto_id FROM immo_conduttori c JOIN immo_assegnazioni_conduttore a ON a.conduttore_id = c.id "
-        "WHERE a.bene_id = :b ORDER BY a.id LIMIT 1"), {"b": unita_2}).scalar() if unita_2 else None
-    if not (unita_1 and unita_2 and conduttore):
-        logger.info("[AFFITTI_LUNGO] immobili example data missing: no example data")
-        return risultati
+    from immobili.models import MillesimiUnita
+    from ..models import Affittuario, Contratto, Incasso, RipartizioneSpesa, Spesa, Tecnico
 
-    affittuario = _affittuario(db, conduttore)
-    contratto = db.execute(text("SELECT id FROM contratti WHERE numero_contratto = :n"), {"n": CONTRATTO}).scalar()
-    if not contratto:
-        contratto = db.execute(text(
-            "INSERT INTO contratti (numero_contratto, unita_immobiliare_id, affittuario_id, uso_immobile, "
-            "tipologia_contratto, durata_anni_iniziale, durata_anni_rinnovo, data_inizio, data_fine, "
-            "canone_mensile, giorno_pagamento, deposito_cauzionale, regime_fiscale, adeguamento_istat, "
-            "registrazione_numero, registrazione_data, registrazione_agenzia, stato) "
-            "VALUES (:n, :u, :a, 'ABITATIVO', 'LIBERO_MERCATO', 4, 4, '2025-01-01', '2028-12-31', 850, 5, 1700, "
-            "'CEDOLARE_SECCA_21', false, '1234 serie 3T', '2025-01-20', 'Milano 1', 'ATTIVO') RETURNING id"
-        ), {"n": CONTRATTO, "u": unita_2, "a": affittuario}).scalar()
-        risultati["contratti"] = 1
+    if db.query(Contratto).filter(Contratto.numero_contratto == CONTRATTO).first():
+        return {}
+    condominio, tabella = _condominio_e_tabella(db)
+    unita_1 = _unita(db, "AL-ESEMPIO-1", condominio.id)
+    unita_2 = _unita(db, "AL-ESEMPIO-2", condominio.id)
+    for unita, millesimi in ((unita_1, 480.0), (unita_2, 520.0)):
+        db.add(MillesimiUnita(unita_immobiliare_id=unita.id, tabella_millesimale_id=tabella.id, millesimi=millesimi))
+
+    inquilino = _soggetto(db, "SMPLLN85A41A944X", tipo_soggetto="PERSONA_FISICA",
+                          nome="Elena", cognome="Esempio")
+    studio = _soggetto(db, "01234560375", tipo_soggetto="PERSONA_GIURIDICA",
+                       ragione_sociale="Studio Tecnico Esempio Srl", partita_iva="01234560375")
+    affittuario = Affittuario(soggetto_id=inquilino.id, note_affittuario="Affittuario di esempio")
+    db.add(affittuario)
+    db.flush()
+
+    contratto = Contratto(
+        numero_contratto=CONTRATTO, unita_immobiliare_id=unita_2.id, affittuario_id=affittuario.id,
+        uso_immobile="ABITATIVO", tipologia_contratto="LIBERO_MERCATO", durata_anni_iniziale=4,
+        durata_anni_rinnovo=4, data_inizio="2025-01-01", data_fine="2028-12-31", canone_mensile=850,
+        giorno_pagamento=5, deposito_cauzionale=1700, regime_fiscale="CEDOLARE_SECCA_21",
+        registrazione_numero="1234 serie 3T", registrazione_data="2025-01-20",
+        registrazione_agenzia="Bologna 1", stato="ATTIVO",
+    )
+    db.add(contratto)
+    db.flush()
     for mese in ("2026-01", "2026-02"):
-        if not db.execute(text("SELECT 1 FROM incassi WHERE contratto_id = :c AND mese_riferimento = :m"),
-                          {"c": contratto, "m": mese}).first():
-            db.execute(text(
-                "INSERT INTO incassi (contratto_id, data_incasso, importo, mese_riferimento, metodo_pagamento) "
-                "VALUES (:c, :d, 850, :m, 'Bonifico')"), {"c": contratto, "d": f"{mese}-05", "m": mese})
+        db.add(Incasso(contratto_id=contratto.id, data_incasso=f"{mese}-05", importo=850,
+                       mese_riferimento=mese, metodo_pagamento="Bonifico"))
 
-    _spesa(db, unita_2, "Riparazione caldaia (esempio)", "MANUTENZIONE", 180.0)
-    tabella = db.execute(text("SELECT id FROM immo_tabelle_millesimali WHERE codice = 'SP-GEN' LIMIT 1")).scalar()
-    if tabella:
-        spesa = _spesa(db, unita_1, "Pulizia scale (esempio)", "AMMINISTRAZIONE", 300.0, tabella)
-        if spesa:
-            for unita, millesimi in ((unita_1, 480.0), (unita_2, 520.0)):
-                db.execute(text(
-                    "INSERT INTO ripartizioni_spese (spesa_id, unita_immobiliare_id, importo_ripartito, "
-                    "millesimi_applicati, importo_da_millesimi) VALUES (:s, :u, :i, :m, :i)"
-                ), {"s": spesa, "u": unita, "i": round(300.0 * millesimi / 1000, 2), "m": millesimi})
+    db.add(Spesa(unita_immobiliare_id=unita_2.id, data="2026-03-15", importo=180.0, categoria="MANUTENZIONE",
+                 descrizione="Riparazione caldaia (esempio)", fornitore="Fornitore di esempio", pagata=1))
+    condominiale = Spesa(unita_immobiliare_id=unita_1.id, tabella_millesimale_id=tabella.id, data="2026-03-15",
+                         importo=300.0, categoria="AMMINISTRAZIONE", descrizione="Pulizia scale (esempio)",
+                         pagata=1, spesa_condominiale=1, ripartita=1)
+    db.add(condominiale)
+    db.flush()
+    for unita, millesimi in ((unita_1, 480.0), (unita_2, 520.0)):
+        quota = round(300.0 * millesimi / 1000, 2)
+        db.add(RipartizioneSpesa(spesa_id=condominiale.id, unita_immobiliare_id=unita.id, importo_ripartito=quota,
+                                 millesimi_applicati=millesimi, importo_da_millesimi=quota))
 
-    tecnico_soggetto = db.execute(text(
-        "SELECT id FROM anag_soggetti_anagrafici WHERE ragione_sociale IS NOT NULL ORDER BY id LIMIT 1")).scalar()
-    if tecnico_soggetto and not db.execute(text("SELECT 1 FROM tecnici WHERE soggetto_id = :s"),
-                                           {"s": tecnico_soggetto}).first():
-        db.execute(text(
-            "INSERT INTO tecnici (soggetto_id, specializzazione, note_tecnico, attivo) "
-            "VALUES (:s, 'CERTIFICATORE_ENERGETICO', 'Tecnico di esempio', true)"), {"s": tecnico_soggetto})
-    return risultati
+    db.add(Tecnico(soggetto_id=studio.id, specializzazione="CERTIFICATORE_ENERGETICO",
+                   note_tecnico="Tecnico di esempio", attivo=True))
+    db.flush()
+    return {"contratti": 1, "incassi": 2, "spese": 2, "ripartizioni_spese": 2, "tecnici": 1}
 
 
 def seed_tenant(db: Session, tenant_id: Optional[int] = None, tenant_schema: Optional[str] = None,

@@ -150,6 +150,13 @@ dati.
      veri. Se la migrazione trasforma dati, un test di integrazione controlla
      la trasformazione; `tenant_prova.py evolutivo` controlla che non si
      perda nulla.
+   - **Ogni modulo è autonomo, anche nei test e negli esempi**: i suoi test
+     stanno in `tests/*/test_modules/test_<modulo>/` e chiamano solo codice
+     del modulo; i suoi dati di esempio creano ciò che serve dai moduli da
+     cui dipende (manifest) tramite i loro modelli, con codici propri (es.
+     `AL-ESEMPIO-*`), mai cercando i dati di esempio di un altro modulo. Le
+     correzioni di schema (es. chiavi esterne) vanno nella catena di
+     migrazioni del modulo che possiede la tabella.
 5. Aggiornare `docs/piattaforma.md` e/o `docs/modules/<modulo>.md` (crearlo se è
    il primo lavoro sul modulo) con requisiti e comportamento implementato.
 6. `revisione-ux` se c'è interfaccia; revisione per medie e grandi.
