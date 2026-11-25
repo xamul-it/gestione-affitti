@@ -7,11 +7,10 @@ import pytest
 from fastapi import HTTPException
 
 from anagrafica_italiana.models import SoggettoAnagrafico, TipoSoggetto
-from immobili.models import (
-    AssegnazioneConduttore, Conduttore, DirittoImmobile, Proprietario,
-    Terreno, TerrenoPorzione, UnitaImmobiliare,
-)
+from immobili.models import Terreno, TerrenoPorzione, UnitaImmobiliare
 from immobili.routes.beni import get_riepilogo
+from immobili.services.relazioni_bene import crea_relazione_bene
+from tests.integration.conftest import TEST_TENANT
 
 pytestmark = pytest.mark.integration
 
@@ -36,15 +35,11 @@ def terreno_forli(db_session):
                 porzioni=[TerrenoPorzione(qualita="SEMINATIVO", superficie_mq=1000)])
     db.add(t)
     db.flush()
-    for cognome, tipo in (("Nudo", "NUDA_PROPRIETA"), ("Usufrutto", "USUFRUTTUARIO")):
-        p = Proprietario(soggetto_id=_soggetto(db, cognome).id)
-        db.add(p)
-        db.flush()
-        db.add(DirittoImmobile(bene_id=t.id, proprietario_id=p.id, tipo_diritto=tipo, quota_percentuale=100))
-    c = Conduttore(soggetto_id=_soggetto(db, "Conduttore").id)
-    db.add(c)
-    db.flush()
-    db.add(AssegnazioneConduttore(bene_id=t.id, conduttore_id=c.id, data_inizio=date(2020, 1, 1)))
+    for cognome, tipo in (("Nudo", "nuda_proprieta"), ("Usufrutto", "usufrutto")):
+        crea_relazione_bene(db, TEST_TENANT, None, t.id, _soggetto(db, cognome).id, tipo, quota="1/1")
+    # An agricultural tenant: the agrarian income follows whoever farms the land.
+    crea_relazione_bene(db, TEST_TENANT, None, t.id, _soggetto(db, "Conduttore").id, "affittuario_agrario",
+                        data_inizio=date(2020, 1, 1))
     db.flush()
     return t
 
@@ -89,3 +84,19 @@ def test_riepilogo_unita_senza_diritti(db_session):
     r = get_riepilogo(u.id, data=None, db=db_session, current_user=UTENTE)
     assert r.voci[0].etichetta == "Rendita catastale"
     assert r.avvisi == ["Nessun titolare registrato alla data"]
+
+
+def test_riepilogo_terreno_locato_avviso_e_quote_esatte(db_session):
+    t = Terreno(codice="RIEP-T2", comune="Forlì", provincia="FC",
+                porzioni=[TerrenoPorzione(qualita="SEMINATIVO", superficie_mq=500)])
+    db_session.add(t)
+    db_session.flush()
+    for i in range(3):
+        crea_relazione_bene(db_session, TEST_TENANT, None, t.id, _soggetto(db_session, f"Terzo{i}").id,
+                            "proprieta", quota="1/3")
+    crea_relazione_bene(db_session, TEST_TENANT, None, t.id, _soggetto(db_session, "Locatario").id, "conduttore")
+    r = get_riepilogo(t.id, data=None, db=db_session, current_user=UTENTE)
+    assert _chi(r, "REDDITO_AGRARIO") == ["Riep Terzo0", "Riep Terzo1", "Riep Terzo2"]
+    assert _chi(r, "SPESE_ORDINARIE") == ["Riep Locatario"]
+    assert any(a.startswith("Terreno locato:") for a in r.avvisi)
+    assert r.voci[0].soggetti[0].quota == Decimal("33.33")
