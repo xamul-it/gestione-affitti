@@ -8,6 +8,34 @@ IMMOBILE = ["IMMOBILE"]
 RELAZIONE = ["RELAZIONE"]
 IMMOBILE_E_RELAZIONE = ["IMMOBILE", "RELAZIONE"]
 
+# Relation types on beni (units and land parcels), by family: (codice, nome, descrizione).
+DIRITTI_REALI = [
+    ("proprieta", "Proprietà", "Titolare del diritto di proprietà sul bene"),
+    ("nuda_proprieta", "Nuda proprietà", "Titolare della nuda proprietà (art. 978 c.c.)"),
+    ("usufrutto", "Usufrutto", "Titolare dell'usufrutto (art. 978 c.c.)"),
+    ("uso", "Uso", "Titolare del diritto di uso (art. 1021 c.c.)"),
+    ("abitazione", "Abitazione", "Titolare del diritto di abitazione (art. 1022 c.c.)"),
+    ("superficie", "Superficie", "Titolare del diritto di superficie (art. 952 c.c.)"),
+    ("enfiteusi", "Enfiteusi", "Enfiteuta (art. 957 c.c.)"),
+    ("diritto_reale_altro", "Altro diritto reale", "Altro diritto reale di godimento"),
+]
+GODIMENTO = [
+    ("conduttore", "Conduttore", "Chi occupa o usa il bene in locazione, con o senza contratto"),
+    ("affittuario_agrario", "Affittuario agrario", "Chi coltiva il fondo in affitto agrario"),
+    ("comodatario", "Comodatario",
+     "Chi usa il bene in comodato; estremi di registrazione in dati (registrazione_data, "
+     "registrazione_ufficio, registrazione_numero)"),
+    ("godimento_altro", "Altro godimento", "Altro titolo di godimento del bene"),
+]
+INCARICHI = [
+    ("manutentore", "Manutentore", "Incaricato della manutenzione del bene"),
+    ("terzo_responsabile_impianto", "Terzo responsabile impianto",
+     "Terzo responsabile dell'impianto termico (DPR 74/2013)"),
+    ("responsabile_impianto", "Responsabile impianto", "Responsabile dell'impianto termico"),
+    ("tecnico_incaricato", "Tecnico incaricato", "Tecnico incaricato (catasto, pratiche edilizie, APE)"),
+    ("incarico_altro", "Altro incarico", "Altro incarico sul bene"),
+]
+
 manifest = {
     # Campi obbligatori
     "name": "Immobili",
@@ -25,24 +53,22 @@ manifest = {
 
     # Tipi di relazione soggetto -> oggetto (spec 2026-11-10-relazioni-ruoli-soggetti)
     "relation_types": [
-        {
-            "codice": "proprietario",
-            "nome": "Proprietario",
-            "descrizione": "Titolare di un diritto reale su un'unità immobiliare",
-            "entity_types": ["IMMOBILE"],
-            "fonte": "MODULO",
-            "provider": "immobili.relations:proprietari",
-            "permesso_oggetto": "immobile.view",
-        },
-        {
-            "codice": "conduttore",
-            "nome": "Conduttore",
-            "descrizione": "Chi occupa o usa un'unità immobiliare, con o senza contratto",
-            "entity_types": ["IMMOBILE"],
-            "fonte": "MODULO",
-            "provider": "immobili.relations:conduttori",
-            "permesso_oggetto": "immobile.view",
-        },
+        *[
+            {"codice": c, "nome": n, "descrizione": d, "entity_types": IMMOBILE, "fonte": "CORE",
+             "permesso_oggetto": "immobile.view", "famiglia": "diritti_reali",
+             "ammette_quota": True, "solo_beni": True}
+            for c, n, d in DIRITTI_REALI
+        ],
+        *[
+            {"codice": c, "nome": n, "descrizione": d, "entity_types": IMMOBILE, "fonte": "CORE",
+             "permesso_oggetto": "immobile.view", "famiglia": "godimento"}
+            for c, n, d in GODIMENTO
+        ],
+        *[
+            {"codice": c, "nome": n, "descrizione": d, "entity_types": IMMOBILE, "fonte": "CORE",
+             "permesso_oggetto": "immobile.view", "famiglia": "incarichi"}
+            for c, n, d in INCARICHI
+        ],
         {
             "codice": "amministratore_condominio",
             "nome": "Amministratore condominio",
@@ -54,6 +80,9 @@ manifest = {
             "permesso_oggetto": "condominio.view",
         },
     ],
+
+    # Per-object visibility of the relations on beni: the permission depends on the bene type.
+    "object_permissions": {"IMMOBILE": "immobili.services.relazioni_bene:permessi_vista"},
 
     # Campi opzionali
     "author": "Gestione Affitti Team",

@@ -27,7 +27,12 @@ def test_relation_types_validate(module_name):
 
 
 def test_expected_codes():
-    assert set(_types("immobili")) == {"proprietario", "conduttore", "amministratore_condominio"}
+    assert set(_types("immobili")) == {
+        "proprieta", "nuda_proprieta", "usufrutto", "uso", "abitazione", "superficie", "enfiteusi",
+        "diritto_reale_altro", "conduttore", "affittuario_agrario", "comodatario", "godimento_altro",
+        "manutentore", "terzo_responsabile_impianto", "responsabile_impianto", "tecnico_incaricato",
+        "incarico_altro", "amministratore_condominio",
+    }
     assert set(_types("affitti_lungo")) == {"affittuario", "tecnico"}
     assert set(_types("anagrafica_italiana")) == {"ruolo_azienda"}
 
@@ -41,14 +46,31 @@ def test_amministratore_condominio():
     assert t["permesso_oggetto"] == "condominio.view"
 
 
-def test_module_sourced_roles():
-    for codice in ("proprietario", "conduttore"):
-        t = _types("immobili")[codice]
-        assert t["fonte"] == "MODULO"
-        assert t["entity_types"] == ["IMMOBILE"]
-        assert t["permesso_oggetto"] == "immobile.view"
-    assert _types("immobili")["proprietario"]["provider"] == "immobili.relations:proprietari"
-    assert _types("immobili")["conduttore"]["provider"] == "immobili.relations:conduttori"
+FAMIGLIE_BENI = {
+    "diritti_reali": {"proprieta", "nuda_proprieta", "usufrutto", "uso", "abitazione", "superficie",
+                      "enfiteusi", "diritto_reale_altro"},
+    "godimento": {"conduttore", "affittuario_agrario", "comodatario", "godimento_altro"},
+    "incarichi": {"manutentore", "terzo_responsabile_impianto", "responsabile_impianto",
+                  "tecnico_incaricato", "incarico_altro"},
+}
+
+
+def test_tipi_dei_beni_per_famiglia():
+    tipi = _types("immobili")
+    for famiglia, codici in FAMIGLIE_BENI.items():
+        for codice in codici:
+            t = tipi[codice]
+            assert t["famiglia"] == famiglia
+            assert t["fonte"] == "CORE" and "provider" not in t
+            assert t["entity_types"] == ["IMMOBILE"]
+            assert t["permesso_oggetto"] == "immobile.view"
+            assert t.get("ammette_quota", False) is (famiglia == "diritti_reali")
+            assert t.get("solo_beni", False) is (famiglia == "diritti_reali")
+
+
+def test_hook_permessi_dei_beni():
+    assert immobili_manifest["object_permissions"] == {
+        "IMMOBILE": "immobili.services.relazioni_bene:permessi_vista"}
 
 
 def test_ruolo_azienda():

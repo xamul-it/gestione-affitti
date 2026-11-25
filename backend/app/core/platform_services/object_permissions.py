@@ -71,3 +71,16 @@ def oggetto_visibile(db: Session, tenant_schema: Optional[str], permessi: Set[st
         sub.c.entity_id == entity_id, sub.c.permesso.in_(list(permessi)),
     ).limit(1)
     return db.execute(q).first() is not None
+
+
+def permessi_modifica(db: Session, tenant_schema: Optional[str], *, entity_type: Optional[str],
+                      entity_id: Optional[int]) -> Optional[Set[str]]:
+    """Permissions that allow writing the relations of one object: the hook's view permission with
+    ".view" replaced by ".edit". None when the entity type has no hook (the type's own
+    permesso_oggetto rule applies); an empty set when the hook does not list the object."""
+    hook = hook_selects(db, tenant_schema).get(entity_type) if entity_type else None
+    if hook is None:
+        return None
+    sub = hook.subquery()
+    rows = db.execute(sa.select(sub.c.permesso).where(sub.c.entity_id == entity_id)).all()
+    return {r[0].rsplit(".", 1)[0] + ".edit" for r in rows if r[0]}

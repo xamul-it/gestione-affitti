@@ -154,8 +154,10 @@ def test_list_filtra_per_famiglia(ctx, tipi_famiglie):
     assert [r["tipo"] for r in res.json()] == [inq]
     assert res.json()[0]["famiglia"] == "godimento"
     tipi = http.get("/api/v1/relazioni/tipi?famiglia=diritti_reali").json()
-    assert [t["codice"] for t in tipi] == [usu]
-    assert tipi[0]["ammette_quota"] is True and tipi[0]["famiglia"] == "diritti_reali"
+    # The real catalog (immobili) has types of this family too: look for the test's own.
+    [mio] = [t for t in tipi if t["codice"] == usu]
+    assert mio["ammette_quota"] is True and mio["famiglia"] == "diritti_reali"
+    assert inq not in [t["codice"] for t in tipi]
 
 
 def test_quota_via_api(ctx, tipi_famiglie):

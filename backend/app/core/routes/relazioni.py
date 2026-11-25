@@ -40,16 +40,28 @@ _moduli_attivi = moduli_attivi
 API_DEDICATE = {"ruolo_azienda": "/anagrafica/ruoli-azienda"}
 
 
-def _verifica_scrittura(user: User, tipo: RuoloDisponibile) -> None:
+def _verifica_scrittura(user: User, tipo: RuoloDisponibile, db: Optional[Session] = None, tenant_schema=None,
+                        entity_type: Optional[str] = None, entity_id: Optional[int] = None) -> None:
+    """Writing needs the ".edit" counterpart of the object's view permission: the module hook's one
+    for that object (e.g. terreno.edit for a land parcel) or, without hook, the type's permesso_oggetto."""
     if tipo.codice in API_DEDICATE:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             f"I '{tipo.nome_display}' si gestiscono da {API_DEDICATE[tipo.codice]}",
         )
-    if user.is_superuser or not tipo.permesso_oggetto:
+    if user.is_superuser:
+        return
+    permessi = user.get_permissions()
+    per_oggetto = (object_permissions.permessi_modifica(db, _schema(tenant_schema), entity_type=entity_type,
+                                                        entity_id=entity_id) if db is not None else None)
+    if per_oggetto is not None:
+        if not per_oggetto & permessi:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Non hai accesso a questo oggetto")
+        return
+    if not tipo.permesso_oggetto:
         return
     richiesto = tipo.permesso_oggetto.rsplit(".", 1)[0] + ".edit"
-    if richiesto not in user.get_permissions():
+    if richiesto not in permessi:
         raise HTTPException(status.HTTP_403_FORBIDDEN, f"Insufficient permissions. Required: {richiesto}")
 
 
@@ -133,7 +145,7 @@ def create_relazione(
 ):
     svc = _service(db, tenant_schema, current_user)
     tipo = _errori(lambda: svc.tipo(data.tipo))
-    _verifica_scrittura(current_user, tipo)
+    _verifica_scrittura(current_user, tipo, db, tenant_schema, data.entity_type, data.entity_id)
     _verifica_oggetto(db, tenant_schema, current_user, tipo, data.entity_type, data.entity_id)
     campi = data.model_dump(exclude={"soggetto_id", "tipo"})
     campi["quota"] = _errori(lambda: parse_quota(data.quota)) if data.quota else None
@@ -155,6 +167,12 @@ def _tipo_di(db: Session, relazione_id: int, tenant_schema=None, user: Optional[
     return tipo
 
 
+def _verifica_scrittura_relazione(db: Session, tenant_schema, user: User, relazione_id: int) -> None:
+    tipo = _tipo_di(db, relazione_id, tenant_schema, user)
+    rel = db.get(Relazione, relazione_id)
+    _verifica_scrittura(user, tipo, db, tenant_schema, rel.entity_type, rel.entity_id)
+
+
 @router.get("/{relazione_id}", response_model=RelazioneCoreOut)
 def get_relazione(
     relazione_id: int,
@@ -174,7 +192,7 @@ def update_relazione(
     tenant_schema=Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.edit")),
 ):
-    _verifica_scrittura(current_user, _tipo_di(db, relazione_id, tenant_schema, current_user))
+    _verifica_scrittura_relazione(db, tenant_schema, current_user, relazione_id)
     svc = _service(db, tenant_schema, current_user)
     campi = data.model_dump(exclude_unset=True)
     if campi.get("quota"):
@@ -192,7 +210,7 @@ def rinnova_relazione(
     tenant_schema=Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.edit")),
 ):
-    _verifica_scrittura(current_user, _tipo_di(db, relazione_id, tenant_schema, current_user))
+    _verifica_scrittura_relazione(db, tenant_schema, current_user, relazione_id)
     rel = _errori(lambda: _service(db, tenant_schema, current_user).rinnova(relazione_id))
     db.commit()
     db.refresh(rel)
@@ -206,7 +224,7 @@ def delete_relazione(
     tenant_schema=Depends(get_tenant_schema),
     current_user: User = Depends(require_permission("soggetto.edit")),
 ):
-    _verifica_scrittura(current_user, _tipo_di(db, relazione_id, tenant_schema, current_user))
+    _verifica_scrittura_relazione(db, tenant_schema, current_user, relazione_id)
     _errori(lambda: _service(db, tenant_schema, current_user).elimina(relazione_id))
     db.commit()
     return None

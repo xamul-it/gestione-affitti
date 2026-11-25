@@ -108,7 +108,7 @@ def test_superuser_vede_tutto(ctx):
 def test_403_su_lettura_modifica_eliminazione(ctx):
     http, rels, monkeypatch = ctx
     _register(monkeypatch)
-    _as("soggetto.view", "soggetto.edit", "x.view")
+    _as("soggetto.view", "soggetto.edit", "x.view", "x.edit")
     b = rels["b"].id
     assert http.get(f"/api/v1/relazioni/{b}").status_code == 403
     assert http.put(f"/api/v1/relazioni/{b}", json={"note": "no"}).status_code == 403
@@ -117,3 +117,20 @@ def test_403_su_lettura_modifica_eliminazione(ctx):
     assert http.get(f"/api/v1/relazioni/{a}").status_code == 200
     assert http.put(f"/api/v1/relazioni/{a}", json={"note": "ok"}).status_code == 200
     assert http.delete(f"/api/v1/relazioni/{a}").status_code == 204
+
+
+def test_scrittura_richiede_il_permesso_di_modifica_dell_oggetto(ctx):
+    """Writing needs the hook's view permission with .view -> .edit (here x.edit), not just the view."""
+    http, rels, monkeypatch = ctx
+    _register(monkeypatch)
+    a, b = rels["a"].id, rels["b"].id
+    _as("soggetto.view", "soggetto.edit", "x.view")
+    assert http.put(f"/api/v1/relazioni/{a}", json={"note": "no"}).status_code == 403
+    assert http.delete(f"/api/v1/relazioni/{a}").status_code == 403
+    # y.edit alone does not help on an object whose hook permission is x.view.
+    _as("soggetto.view", "soggetto.edit", "x.view", "y.edit")
+    assert http.put(f"/api/v1/relazioni/{a}", json={"note": "no"}).status_code == 403
+    _as("soggetto.view", "soggetto.edit", "x.view", "x.edit")
+    assert http.put(f"/api/v1/relazioni/{a}", json={"note": "ok"}).status_code == 200
+    _as("soggetto.view", "soggetto.edit", "y.view", "y.edit")
+    assert http.put(f"/api/v1/relazioni/{b}", json={"note": "ok"}).status_code == 200

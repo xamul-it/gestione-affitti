@@ -73,13 +73,39 @@ Certificati in scadenza.
 
 ## 3. Relazioni (ruoli)
 
-Tipi dichiarati dal modulo (`relation_types`), vedi `docs/piattaforma.md` §5:
+Tipi dichiarati dal modulo (`relation_types`), vedi `docs/piattaforma.md` §5.
+Tutti sono CORE (tabella `core_relazioni`), su `IMMOBILE` (unità e terreni),
+con `permesso_oggetto` `immobile.view`; per i beni la visibilità effettiva
+dipende dal tipo del bene (hook `object_permissions`,
+`services/relazioni_bene.py:permessi_vista`): `immobile.view` per le unità,
+`terreno.view` per i terreni; per scrivere serve il corrispondente `.edit`
+(`immobile.edit` / `terreno.edit`), anche sull'API generica `/relazioni`.
+
+| Famiglia | Quota | Tipi |
+|---|---|---|
+| `diritti_reali` (solo beni) | sì, frazione `n/d` | `proprieta`, `nuda_proprieta`, `usufrutto`, `uso`, `abitazione`, `superficie`, `enfiteusi`, `diritto_reale_altro` |
+| `godimento` | no | `conduttore`, `affittuario_agrario`, `comodatario`, `godimento_altro` |
+| `incarichi` | no | `manutentore`, `terzo_responsabile_impianto`, `responsabile_impianto`, `tecnico_incaricato`, `incarico_altro` |
 
 | Tipo | Oggetto | Fonte |
 |---|---|---|
-| `proprietario` | IMMOBILE | MODULO: da proprietari e diritti |
-| `conduttore` | IMMOBILE | MODULO: da conduttori e assegnazioni |
 | `amministratore_condominio` | CONDOMINIO | CORE, scadenza 12 mesi da `data_inizio` (art. 1129 c.c., rinnovo tacito con "rinnova") |
+
+Rotte del bene: `GET /beni/{id}/relazioni?solo_correnti=` (raggruppate per
+famiglia) e `POST /beni/{id}/relazioni` (`soggetto_id`, `tipo`, `quota`,
+`data_inizio`, `data_fine`, `note`, `dati`) che restituisce la relazione e gli
+avvisi. Modifica, chiusura ed eliminazione restano su `/relazioni/{id}`. I
+dati non validi danno 422. Se la somma delle quote aperte di uno stesso tipo
+supera l'intero (somma esatta, mai arrotondata) la relazione viene creata e
+la risposta porta l'avviso. Il comodatario salva gli estremi di registrazione
+in `dati`: `registrazione_data` (ISO), `registrazione_ufficio`,
+`registrazione_numero`.
+
+I tipi `proprietario` e `conduttore` con fonte MODULO (da `immo_proprietari`,
+`immo_diritti_immobile`, `immo_conduttori`, `immo_assegnazioni_conduttore`)
+non esistono più: `conduttore` mantiene il codice ma è ora CORE; la
+conversione dei dati e l'eliminazione delle vecchie tabelle seguono nelle
+fasi successive della fase 3 dei beni.
 
 Se il modulo viene disattivato nel tenant, l'amministratore di condominio
 resta salvato ma nascosto e le sue scadenze vengono annullate; alla

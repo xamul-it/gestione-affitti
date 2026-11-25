@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_active_user
 from app.core.auth.models import User
-from app.core.database import get_db
+from app.core.database import get_db, get_tenant_schema
 
 from ..models import Bene, CollegamentoBeni, VariazioneCatastale
 from ..schemas.bene import BeneResponse
@@ -24,6 +24,10 @@ from ..services.collegamenti_beni import (
     TIPI_COLLEGAMENTO, CollegamentoNonValido, aggiorna_collegamento, avvisi_collegamenti,
     crea_collegamento,
 )
+from ..schemas.relazioni_bene import (
+    RelazioneBeneCreata, RelazioneBeneCreate, RelazioniBeneResponse,
+)
+from ..services.relazioni_bene import PERMESSO_PER_TIPO, crea_relazione_bene, relazioni_del_bene
 from ..services.ruoli_bene import riepilogo_bene
 from ..schemas.immobili import VariazioneCatastaleResponse
 from ..schemas.riepilogo_bene import RiepilogoBeneResponse
@@ -33,7 +37,7 @@ router = APIRouter(prefix="/beni", tags=["Beni"])
 _FOGLIO_PARTICELLA = re.compile(r"^\s*0*(\w+)\s*/\s*0*(\w+)\s*$")
 
 # Units are seen with immobile.view, land parcels with terreno.view.
-_PERMESSO_PER_TIPO = {"UNITA": "immobile.view", "TERRENO": "terreno.view"}
+_PERMESSO_PER_TIPO = PERMESSO_PER_TIPO
 _PERMESSO_MODIFICA = {"UNITA": "immobile.edit", "TERRENO": "terreno.edit"}
 
 
@@ -256,3 +260,58 @@ def delete_collegamento(
     db.delete(collegamento)
     db.commit()
     return Response(status_code=204)
+
+
+# --- Relations of the bene (rights, tenancies, assignments) -------------------
+# Changing or closing one stays on /relazioni/{id}.
+
+def _bene_per_relazioni(db: Session, bene_id: int, utente, scrittura: bool = False) -> Bene:
+    """The bene, if the user may see it (403 otherwise, as the generic relations API) and,
+    for writes, edit it (immobile.edit for units, terreno.edit for land parcels)."""
+    bene = db.get(Bene, bene_id)
+    if bene is None:
+        raise HTTPException(status_code=404, detail="Bene non trovato")
+    if getattr(utente, "is_superuser", False):
+        return bene
+    permessi = utente.get_permissions()
+    if _PERMESSO_PER_TIPO[bene.tipo_bene] not in permessi:
+        raise HTTPException(status_code=403, detail="Permessi insufficienti")
+    if scrittura and _PERMESSO_MODIFICA[bene.tipo_bene] not in permessi:
+        raise HTTPException(status_code=403, detail="Permessi insufficienti")
+    return bene
+
+
+@router.get("/{bene_id}/relazioni", response_model=RelazioniBeneResponse)
+def get_relazioni_bene(
+    bene_id: int,
+    solo_correnti: bool = Query(False, description="Solo le relazioni non chiuse"),
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Diritti, godimento e incarichi del bene, per famiglia."""
+    _bene_per_relazioni(db, bene_id, current_user)
+    return relazioni_del_bene(db, tenant_schema, bene_id, solo_correnti)
+
+
+@router.post("/{bene_id}/relazioni", response_model=RelazioneBeneCreata, status_code=201)
+def create_relazione_bene(
+    bene_id: int,
+    dati: RelazioneBeneCreate,
+    db: Session = Depends(get_db),
+    tenant_schema: Optional[str] = Depends(get_tenant_schema),
+    current_user: User = Depends(get_current_active_user),
+):
+    _bene_per_relazioni(db, bene_id, current_user, scrittura=True)
+    try:
+        rel, avvisi = crea_relazione_bene(
+            db, tenant_schema, current_user.id, bene_id, dati.soggetto_id, dati.tipo, quota=dati.quota,
+            data_inizio=dati.data_inizio, data_fine=dati.data_fine, note=dati.note, dati=dati.dati,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    db.commit()
+    riga = next(r for righe in relazioni_del_bene(db, tenant_schema, bene_id).values() for r in righe if r["id"] == rel.id)
+    return {"relazione": riga, "avvisi": avvisi}
