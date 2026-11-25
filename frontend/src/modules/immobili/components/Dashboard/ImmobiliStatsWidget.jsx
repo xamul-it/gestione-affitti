@@ -34,7 +34,7 @@ function ImmobiliStatsWidget() {
       // Relations need soggetto.view: without it the counts degrade to 0.
       const correnti = (famiglia) => relazioniAPI
         .list({ famiglia, entity_type: 'IMMOBILE', solo_correnti: true })
-        .catch(() => ({ data: [] }));
+        .catch(() => ({ data: [], fallita: true }));
       const [immobiliRes, dirittiRes, condominiRes, godimentoRes] = await Promise.all([
         unitaImmobiliariAPI.getAll(),
         correnti('diritti_reali'),
@@ -51,10 +51,10 @@ function ImmobiliStatsWidget() {
 
       setStats({
         totale_immobili: immobili.length,
-        totale_proprietari: titolari.size,
+        totale_proprietari: dirittiRes.fallita ? null : titolari.size,
         totale_condomini: condominiRes.data.length,
-        immobili_liberi: immobili.length - occupati,
-        immobili_occupati: occupati,
+        immobili_liberi: godimentoRes.fallita ? null : immobili.length - occupati,
+        immobili_occupati: godimentoRes.fallita ? null : occupati,
       });
     } catch (err) {
       console.error('Error loading immobili stats:', err);
@@ -107,7 +107,7 @@ function ImmobiliStatsWidget() {
             {renderIcon('user-tie', { size: 22 })}
           </span>
           <span className="stat-content">
-            <span className="stat-value">{stats.totale_proprietari}</span>
+            <span className="stat-value">{stats.totale_proprietari ?? '—'}</span>
             <span className="stat-label">Titolari di diritti</span>
           </span>
         </Link>
@@ -123,12 +123,12 @@ function ImmobiliStatsWidget() {
         </Link>
 
         <div className="stat-card stat-card--liberi">
-          <div className="stat-value">{stats.immobili_liberi}</div>
+          <div className="stat-value">{stats.immobili_liberi ?? '—'}</div>
           <div className="stat-label">Liberi</div>
         </div>
 
         <div className="stat-card stat-card--affittati">
-          <div className="stat-value">{stats.immobili_occupati}</div>
+          <div className="stat-value">{stats.immobili_occupati ?? '—'}</div>
           <div className="stat-label">Occupati</div>
         </div>
       </div>

@@ -7,6 +7,8 @@ import { EmptyState } from '../../../../core/components/common/EmptyState';
 import { LoadingSpinner } from '../../../../core/components/common/LoadingSpinner';
 import DocumentiPanel from '../../../../core/components/Documenti/DocumentiPanel';
 import { formatDate } from '../../../../core/components/Documenti/documentiUtils';
+import { ErrorMessage } from '../../../../core/components/common/ErrorMessage';
+import { useToast } from '../../../../core/hooks/useToast';
 import { relazioniAPI } from '../../../../services/relazioniAPI';
 import { beniAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
@@ -33,6 +35,7 @@ function periodo(r) {
  */
 export default function SoggettiSection({ beneId, onChange }) {
   const uid = useId();
+  const toast = useToast();
   const [dati, setDati] = useState({ diritti_reali: [], godimento: [], incarichi: [] });
   const [chiuse, setChiuse] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -65,7 +68,7 @@ export default function SoggettiSection({ beneId, onChange }) {
       await carica();
       onChange?.();
     } catch (err) {
-      setError(formatApiError(err));
+      toast.error(formatApiError(err));
     }
   };
 
@@ -94,8 +97,9 @@ export default function SoggettiSection({ beneId, onChange }) {
         </label>
       </div>
 
-      {error && <div className="scheda-error" role="alert">{error}</div>}
-      {loading && !caricato && <LoadingSpinner message="Caricamento soggetti…" />}
+      {error && !caricato && <ErrorMessage message={error} onRetry={carica} />}
+      {error && caricato && <div className="scheda-error" role="alert">{error}</div>}
+      {loading && !caricato && !error && <LoadingSpinner message="Caricamento soggetti…" />}
 
       {caricato && BLOCCHI.map((b) => {
         const righe = dati[b.famiglia] || [];
@@ -130,6 +134,7 @@ export default function SoggettiSection({ beneId, onChange }) {
                         <tr key={r.id} className={chiusa ? 'is-chiuso' : undefined}>
                           <td data-label="Anagrafica">
                             <Link to={`/anagrafiche/${r.soggetto_id}`}>{r.soggetto_nome}</Link>
+                            {chiusa && <span className="scheda-muted"> (chiusa)</span>}
                           </td>
                           <td data-label="Tipo">{r.tipo_nome}</td>
                           {b.conQuota && <td data-label="Quota">{r.quota || '—'}</td>}

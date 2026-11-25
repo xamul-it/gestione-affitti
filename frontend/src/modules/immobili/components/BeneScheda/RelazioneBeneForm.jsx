@@ -83,9 +83,16 @@ export default function RelazioneBeneForm({ beneId, famiglia, titolo, relazione,
         return;
       }
     }
-    const datiOut = {};
+    if (dataInizio && dataFine && dataFine < dataInizio) {
+      setError('La data di fine non può precedere la data di inizio');
+      return;
+    }
+    // Keep the other keys of dati: only the registration ones are edited here.
+    const datiOut = { ...(relazione?.dati || {}) };
     if (comodato) {
-      CAMPI_REGISTRAZIONE.forEach(({ chiave }) => { if (dati[chiave]) datiOut[chiave] = dati[chiave]; });
+      CAMPI_REGISTRAZIONE.forEach(({ chiave }) => {
+        if (dati[chiave]) datiOut[chiave] = dati[chiave]; else delete datiOut[chiave];
+      });
     }
     const corpo = {
       data_inizio: dataInizio || null,
@@ -102,6 +109,7 @@ export default function RelazioneBeneForm({ beneId, famiglia, titolo, relazione,
         const r = await beniAPI.createRelazione(beneId, { soggetto_id: soggetto.id, tipo, ...corpo });
         (r.data?.avvisi || []).forEach((a) => toast.warning(a));
       }
+      toast.success('Relazione salvata');
       onClose(true);
     } catch (err) {
       setError(formatApiError(err));

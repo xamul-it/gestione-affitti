@@ -153,3 +153,55 @@ describe('SoggettiSection', () => {
     expect(await screen.findByText('Pannello documenti RELAZIONE 1')).toBeInTheDocument();
   });
 });
+
+describe('SoggettiSection - edit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    relazioniAPI.getTipi.mockImplementation((_et, famiglia) => Promise.resolve({ data: tipi[famiglia] }));
+  });
+
+  it('keeps quota on edit of a diritto reale', async () => {
+    beniAPI.getRelazioni.mockResolvedValue({ data: risposta });
+    relazioniAPI.update.mockResolvedValue({});
+    renderSezione();
+    fireEvent.click(await screen.findByRole('button', { name: 'Modifica la relazione di Mario Rossi' }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByLabelText(/Quota/)).toHaveValue('1/2'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Salva' }));
+    await waitFor(() => expect(relazioniAPI.update).toHaveBeenCalledWith(1, expect.objectContaining({ quota: '1/2' })));
+  });
+
+  it('keeps other dati keys and registration data of a comodatario', async () => {
+    const comodato = { id: 3, tipo: 'comodatario', tipo_nome: 'Comodatario', soggetto_id: 8, soggetto_nome: 'Anna Bianchi',
+      quota: null, data_inizio: '2024-01-01', data_fine: null, note: null,
+      dati: { registrazione_ufficio: 'Milano', altro: 'x' } };
+    beniAPI.getRelazioni.mockResolvedValue({ data: { ...risposta, godimento: [comodato] } });
+    relazioniAPI.update.mockResolvedValue({});
+    renderSezione();
+    fireEvent.click(await screen.findByRole('button', { name: 'Modifica la relazione di Anna Bianchi' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('Numero di registrazione'), { target: { value: '55' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Salva' }));
+    await waitFor(() => expect(relazioniAPI.update).toHaveBeenCalledWith(3, expect.objectContaining({
+      dati: { registrazione_ufficio: 'Milano', altro: 'x', registrazione_numero: '55' },
+    })));
+  });
+
+  it('shows a 422 error in the form and rejects an end before the start', async () => {
+    beniAPI.getRelazioni.mockResolvedValue({ data: risposta });
+    beniAPI.createRelazione.mockRejectedValue({ response: { status: 422, data: { detail: 'Esiste già un conduttore' } } });
+    renderSezione();
+    await screen.findByText('Mario Rossi');
+    fireEvent.click(within(blocco('Godimento')).getByRole('button', { name: /Aggiungi/ }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByText('Scegli anagrafica'));
+    fireEvent.change(within(dialog).getByLabelText('Dal'), { target: { value: '2024-05-01' } });
+    fireEvent.change(within(dialog).getByLabelText('Fino al'), { target: { value: '2024-04-01' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Salva' }));
+    expect(await within(dialog).findByText(/data di fine non può precedere/)).toBeInTheDocument();
+    expect(beniAPI.createRelazione).not.toHaveBeenCalled();
+    fireEvent.change(within(dialog).getByLabelText('Fino al'), { target: { value: '' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Salva' }));
+    expect(await within(dialog).findByText(/Esiste già un conduttore/)).toBeInTheDocument();
+  });
+});

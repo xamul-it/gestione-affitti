@@ -6,6 +6,7 @@ import { nomeSoggetto } from '../../../anagrafica_italiana/components/SoggettiAn
 import { getSoggettiAnagrafici } from '../../../anagrafica_italiana/services/anagraficaAPI';
 import { EmptyState, ErrorMessage, LoadingSpinner } from '../../../../core/components/common';
 import { formatDate } from '../../../../core/utils/formatters';
+import { useToast } from '../../../../core/hooks/useToast';
 import { relazioniAPI } from '../../../../services/relazioniAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
 import './RuoloSoggettiPage.css';
@@ -25,25 +26,29 @@ function periodo(r) {
  * bene; here they are read, with the anagrafica and the bene linked.
  */
 function RuoloSoggettiPage({ famiglia, title, colonnaTipo, conQuota = false, vuoto }) {
+  const toast = useToast();
   const [righe, setRighe] = useState(null);
   const [nomi, setNomi] = useState({});
   const [error, setError] = useState(null);
-  const [cessate, setCessate] = useState(false);
+  const [chiuse, setChiuse] = useState(false);
 
   useEffect(() => {
     let attivo = true;
     setRighe(null);
     setError(null);
     Promise.all([
-      relazioniAPI.list({ famiglia, entity_type: 'IMMOBILE', solo_correnti: !cessate }),
-      getSoggettiAnagrafici({ limit: 1000 }).catch(() => []),
+      relazioniAPI.list({ famiglia, entity_type: 'IMMOBILE', solo_correnti: !chiuse }),
+      getSoggettiAnagrafici({ limit: 1000 }).catch(() => {
+        toast.error('Impossibile caricare i nomi delle anagrafiche: riprova più tardi');
+        return [];
+      }),
     ]).then(([rel, soggetti]) => {
       if (!attivo) return;
       setNomi(Object.fromEntries((soggetti || []).map((s) => [s.id, nomeSoggetto(s)])));
       setRighe(rel.data || []);
     }).catch((err) => { if (attivo) setError(formatApiError(err)); });
     return () => { attivo = false; };
-  }, [famiglia, cessate]);
+  }, [famiglia, chiuse]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ordinate = useMemo(() => [...(righe || [])].sort((a, b) => (
     (nomi[a.soggetto_id] || '').localeCompare(nomi[b.soggetto_id] || '', 'it')
@@ -54,8 +59,8 @@ function RuoloSoggettiPage({ famiglia, title, colonnaTipo, conQuota = false, vuo
       <div className="ruolo-page__head">
         <h2>{title}</h2>
         <label className="ruolo-page__cessate">
-          <input type="checkbox" checked={cessate} onChange={(e) => setCessate(e.target.checked)} />
-          Mostra cessate
+          <input type="checkbox" checked={chiuse} onChange={(e) => setChiuse(e.target.checked)} />
+          Mostra chiuse
         </label>
       </div>
       {error && <ErrorMessage message={error} />}
@@ -78,7 +83,7 @@ function RuoloSoggettiPage({ famiglia, title, colonnaTipo, conQuota = false, vuo
                 <td data-label="Anagrafica">
                   <Link to={`/anagrafiche/${r.soggetto_id}`}>{nomi[r.soggetto_id] || `Anagrafica ${r.soggetto_id}`}</Link>
                 </td>
-                <td data-label={colonnaTipo}>{r.tipo_nome}{r.corrente ? '' : ' (cessato)'}</td>
+                <td data-label={colonnaTipo}>{r.tipo_nome}{r.corrente ? '' : ' (chiusa)'}</td>
                 <td data-label="Immobile"><OggettoRelazione r={r} /></td>
                 {conQuota && <td data-label="Quota">{r.quota || '—'}</td>}
                 <td data-label="Periodo">{periodo(r)}</td>
