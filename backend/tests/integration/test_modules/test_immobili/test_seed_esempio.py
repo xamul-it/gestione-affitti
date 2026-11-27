@@ -71,3 +71,25 @@ def test_dati_di_esempio_durante_l_installazione_del_modulo(db_session, monkeypa
     seed_tenant_data(db_session, tenant_id=0, tenant_schema=TEST_TENANT, seed_test_data=True)
     assert _relazioni(db_session, "UNITA-001", "proprieta") == 2
     assert _relazioni(db_session, "UNITA-002", "conduttore") == 1
+
+
+def _complesso(db):
+    return db.execute(text(
+        "SELECT c.id, e.id FROM immo_raggruppamenti c JOIN immo_raggruppamenti e ON e.padre_id = c.id "
+        "WHERE c.nome = 'Complesso di esempio' AND c.tipo = 'COMPLESSO' "
+        "AND e.nome = 'Edificio A' AND e.tipo = 'EDIFICIO'")).all()
+
+
+def test_seed_complesso_idempotente(db_session):
+    db = db_session
+    for _ in range(2):
+        seed_tenant_data(db, tenant_id=0, tenant_schema=None, seed_test_data=True)
+    ((_, edificio),) = _complesso(db)
+    unita = db.execute(text("SELECT codice FROM immo_beni WHERE raggruppamento_id = :e ORDER BY codice"),
+                       {"e": edificio}).scalars().all()
+    assert unita == ["UNITA-001", "UNITA-002"]
+    manutentori = db.execute(text(
+        "SELECT count(*) FROM core_relazioni r JOIN core_ruoli_disponibili t ON t.id = r.ruolo_id "
+        "WHERE r.entity_type = 'RAGGRUPPAMENTO' AND r.entity_id = :e AND t.codice = 'manutentore'"),
+        {"e": edificio}).scalar()
+    assert manutentori == 1

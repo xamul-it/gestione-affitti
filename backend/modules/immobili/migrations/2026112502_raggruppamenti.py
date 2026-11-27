@@ -48,9 +48,60 @@ def crea_schema(conn) -> None:
         "CREATE INDEX IF NOT EXISTS ix_immo_beni_raggruppamento_id ON immo_beni (raggruppamento_id)"))
 
 
+def _dubbi(conn) -> list:
+    """Cases the migration does not guess: listed, then it stops before any write."""
+    problemi = []
+    for r in conn.execute(text("""
+        SELECT k.id, p.codice AS principale, c.codice AS collegato, k.data_fine
+        FROM immo_beni_collegamenti k JOIN immo_beni p ON p.id = k.bene_id JOIN immo_beni c ON c.id = k.bene_collegato_id
+        WHERE k.tipo = 'PARTE_DI_FONDO' AND k.data_fine IS NOT NULL ORDER BY k.id""")):
+        problemi.append(f"collegamento {r.id} {r.principale} -> {r.collegato} chiuso il {r.data_fine}: "
+                        "si perderebbe, decidere prima")
+    for r in conn.execute(text("""
+        SELECT c.codice, string_agg(p.codice, ', ' ORDER BY p.codice) AS fondi
+        FROM immo_beni_collegamenti k JOIN immo_beni p ON p.id = k.bene_id JOIN immo_beni c ON c.id = k.bene_collegato_id
+        WHERE k.tipo = 'PARTE_DI_FONDO' AND k.data_fine IS NULL
+        GROUP BY c.codice HAVING count(DISTINCT k.bene_id) > 1 ORDER BY c.codice""")):
+        problemi.append(f"particella {r.codice} in più fondi ({r.fondi})")
+    for r in conn.execute(text("""
+        SELECT DISTINCT b.codice FROM immo_beni b
+        WHERE EXISTS (SELECT 1 FROM immo_beni_collegamenti k WHERE k.tipo = 'PARTE_DI_FONDO'
+                      AND k.data_fine IS NULL AND k.bene_id = b.id)
+          AND EXISTS (SELECT 1 FROM immo_beni_collegamenti k WHERE k.tipo = 'PARTE_DI_FONDO'
+                      AND k.data_fine IS NULL AND k.bene_collegato_id = b.id)
+        ORDER BY b.codice""")):
+        problemi.append(f"terreno {r.codice} è sia fondo principale sia parte di un altro fondo")
+    for r in conn.execute(text("""
+        SELECT DISTINCT b.codice FROM immo_beni b JOIN immo_beni_collegamenti k
+          ON k.tipo = 'PARTE_DI_FONDO' AND k.data_fine IS NULL AND b.id IN (k.bene_id, k.bene_collegato_id)
+        WHERE b.raggruppamento_id IS NOT NULL ORDER BY b.codice""")):
+        problemi.append(f"terreno {r.codice} è già in un raggruppamento")
+    return problemi
+
+
 def converti(conn) -> dict:
-    """PARTE_DI_FONDO -> FONDO rami. Filled in by the conversion step (see below)."""
-    return {"fondi_creati": 0, "terreni_spostati": 0, "collegamenti_rimossi": 0}
+    """Open PARTE_DI_FONDO links -> one FONDO ramo per main parcel (name = its code), holding the
+    main parcel and its parts; the links are then removed. PERTINENZA and FABBRICATO_SU_PARTICELLA
+    stay links. Stops with the list of doubtful cases before writing anything."""
+    problemi = _dubbi(conn)
+    if problemi:
+        raise RuntimeError("Migrazione raggruppamenti fermata, casi da decidere:\n  - " + "\n  - ".join(problemi))
+    conteggi = {"fondi_creati": 0, "terreni_spostati": 0, "collegamenti_rimossi": 0}
+    fondi = conn.execute(text("""
+        SELECT k.bene_id, p.codice, array_agg(k.bene_collegato_id ORDER BY k.bene_collegato_id) AS parti
+        FROM immo_beni_collegamenti k JOIN immo_beni p ON p.id = k.bene_id
+        WHERE k.tipo = 'PARTE_DI_FONDO' AND k.data_fine IS NULL
+        GROUP BY k.bene_id, p.codice ORDER BY p.codice""")).all()
+    for principale, codice, parti in fondi:
+        ramo = conn.execute(text(
+            "INSERT INTO immo_raggruppamenti (tipo, nome) VALUES ('FONDO', :n) RETURNING id"), {"n": codice}).scalar()
+        conteggi["fondi_creati"] += 1
+        conteggi["terreni_spostati"] += conn.execute(text(
+            "UPDATE immo_beni SET raggruppamento_id = :r WHERE id = ANY(:ids)"),
+            {"r": ramo, "ids": [principale, *parti]}).rowcount
+    conteggi["collegamenti_rimossi"] = conn.execute(text(
+        "DELETE FROM immo_beni_collegamenti WHERE tipo = 'PARTE_DI_FONDO'")).rowcount
+    return conteggi
 
 
 def _get_target_schema():

@@ -100,6 +100,35 @@ def _relazione(db: Session, bene_id: int, soggetto_id: int, tipo: str,
     return 1
 
 
+def _ramo_demo(db: Session, tipo: str, nome: str, padre_id: Optional[int]) -> int:
+    ramo = db.execute(text(
+        "SELECT id FROM immo_raggruppamenti WHERE tipo = :t AND nome = :n AND padre_id IS NOT DISTINCT FROM :p"
+    ), {"t": tipo, "n": nome, "p": padre_id}).scalar()
+    if ramo:
+        return ramo
+    return db.execute(text(
+        "INSERT INTO immo_raggruppamenti (tipo, nome, padre_id) VALUES (:t, :n, :p) RETURNING id"
+    ), {"t": tipo, "n": nome, "p": padre_id}).scalar()
+
+
+def _complesso_demo(db: Session, soggetto_id: int, unita_ids: list) -> int:
+    """Phase 4a: "Complesso di esempio" › "Edificio A" with two units and a maintainer on the building.
+    Returns the relations created (0 when already there)."""
+    from immobili.services.relazioni_bene import crea_relazione_raggruppamento
+    complesso = _ramo_demo(db, "COMPLESSO", "Complesso di esempio", None)
+    edificio = _ramo_demo(db, "EDIFICIO", "Edificio A", complesso)
+    db.execute(text("UPDATE immo_beni SET raggruppamento_id = :e WHERE id = ANY(:ids) AND raggruppamento_id IS NULL"),
+               {"e": edificio, "ids": unita_ids})
+    if db.execute(text(
+        "SELECT 1 FROM core_relazioni r JOIN core_ruoli_disponibili t ON t.id = r.ruolo_id "
+        "WHERE r.entity_type = 'RAGGRUPPAMENTO' AND r.entity_id = :e AND t.codice = 'manutentore' "
+        "AND r.data_fine IS NULL"), {"e": edificio}).first():
+        return 0
+    # No tenant schema on purpose (module gate), as in _relazione.
+    crea_relazione_raggruppamento(db, None, None, edificio, soggetto_id, "manutentore", data_inizio=date(2020, 1, 1))
+    return 1
+
+
 def seed_beni_demo(db: Session, soggetto_ids: list, unita_ids: list) -> dict:
     """Beni features of phase 1-2b: tenant, usufruct, pertinenza, building on a parcel, recurring cost.
 
@@ -120,6 +149,7 @@ def seed_beni_demo(db: Session, soggetto_ids: list, unita_ids: list) -> dict:
         relazioni += _relazione(db, terreno, soggetto_ids[1], "nuda_proprieta", "1/1")
         relazioni += _relazione(db, terreno, soggetto_ids[2], "usufrutto", "1/1")
         relazioni += _relazione(db, terreno, soggetto_ids[3], "conduttore", data_inizio=date(2025, 1, 1))
+    relazioni += _complesso_demo(db, soggetto_ids[-1], unita_ids[:2])
     if not db.execute(text("SELECT 1 FROM immo_spese_ricorrenti WHERE bene_id = :b"), {"b": unita_ids[0]}).first():
         db.execute(text(
             "INSERT INTO immo_spese_ricorrenti (bene_id, tipo_spesa, responsabile, periodo, rata, importo, data_scadenza) "

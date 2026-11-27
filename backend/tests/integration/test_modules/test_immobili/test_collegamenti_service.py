@@ -79,7 +79,8 @@ def test_tipi_ed_etichette():
     assert TIPI_COLLEGAMENTO["PERTINENZA"]["etichetta_principale"] == "Pertinenze"
     assert TIPI_COLLEGAMENTO["PERTINENZA"]["etichetta_collegato"] == "Pertinenza di"
     assert TIPI_COLLEGAMENTO["FABBRICATO_SU_PARTICELLA"]["etichetta_collegato"] == "Costruito sulla particella"
-    assert TIPI_COLLEGAMENTO["PARTE_DI_FONDO"]["etichetta_principale"] == "Particelle del fondo"
+    # A farm is a FONDO raggruppamento since phase 4a.
+    assert set(TIPI_COLLEGAMENTO) == {"PERTINENZA", "FABBRICATO_SU_PARTICELLA"}
 
 
 def test_pertinenza_valida(db_session, beni):
@@ -150,10 +151,9 @@ def test_fabbricato_e_fondo_regole(db_session, beni):
     with pytest.raises(CollegamentoNonValido) as e:
         crea_collegamento(db_session, beni.fabbricato.id, beni.terreno.id, "FABBRICATO_SU_PARTICELLA", None, None)
     assert str(e.value) == "Fabbricato su particella: il principale è un terreno, il collegato un'unità"
-    crea_collegamento(db_session, beni.terreno.id, beni.terreno2.id, "PARTE_DI_FONDO", None, None)
     with pytest.raises(CollegamentoNonValido) as e:
-        crea_collegamento(db_session, beni.terreno.id, beni.fabbricato.id, "PARTE_DI_FONDO", None, None)
-    assert str(e.value) == "Parte di fondo: collega due terreni"
+        crea_collegamento(db_session, beni.terreno.id, beni.terreno2.id, "PARTE_DI_FONDO", None, None)
+    assert str(e.value) == "Tipo di collegamento sconosciuto: PARTE_DI_FONDO"
 
 
 AVVISO_C6 = ("Più pertinenze di categoria C/6: per l'IMU dell'abitazione principale "

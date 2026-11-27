@@ -2,7 +2,8 @@
 Links between beni: types, rules and warnings.
 
 Phase 2b of docs/superpowers/specs/2026-11-10-beni-catastali-design.md
-("Collegamenti tra beni"). The type list lives here, not in a DB CHECK, so
+("Collegamenti tra beni"). Since phase 4a a farm is a FONDO raggruppamento,
+not a PARTE_DI_FONDO link. The type list lives here, not in a DB CHECK, so
 a new type needs no migration. Every check runs before the flush so the
 user gets the right message; the partial unique indexes stay as the last
 guard against two concurrent requests.
@@ -53,12 +54,6 @@ def _verifica_fabbricato(principale: Bene, collegato: Bene) -> Optional[str]:
     return None
 
 
-def _verifica_fondo(principale: Bene, collegato: Bene) -> Optional[str]:
-    if principale.tipo_bene != "TERRENO" or collegato.tipo_bene != "TERRENO":
-        return "Parte di fondo: collega due terreni"
-    return None
-
-
 TIPI_COLLEGAMENTO: dict[str, dict] = {
     "PERTINENZA": {
         "etichetta_principale": "Pertinenze",
@@ -69,11 +64,6 @@ TIPI_COLLEGAMENTO: dict[str, dict] = {
         "etichetta_principale": "Fabbricati sulla particella",
         "etichetta_collegato": "Costruito sulla particella",
         "verifica": _verifica_fabbricato,
-    },
-    "PARTE_DI_FONDO": {
-        "etichetta_principale": "Particelle del fondo",
-        "etichetta_collegato": "Parte del fondo di",
-        "verifica": _verifica_fondo,
     },
 }
 
