@@ -27,7 +27,7 @@ from ..services.raggruppamenti import (
     sposta_raggruppamento,
 )
 from ..services.relazioni_bene import (
-    crea_relazione_raggruppamento, permessi_modifica_ramo, relazioni_del_raggruppamento,
+    crea_relazione_raggruppamento, permessi_modifica_ramo, permessi_vista_ramo, relazioni_del_raggruppamento,
 )
 from .beni import _tipi_visibili
 
@@ -197,6 +197,10 @@ def get_relazioni_raggruppamento(
 ):
     _verifica(current_user, _VISTA, "soggetto.view")
     _ramo(db, raggruppamento_id)
+    # Its relations hold for the beni below: the view of at least one of their types is needed.
+    if not getattr(current_user, "is_superuser", False) and not (
+            permessi_vista_ramo(db, raggruppamento_id) & current_user.get_permissions()):
+        raise HTTPException(status_code=403, detail="Permessi insufficienti sui beni del raggruppamento")
     return relazioni_del_raggruppamento(db, tenant_schema, raggruppamento_id, solo_correnti)
 
 

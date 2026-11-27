@@ -131,8 +131,10 @@ bene_id, d=None)` è l'unico punto che somma le relazioni del bene e quelle dei
 rami antenati (con `d`, solo quelle valide quel giorno); la usano la scheda e
 "chi paga cosa". Nessuna regola di precedenza: valgono tutte così come sono.
 Le relazioni di un ramo archiviato continuano a valere. Hook di visibilità dei
-rami: `permessi_vista_raggruppamenti` (una riga per `immobile.view` e una per
-`terreno.view`).
+rami: `permessi_vista_raggruppamenti`: le relazioni di un raggruppamento si
+leggono (anche da `/relazioni`) col `.view` di almeno un tipo di bene che
+contiene nel sotto-albero; un raggruppamento vuoto con uno qualsiasi dei due
+(correzione del 2026-11-27 dopo la revisione di sicurezza).
 
 Rotte del bene: `GET /beni/{id}/relazioni?solo_correnti=` (raggruppate per
 famiglia, proprie ed ereditate: le ereditate hanno `provenienza` =

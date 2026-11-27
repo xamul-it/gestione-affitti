@@ -60,12 +60,39 @@ def permessi_vista(db: Session, tenant_schema: Optional[str]) -> sa.Select:
     return sa.select(b.id.label("entity_id"), permesso.label("permesso")).where(permesso.isnot(None))
 
 
-def permessi_vista_raggruppamenti(db: Session, tenant_schema: Optional[str]) -> sa.Select:
-    """Hook object_permissions for RAGGRUPPAMENTO: a ramo is seen with either view permission."""
-    r = Raggruppamento.__table__.c
-    return sa.union_all(*[
-        sa.select(r.id.label("entity_id"), sa.literal(p).label("permesso")) for p in PERMESSO_PER_TIPO.values()
-    ])
+# (ramo, view permission) for every bene type found in the ramo's subtree; a ramo with no beni
+# below is seen with either view permission.
+_VISTA_RAMI_SQL = """
+    WITH RECURSIVE giu(radice, id, livello) AS (
+        SELECT id, id, 0 FROM immo_raggruppamenti
+        UNION ALL
+        SELECT giu.radice, r.id, giu.livello + 1
+        FROM immo_raggruppamenti r JOIN giu ON r.padre_id = giu.id
+        WHERE giu.livello < 100
+    ),
+    tipi AS (
+        SELECT DISTINCT giu.radice, b.tipo_bene FROM giu JOIN immo_beni b ON b.raggruppamento_id = giu.id
+    )
+    SELECT radice AS entity_id,
+           CASE tipo_bene WHEN 'UNITA' THEN 'immobile.view' WHEN 'TERRENO' THEN 'terreno.view' END AS permesso
+    FROM tipi
+    UNION ALL
+    SELECT r.id, p.permesso
+    FROM immo_raggruppamenti r CROSS JOIN (VALUES ('immobile.view'), ('terreno.view')) AS p(permesso)
+    WHERE NOT EXISTS (SELECT 1 FROM tipi WHERE tipi.radice = r.id)
+"""
+
+
+def permessi_vista_raggruppamenti(db: Session, tenant_schema: Optional[str]):
+    """Hook object_permissions for RAGGRUPPAMENTO: a ramo's relations hold for its beni, so they are
+    seen with the view permission of at least one bene type below it (either one for an empty ramo)."""
+    return sa.text(_VISTA_RAMI_SQL).columns(entity_id=sa.Integer, permesso=sa.String)
+
+
+def permessi_vista_ramo(db: Session, raggruppamento_id: int) -> set:
+    """View permissions that each allow reading the ramo's relations."""
+    sub = permessi_vista_raggruppamenti(db, None).subquery()
+    return {r[0] for r in db.execute(sa.select(sub.c.permesso).where(sub.c.entity_id == raggruppamento_id)) if r[0]}
 
 
 # bene type -> permission needed to change what its beni inherit.

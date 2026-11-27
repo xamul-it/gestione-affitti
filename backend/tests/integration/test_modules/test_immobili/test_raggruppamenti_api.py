@@ -285,3 +285,29 @@ def test_descrizione_del_ramo_nelle_relazioni_dell_anagrafica(ctx):
     righe = [r for r in client.get(f"/api/v1/relazioni/?soggetto_id={a.id}").json()
              if r["entity_type"] == "RAGGRUPPAMENTO"]
     assert [r["descrizione"] for r in righe] == [e.nome]
+
+
+# --- reading a ramo's relations needs the view of at least one bene type below it ---------------
+
+def test_relazioni_di_ramo_con_sole_unita_nascoste_a_chi_vede_solo_terreni(ctx):
+    client, db, _, _, u, _, (a, *_) = ctx
+    solo_unita = crea_raggruppamento(db, "EDIFICIO", "Solo unità")
+    sposta_bene(db, u, solo_unita.id)
+    rid = _rel_ramo(client, solo_unita, a, "conduttore").json()["relazione"]["id"]
+    _as("terreno.view", "soggetto.view")
+    assert client.get(f"/api/v1/raggruppamenti/{solo_unita.id}/relazioni").status_code == 403
+    elenco = {r["relazione_id"] for r in client.get("/api/v1/relazioni/?entity_type=RAGGRUPPAMENTO").json()}
+    assert rid not in elenco
+    assert client.get(f"/api/v1/relazioni/{rid}").status_code == 403
+    _as("immobile.view", "soggetto.view")
+    assert client.get(f"/api/v1/raggruppamenti/{solo_unita.id}/relazioni").status_code == 200
+    assert rid in {r["relazione_id"] for r in client.get("/api/v1/relazioni/?entity_type=RAGGRUPPAMENTO").json()}
+
+
+def test_relazioni_di_ramo_vuoto_con_uno_dei_due(ctx):
+    client, db, _, _, _, _, (a, *_) = ctx
+    vuoto = crea_raggruppamento(db, "ALTRO", "Vuoto lettura")
+    _rel_ramo(client, vuoto, a, "manutentore")
+    for vista in ("immobile.view", "terreno.view"):
+        _as(vista, "soggetto.view")
+        assert client.get(f"/api/v1/raggruppamenti/{vuoto.id}/relazioni").status_code == 200

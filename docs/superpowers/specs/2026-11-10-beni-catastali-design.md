@@ -161,7 +161,10 @@ immo_raggruppamenti (id, tipo, nome, padre_id → immo_raggruppamenti nullable,
   e nei sotto-rami (es. `immobile.edit` e `terreno.edit` per un ramo misto),
   altrimenti chi ha solo `terreno.edit` cambierebbe l'eredità delle unità.
   Rinominare o archiviare un ramo non cambia l'eredità: basta uno dei due.
-  (Correzione del 2026-11-27 dopo la revisione di sicurezza.)
+  **Leggere** le relazioni di un ramo richiede il `.view` di almeno un tipo
+  di bene contenuto (uno qualsiasi se il ramo è vuoto): chi vede solo i
+  terreni non vede i conduttori di un edificio di sole unità.
+  (Correzioni del 2026-11-27 dopo le revisioni di sicurezza.)
 
 ### Collegamenti tra beni (ridotti)
 
