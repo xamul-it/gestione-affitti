@@ -99,3 +99,61 @@ def test_riepilogo_terreno_locato_avviso_e_quote_esatte(db_session):
     assert _chi(r, "SPESE_ORDINARIE") == ["Riep Locatario"]
     assert any(a.startswith("Terreno locato:") for a in r.avvisi)
     assert r.voci[0].soggetti[0].quota == Decimal("33.33")
+
+
+# --- relations inherited from the raggruppamenti (phase 4a) ----------------------------
+
+from immobili.services.raggruppamenti import aggiorna_raggruppamento, crea_raggruppamento, sposta_bene  # noqa: E402
+from immobili.services.relazioni_bene import crea_relazione_raggruppamento  # noqa: E402
+
+
+@pytest.fixture
+def unita_in_edificio(db_session):
+    db = db_session
+    edificio = crea_raggruppamento(db, "EDIFICIO", "Edificio riepilogo")
+    u = UnitaImmobiliare(codice="RIEP-UE", tipo="Appartamento", indirizzo="Via B 1", citta="Forlì")
+    db.add(u)
+    db.flush()
+    sposta_bene(db, u, edificio.id)
+    crea_relazione_bene(db, TEST_TENANT, None, u.id, _soggetto(db, "Proprietario").id, "proprieta", quota="1/1")
+    crea_relazione_raggruppamento(db, TEST_TENANT, None, edificio.id, _soggetto(db, "Inquilino").id, "conduttore")
+    crea_relazione_raggruppamento(db, TEST_TENANT, None, edificio.id, _soggetto(db, "Caldaista").id, "manutentore")
+    db.flush()
+    return u, edificio
+
+
+def test_conduttore_del_ramo_paga_ordinarie(db_session, unita_in_edificio):
+    u, _ = unita_in_edificio
+    r = get_riepilogo(u.id, data=None, db=db_session, current_user=UTENTE)
+    assert _chi(r, "SPESE_ORDINARIE") == ["Riep Inquilino"]
+    assert _chi(r, "IMU") == ["Riep Proprietario"]
+
+
+def test_ramo_archiviato_eredita(db_session, unita_in_edificio):
+    u, edificio = unita_in_edificio
+    aggiorna_raggruppamento(db_session, edificio, attivo=False)
+    r = get_riepilogo(u.id, data=None, db=db_session, current_user=UTENTE)
+    assert _chi(r, "SPESE_ORDINARIE") == ["Riep Inquilino"]
+
+
+def test_incarico_del_ramo_ignorato(db_session, unita_in_edificio):
+    u, _ = unita_in_edificio
+    r = get_riepilogo(u.id, data=None, db=db_session, current_user=UTENTE)
+    assert all("Riep Caldaista" not in [s.nome for s in v.soggetti] for v in r.voci)
+
+
+def test_affittuario_agrario_del_fondo(db_session):
+    db = db_session
+    fondo = crea_raggruppamento(db, "FONDO", "Fondo riepilogo")
+    t = Terreno(codice="RIEP-TF", comune="Forlì", provincia="FC",
+                porzioni=[TerrenoPorzione(qualita="SEMINATIVO", superficie_mq=1000)])
+    db.add(t)
+    db.flush()
+    sposta_bene(db, t, fondo.id)
+    crea_relazione_bene(db, TEST_TENANT, None, t.id, _soggetto(db, "Titolare").id, "proprieta", quota="1/1")
+    crea_relazione_raggruppamento(db, TEST_TENANT, None, fondo.id, _soggetto(db, "Agricoltore").id,
+                                  "affittuario_agrario")
+    db.flush()
+    r = get_riepilogo(t.id, data=None, db=db, current_user=UTENTE)
+    assert _chi(r, "REDDITO_AGRARIO") == ["Riep Agricoltore"]
+    assert _chi(r, "RENDITA") == ["Riep Titolare"]

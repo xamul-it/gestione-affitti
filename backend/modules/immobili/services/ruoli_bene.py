@@ -15,13 +15,9 @@ from typing import Iterable, Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.core.models import RuoloDisponibile
-from app.core.platform.models import Relazione
 
 from ..models import Bene
 
-ENTITY_TYPE = "IMMOBILE"
-MODULO = "immobili"
 GODIMENTO = ("usufrutto", "uso", "abitazione", "enfiteusi", "superficie")
 PIENA_PROPRIETA = ("proprieta",)
 PROPRIETA = ("nuda_proprieta", "proprieta")
@@ -182,18 +178,15 @@ def ruoli_da_righe(relazioni: Iterable[RigaRelazione], d: date) -> RuoliBene:
 
 
 def ruoli_alla_data(db: Session, bene_id: int, d: date) -> RuoliBene:
-    tipi = GODIMENTO + PROPRIETA + GODIMENTO_PERSONALE + ("diritto_reale_altro",)
-    rel = (
-        db.query(Relazione, RuoloDisponibile.codice)
-        .join(RuoloDisponibile, RuoloDisponibile.id == Relazione.ruolo_id)
-        .filter(Relazione.entity_type == ENTITY_TYPE, Relazione.entity_id == bene_id,
-                RuoloDisponibile.modulo_id == MODULO, RuoloDisponibile.codice.in_(tipi))
-        .order_by(Relazione.id)
-        .all()
-    )
+    """Roles on day d from the bene's relations and those inherited from its rami
+    (relazioni_effettive); the date filter stays in ruoli_da_righe."""
+    from .relazioni_bene import relazioni_effettive
+
+    tipi = set(GODIMENTO + PROPRIETA + GODIMENTO_PERSONALE + ("diritto_reale_altro",))
+    rel = [x for x in relazioni_effettive(db, bene_id) if x.tipo.codice in tipi]
     nomi = {}
     if rel:
-        ids = sorted({r.soggetto_id for r, _ in rel})
+        ids = sorted({x.relazione.soggetto_id for x in rel})
         nomi = {
             row.id: (" ".join(p for p in (row.nome, row.cognome) if p) or row.ragione_sociale
                      or f"Anagrafica {row.id}")
@@ -202,9 +195,9 @@ def ruoli_alla_data(db: Session, bene_id: int, d: date) -> RuoliBene:
                      "FROM anag_soggetti_anagrafici WHERE id = ANY(:ids)"), {"ids": ids})
         }
     righe = [
-        RigaRelazione(r.soggetto_id, nomi.get(r.soggetto_id, f"Anagrafica {r.soggetto_id}"), codice,
+        RigaRelazione(r.soggetto_id, nomi.get(r.soggetto_id, f"Anagrafica {r.soggetto_id}"), x.tipo.codice,
                       r.quota_frazione, r.data_inizio, r.data_fine, r.quota)
-        for r, codice in rel
+        for x in rel for r in (x.relazione,)
     ]
     return ruoli_da_righe(righe, d)
 
