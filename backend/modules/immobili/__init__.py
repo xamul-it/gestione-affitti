@@ -92,6 +92,14 @@ MENU_ITEMS = [
         "required_permission": "terreno.view"
     },
     {
+        "id": "immobili.raggruppamenti",
+        "label": "Raggruppamenti",
+        "path": "/raggruppamenti",
+        "icon": "folder",
+        "order_index": 17,
+        "required_permission": "immobile.view"
+    },
+    {
         "id": "immobili.proprietari",
         "label": "Proprietari",
         "path": "/proprietari",

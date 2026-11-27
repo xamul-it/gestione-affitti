@@ -28,7 +28,9 @@ import {
   CategorieCatastaliList,
   TipologieTerrenoList,
   BeneScheda,
-  RedirectABene
+  RedirectABene,
+  RaggruppamentiAlbero,
+  RaggruppamentoScheda
 } from './modules/immobili';
 
 import { TenantSelector } from './components/Tenant/TenantSelector';
@@ -240,6 +242,8 @@ function App() {
                 <Route path="/immobili/home" element={<ProtectedRoute><ImmobiliHome /></ProtectedRoute>} />
                 <Route path="/unita-immobiliari" element={<ProtectedRoute><UnitaImmobiliariList /></ProtectedRoute>} />
                 <Route path="/beni/:id" element={<ProtectedRoute><BeneScheda /></ProtectedRoute>} />
+                <Route path="/raggruppamenti" element={<ProtectedRoute><RaggruppamentiAlbero /></ProtectedRoute>} />
+                <Route path="/raggruppamenti/:id" element={<ProtectedRoute><RaggruppamentoScheda /></ProtectedRoute>} />
                 <Route path="/unita-immobiliari/:id" element={<RedirectABene />} />
                 <Route path="/terreni/:id" element={<RedirectABene />} />
                 <Route path="/terreni" element={<ProtectedRoute><TerreniList /></ProtectedRoute>} />

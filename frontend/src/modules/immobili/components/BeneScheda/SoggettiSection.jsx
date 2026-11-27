@@ -30,9 +30,13 @@ function periodo(r) {
 
 /**
  * "Soggetti" of a bene: rights in rem, enjoyment (tenancies, loans) and
- * assignments, all core relations of the bene grouped by family.
+ * assignments, all core relations of the bene grouped by family. Relations
+ * inherited from a raggruppamento (provenienza) are read-only, with a link to
+ * the ramo. A ramo page reuses it with its own loader/creator and families.
  */
-export default function SoggettiSection({ beneId, onChange }) {
+export default function SoggettiSection({
+  beneId, onChange, caricaRelazioni, creaRelazione, entityType = 'IMMOBILE', famiglie,
+}) {
   const uid = useId();
   const toast = useToast();
   const [dati, setDati] = useState({ diritti_reali: [], godimento: [], incarichi: [] });
@@ -48,7 +52,8 @@ export default function SoggettiSection({ beneId, onChange }) {
   const carica = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await beniAPI.getRelazioni(beneId, { soloCorrenti: !chiuse });
+      const opzioni = { soloCorrenti: !chiuse };
+      const r = await (caricaRelazioni ? caricaRelazioni(opzioni) : beniAPI.getRelazioni(beneId, opzioni));
       setDati({ diritti_reali: [], godimento: [], incarichi: [], ...(r.data || {}) });
       setCaricato(true);
       setError(null);
@@ -57,7 +62,7 @@ export default function SoggettiSection({ beneId, onChange }) {
     } finally {
       setLoading(false);
     }
-  }, [beneId, chiuse]);
+  }, [beneId, chiuse, caricaRelazioni]);
 
   useEffect(() => { carica(); }, [carica]);
 
@@ -100,7 +105,7 @@ export default function SoggettiSection({ beneId, onChange }) {
       {error && caricato && <div className="scheda-error" role="alert">{error}</div>}
       {loading && !caricato && !error && <LoadingSpinner message="Caricamento soggetti…" />}
 
-      {caricato && BLOCCHI.map((b) => {
+      {caricato && BLOCCHI.filter((b) => !famiglie || famiglie.includes(b.famiglia)).map((b) => {
         const righe = dati[b.famiglia] || [];
         const bloccoId = `${uid}-${b.famiglia}`;
         const colonne = b.conQuota ? 5 : 4;
@@ -129,17 +134,25 @@ export default function SoggettiSection({ beneId, onChange }) {
                   <tbody>
                     {righe.flatMap((r) => {
                       const chiusa = Boolean(r.data_fine) && r.data_fine < todayIso();
+                      const ramo = r.provenienza;
                       return [
                         <tr key={r.id} className={chiusa ? 'is-chiuso' : undefined}>
                           <td data-label="Anagrafica">
                             <Link to={`/anagrafiche/${r.soggetto_id}`}>{r.soggetto_nome}</Link>
                             {chiusa && <span className="scheda-muted"> (chiusa)</span>}
+                            {ramo && (
+                              <div className="soggetti-bene__provenienza">
+                                <Link to={`/raggruppamenti/${ramo.raggruppamento_id}`}>dal ramo {ramo.nome}</Link>
+                              </div>
+                            )}
                           </td>
                           <td data-label="Tipo">{r.tipo_nome}</td>
                           {b.conQuota && <td data-label="Quota">{r.quota || '—'}</td>}
                           <td data-label="Periodo">{periodo(r)}</td>
                           <td data-label="Azioni">
-                            {chiusura?.id === r.id ? (
+                            {ramo ? (
+                              <span className="scheda-muted">Ereditata</span>
+                            ) : chiusura?.id === r.id ? (
                               <form className="collegamenti__chiusura" onSubmit={chiudi}>
                                 <label htmlFor={`${uid}-fine-${r.id}`}>Fino al</label>
                                 <input id={`${uid}-fine-${r.id}`} type="date" required value={chiusura.data}
@@ -188,6 +201,8 @@ export default function SoggettiSection({ beneId, onChange }) {
           famiglia={form.blocco.famiglia}
           titolo={form.blocco.titolo}
           relazione={form.relazione}
+          entityType={entityType}
+          crea={creaRelazione}
           onClose={(salvato) => {
             setForm(null);
             if (salvato) { carica(); onChange?.(); }

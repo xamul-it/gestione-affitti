@@ -204,4 +204,27 @@ describe('SoggettiSection - edit', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Salva' }));
     expect(await within(dialog).findByText(/Esiste già un conduttore/)).toBeInTheDocument();
   });
+
+  it('shows inherited relations read-only, with the ramo they come from', async () => {
+    beniAPI.getRelazioni.mockResolvedValue({ data: { ...risposta, incarichi: [
+      { id: 3, tipo: 'manutentore', tipo_nome: 'Manutentore', soggetto_id: 9, soggetto_nome: 'Caldaie Srl',
+        quota: null, data_inizio: null, data_fine: null, note: null, dati: null,
+        provenienza: { raggruppamento_id: 2, nome: 'Edificio A', tipo: 'EDIFICIO' } },
+    ] } });
+    renderSezione();
+    const incarichi = await screen.findByRole('region', { name: 'Incarichi' });
+    expect(await within(incarichi).findByText('Caldaie Srl')).toBeInTheDocument();
+    expect(within(incarichi).getByRole('link', { name: 'dal ramo Edificio A' })).toHaveAttribute('href', '/raggruppamenti/2');
+    expect(within(incarichi).queryByRole('button', { name: /Caldaie Srl/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chiudi la relazione di Anna Bianchi' })).toBeInTheDocument();
+  });
+
+  it('works on a ramo with its own loader and only some families', async () => {
+    const caricaRelazioni = vi.fn().mockResolvedValue({ data: risposta });
+    renderSezione({ caricaRelazioni, famiglie: ['godimento', 'incarichi'] });
+    expect(await screen.findByText('Anna Bianchi')).toBeInTheDocument();
+    expect(caricaRelazioni).toHaveBeenCalledWith({ soloCorrenti: true });
+    expect(beniAPI.getRelazioni).not.toHaveBeenCalled();
+    expect(screen.queryByRole('region', { name: 'Diritti reali' })).not.toBeInTheDocument();
+  });
 });

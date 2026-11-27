@@ -65,6 +65,7 @@ function ModuleTabs() {
     if (
       path.startsWith('/unita-immobiliari') ||
       path.startsWith('/terreni') ||
+      path.startsWith('/raggruppamenti') ||
       path.startsWith('/proprietari') ||
       path.startsWith('/condomini') ||
       path.startsWith('/certificati-energetici') ||

@@ -17,6 +17,8 @@ import DatiTerreno from './DatiTerreno';
 import CollegamentiSection from './CollegamentiSection';
 import RiepilogoSection from './RiepilogoSection';
 import SoggettiSection from './SoggettiSection';
+import PercorsoRamo from '../Raggruppamenti/PercorsoRamo';
+import SceltaRamo from '../Raggruppamenti/SceltaRamo';
 import './BeneScheda.css';
 
 function Sezione({ id, title, children }) {
@@ -70,12 +72,15 @@ export default function BeneScheda() {
   const [error, setError] = useState(null);
   const [modifica, setModifica] = useState(false);
   const [versione, setVersione] = useState(0);
+  const [ramo, setRamo] = useState({ id: null, percorso: [] });
+  const [sposta, setSposta] = useState(false);
 
   const carica = useCallback(async () => {
     setLoading(true);
     try {
       const base = await beniAPI.getById(id);
       const tipoBene = TIPI[base.data.tipo_bene] ? base.data.tipo_bene : 'UNITA';
+      setRamo({ id: base.data.raggruppamento_id ?? null, percorso: base.data.percorso || [] });
       const res = await TIPI[tipoBene].carica(id);
       setTipo(tipoBene);
       setBene(res.data);
@@ -114,6 +119,26 @@ export default function BeneScheda() {
         <div>
           <h2>{config.titolo(bene)}</h2>
           <p className="scheda-muted">{indirizzo}</p>
+          <div className="scheda-ramo">
+            <PercorsoRamo percorso={ramo.percorso} />
+            {!sposta && (
+              <Button variant="ghost" size="sm" onClick={() => setSposta(true)}>Sposta in un ramo</Button>
+            )}
+          </div>
+          {sposta && (
+            <SceltaRamo
+              label="Ramo"
+              vuoto="Nessun ramo"
+              attuale={ramo.id}
+              onAnnulla={() => setSposta(false)}
+              onConferma={async (id) => {
+                const r = await beniAPI.spostaInRamo(beneId, id);
+                setRamo({ id: r.data.raggruppamento_id ?? null, percorso: r.data.percorso || [] });
+                setSposta(false);
+                setVersione((v) => v + 1);
+              }}
+            />
+          )}
         </div>
         <Button variant="secondary" onClick={() => setModifica(true)}>
           <Pencil size={16} aria-hidden="true" /> Modifica

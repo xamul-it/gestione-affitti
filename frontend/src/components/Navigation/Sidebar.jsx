@@ -44,6 +44,7 @@ function Sidebar() {
     // Immobili module routes
     if (path.startsWith('/unita-immobiliari') ||
         path.startsWith('/terreni') ||
+        path.startsWith('/raggruppamenti') ||
         path.startsWith('/proprietari') ||
         path.startsWith('/conduttori') ||
         path.startsWith('/condomini') ||

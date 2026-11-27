@@ -78,6 +78,22 @@ export const beniAPI = {
   getRelazioni: (id, { soloCorrenti = true } = {}) => api.get(`/beni/${id}/relazioni`, { params: { solo_correnti: soloCorrenti } }),
   // Returns { relazione, avvisi }.
   createRelazione: (id, data) => api.post(`/beni/${id}/relazioni`, data),
+  // Moves the bene into a raggruppamento (null = out of any); returns the bene with its percorso.
+  spostaInRamo: (id, raggruppamentoId) => api.patch(`/beni/${id}/raggruppamento`, { raggruppamento_id: raggruppamentoId }),
+};
+
+// Raggruppamenti (rami) of beni: complex, building, farm…
+export const raggruppamentiAPI = {
+  // params: { vista: 'albero' | 'piatta', tipo, includi_archiviati }
+  getAll: (params = {}) => api.get('/raggruppamenti/', { params }),
+  getById: (id) => api.get(`/raggruppamenti/${id}`),
+  create: (data) => api.post('/raggruppamenti/', data),
+  // data: { tipo, nome, descrizione, note, attivo } (attivo: false = archive)
+  update: (id, data) => api.put(`/raggruppamenti/${id}`, data),
+  sposta: (id, padreId) => api.post(`/raggruppamenti/${id}/sposta`, { padre_id: padreId }),
+  delete: (id) => api.delete(`/raggruppamenti/${id}`),
+  getRelazioni: (id, { soloCorrenti = true } = {}) => api.get(`/raggruppamenti/${id}/relazioni`, { params: { solo_correnti: soloCorrenti } }),
+  createRelazione: (id, data) => api.post(`/raggruppamenti/${id}/relazioni`, data),
 };
 
 // Condomini API

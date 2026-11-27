@@ -51,6 +51,8 @@ export { default as DocumentiImmobiliPage } from './components/Documenti/Documen
 
 // Scheda immobile
 export { default as BeneScheda, RedirectABene } from './components/BeneScheda/BeneScheda';
+export { default as RaggruppamentiAlbero } from './components/Raggruppamenti/RaggruppamentiAlbero';
+export { default as RaggruppamentoScheda } from './components/Raggruppamenti/RaggruppamentoScheda';
 
 
 // MillesimiImmobile

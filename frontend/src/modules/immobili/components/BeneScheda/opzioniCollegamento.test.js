@@ -17,9 +17,7 @@ describe('opzioniCollegamento', () => {
     expect(chiavi(unita('C/6'))).toEqual(['PERTINENZA/COLLEGATO/UNITA', 'FABBRICATO_SU_PARTICELLA/COLLEGATO/TERRENO']);
     expect(opzioniCollegamento(unita('C/6'))[0].etichetta).toBe('È pertinenza di…');
   });
-  it('terreno: fabbricato e fondo nei due versi', () => {
-    expect(chiavi({ tipo_bene: 'TERRENO' })).toEqual([
-      'FABBRICATO_SU_PARTICELLA/PRINCIPALE/UNITA', 'PARTE_DI_FONDO/PRINCIPALE/TERRENO', 'PARTE_DI_FONDO/COLLEGATO/TERRENO',
-    ]);
+  it('terreno: solo fabbricato (il fondo è un raggruppamento)', () => {
+    expect(chiavi({ tipo_bene: 'TERRENO' })).toEqual(['FABBRICATO_SU_PARTICELLA/PRINCIPALE/UNITA']);
   });
 });

@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import BeneScheda, { RedirectABene } from './BeneScheda';
-import { beniAPI, unitaImmobiliariAPI, terreniAPI } from '../../services/immobiliAPI';
+import { beniAPI, unitaImmobiliariAPI, terreniAPI, raggruppamentiAPI } from '../../services/immobiliAPI';
 
 vi.mock('../../services/immobiliAPI', () => ({
-  beniAPI: { getById: vi.fn() },
+  beniAPI: { getById: vi.fn(), spostaInRamo: vi.fn() },
   unitaImmobiliariAPI: { getById: vi.fn() },
   terreniAPI: { getById: vi.fn() },
+  raggruppamentiAPI: { getAll: vi.fn() },
 }));
 vi.mock('../../../../core/components/Documenti/DocumentiPanel', () => ({
   default: ({ entityType, entityId }) => <div>Pannello documenti {entityType} {entityId}</div>,
@@ -115,5 +116,27 @@ describe('BeneScheda', () => {
     beniAPI.getById.mockRejectedValue({ response: { status: 404, data: { detail: 'Bene non trovato' } } });
     renderAt('/beni/999');
     expect(await screen.findByRole('alert')).toHaveTextContent('Bene non trovato');
+  });
+
+  it('shows the path of its ramo and moves it into another one', async () => {
+    beniAPI.getById.mockResolvedValue({ data: { id: 5, tipo_bene: 'UNITA', raggruppamento_id: 2, percorso: [
+      { id: 1, nome: 'Complesso Forlì', tipo: 'COMPLESSO' }, { id: 2, nome: 'Edificio A', tipo: 'EDIFICIO' }] } });
+    raggruppamentiAPI.getAll.mockResolvedValue({ data: [{ id: 1, nome: 'Complesso Forlì', figli: [
+      { id: 2, nome: 'Edificio A', figli: [] }, { id: 4, nome: 'Edificio B', figli: [] }] }] });
+    beniAPI.spostaInRamo.mockResolvedValue({ data: { id: 5, raggruppamento_id: 4, percorso: [] } });
+    renderAt('/beni/5');
+    const percorso = await screen.findByRole('navigation', { name: 'Raggruppamento' });
+    expect(within(percorso).getByRole('link', { name: 'Edificio A' })).toHaveAttribute('href', '/raggruppamenti/2');
+    fireEvent.click(screen.getByRole('button', { name: 'Sposta in un ramo' }));
+    const scelta = await screen.findByLabelText('Ramo');
+    fireEvent.change(scelta, { target: { value: '4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Conferma spostamento' }));
+    await vi.waitFor(() => expect(beniAPI.spostaInRamo).toHaveBeenCalledWith(5, 4));
+  });
+
+  it('a bene outside any ramo says so', async () => {
+    renderAt('/beni/5');
+    const percorso = await screen.findByRole('navigation', { name: 'Raggruppamento' });
+    expect(within(percorso).getByText('Nessun raggruppamento')).toBeInTheDocument();
   });
 });

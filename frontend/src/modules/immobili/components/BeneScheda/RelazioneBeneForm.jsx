@@ -32,7 +32,9 @@ const CAMPI_REGISTRAZIONE = [
  * quota field only shows for types that admit one; the comodato also asks for
  * the registration data. Warnings of the response are shown as toasts.
  */
-export default function RelazioneBeneForm({ beneId, famiglia, titolo, relazione, onClose }) {
+export default function RelazioneBeneForm({
+  beneId, famiglia, titolo, relazione, onClose, entityType = 'IMMOBILE', crea,
+}) {
   const uid = useId();
   const toast = useToast();
   const modifica = Boolean(relazione);
@@ -51,7 +53,7 @@ export default function RelazioneBeneForm({ beneId, famiglia, titolo, relazione,
 
   useEffect(() => {
     let attivo = true;
-    relazioniAPI.getTipi('IMMOBILE', famiglia)
+    relazioniAPI.getTipi(entityType, famiglia)
       .then((r) => {
         if (!attivo) return;
         const lista = r.data || [];
@@ -60,7 +62,7 @@ export default function RelazioneBeneForm({ beneId, famiglia, titolo, relazione,
       })
       .catch((err) => { if (attivo) setError(formatApiError(err)); });
     return () => { attivo = false; };
-  }, [famiglia]);
+  }, [famiglia, entityType]);
 
   const tipoScelto = tipi.find((t) => t.codice === tipo);
   const conQuota = Boolean(tipoScelto?.ammette_quota);
@@ -106,7 +108,8 @@ export default function RelazioneBeneForm({ beneId, famiglia, titolo, relazione,
       if (modifica) {
         await relazioniAPI.update(relazione.id, corpo);
       } else {
-        const r = await beniAPI.createRelazione(beneId, { soggetto_id: soggetto.id, tipo, ...corpo });
+        const nuova = { soggetto_id: soggetto.id, tipo, ...corpo };
+        const r = await (crea ? crea(nuova) : beniAPI.createRelazione(beneId, nuova));
         (r.data?.avvisi || []).forEach((a) => toast.warning(a));
       }
       toast.success('Relazione salvata');

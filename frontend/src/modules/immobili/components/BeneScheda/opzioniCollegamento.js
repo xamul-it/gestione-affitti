@@ -10,9 +10,8 @@ export function opzioniCollegamento(bene) {
   if (!bene) return [];
   if (bene.tipo_bene === 'TERRENO') {
     return [
+      // A farm is a FONDO raggruppamento, not a link.
       { tipo: 'FABBRICATO_SU_PARTICELLA', questo_e: 'PRINCIPALE', etichetta: 'Aggiungi fabbricato', tipoAltro: 'UNITA' },
-      { tipo: 'PARTE_DI_FONDO', questo_e: 'PRINCIPALE', etichetta: 'Aggiungi particella del fondo', tipoAltro: 'TERRENO' },
-      { tipo: 'PARTE_DI_FONDO', questo_e: 'COLLEGATO', etichetta: 'È parte del fondo di…', tipoAltro: 'TERRENO' },
     ];
   }
   const cat = categoria(bene);

@@ -35,6 +35,12 @@ export const manifest = {
       icon: 'leaf',
     },
     {
+      path: '/raggruppamenti',
+      component: 'RaggruppamentiAlbero',
+      label: 'Raggruppamenti',
+      icon: 'folder',
+    },
+    {
       path: '/proprietari',
       component: 'ProprietariList',
       label: 'Titolari di diritti',
@@ -89,6 +95,14 @@ export const manifest = {
       icon: 'leaf',
       order: 15,
       requiredPermission: 'terreno.view',
+    },
+    {
+      id: 'immobili.raggruppamenti',
+      label: 'Raggruppamenti',
+      path: '/raggruppamenti',
+      icon: 'folder',
+      order: 17,
+      requiredPermission: 'immobile.view',
     },
     {
       id: 'immobili.proprietari',

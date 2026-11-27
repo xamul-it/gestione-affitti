@@ -418,3 +418,46 @@
   color: var(--color-brand);
   font-weight: 600;
 }
+
+/* Raggruppamento of the bene (phase 4a) */
+.immobile-scheda .scheda-ramo,
+.immobile-scheda .percorso-ramo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.immobile-scheda .scheda-ramo {
+  margin-top: var(--space-2);
+}
+
+.immobile-scheda .percorso-ramo {
+  font-size: var(--font-size-small);
+}
+
+.immobile-scheda .percorso-ramo a {
+  color: var(--color-brand);
+  font-weight: 600;
+}
+
+.immobile-scheda .percorso-ramo__sep {
+  color: var(--gray-600);
+}
+
+.immobile-scheda .scelta-ramo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.immobile-scheda .scelta-ramo select {
+  min-height: 44px;
+  max-width: 100%;
+}
+
+.immobile-scheda .soggetti-bene__provenienza {
+  font-size: var(--font-size-small);
+}
