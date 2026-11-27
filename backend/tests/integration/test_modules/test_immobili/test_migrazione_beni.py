@@ -158,6 +158,8 @@ def test_installazione_su_tenant_nuovo(db_session):
     assert "superficie_mq" in terreni and "comune" not in terreni
     assert "qualita" in colonne("immo_terreni_porzioni")
     assert "bene_collegato_id" in colonne("immo_beni_collegamenti")
+    assert "raggruppamento_id" in colonne("immo_beni")
+    assert "padre_id" in colonne("immo_raggruppamenti")
     indici = {r[0] for r in conn.execute(text(
         "SELECT indexname FROM pg_indexes WHERE schemaname = :s AND tablename = 'immo_beni_collegamenti'"
     ), {"s": schema})}

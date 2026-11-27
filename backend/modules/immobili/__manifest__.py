@@ -163,6 +163,7 @@ manifest = {
         "immo_tipologie_terreno_overrides",
         "immo_terreni",
         "immo_terreni_porzioni",
+        "immo_raggruppamenti",
         "immo_beni",
         "immo_beni_collegamenti",
         "immo_unita_immobiliari",
@@ -182,6 +183,7 @@ manifest = {
     # Tenant schema tables (created during tenant install)
     "tenant_tables": [
         "immo_condomini",
+        "immo_raggruppamenti",
         "immo_beni",
         "immo_beni_collegamenti",
         "immo_unita_immobiliari",

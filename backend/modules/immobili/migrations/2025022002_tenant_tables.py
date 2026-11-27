@@ -115,6 +115,9 @@ def _ensure_fk_targets(target_metadata: MetaData, schema: str) -> None:
 def _order_tenant_tables(tables: list[Table]) -> list[Table]:
     ordered_names = [
         "immo_condomini",
+        # Before immo_beni: today's bene model has raggruppamento_id -> immo_raggruppamenti
+        # (2026112502_raggruppamenti creates both idempotently on existing tenants).
+        "immo_raggruppamenti",
         "immo_beni",  # the unit's id is the bene's id (2026111201_beni)
         "immo_unita_immobiliari",
         "immo_certificati_energetici",

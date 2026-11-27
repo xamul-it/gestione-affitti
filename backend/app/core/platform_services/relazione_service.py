@@ -26,6 +26,7 @@ from app.core.platform_services.scadenze_collegate import apri_o_aggiorna, chiud
 TABELLE_OGGETTI = {
     "CONDOMINIO": "immo_condomini",
     "IMMOBILE": "immo_beni",
+    "RAGGRUPPAMENTO": "immo_raggruppamenti",
     "SOGGETTO_ANAGRAFICO": "anag_soggetti_anagrafici",
 }
 

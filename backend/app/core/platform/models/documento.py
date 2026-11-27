@@ -31,6 +31,7 @@ class EntityType(str, enum.Enum):
     PROPRIETARIO = "PROPRIETARIO"
     SOGGETTO_ANAGRAFICO = "SOGGETTO_ANAGRAFICO"
     RELAZIONE = "RELAZIONE"
+    RAGGRUPPAMENTO = "RAGGRUPPAMENTO"
 
 
 class TipoDocumentoEnum(str, enum.Enum):

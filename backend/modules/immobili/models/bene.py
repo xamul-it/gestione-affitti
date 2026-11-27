@@ -6,7 +6,7 @@ inheritance): see docs/superpowers/specs/2026-11-10-beni-catastali-design.md.
 SCHEMA: TENANT
 PREFIX: immo_ (modulo immobili)
 """
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -38,11 +38,15 @@ class Bene(Base):
     descrizione = Column(Text)
     note = Column(Text)
     attivo = Column(Boolean, nullable=False, default=True, server_default="true")
+    raggruppamento_id = Column(
+        Integer, ForeignKey("immo_raggruppamenti.id", ondelete="RESTRICT"), nullable=True, index=True,
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     __mapper_args__ = {"polymorphic_on": tipo_bene}
 
+    raggruppamento = relationship("Raggruppamento", back_populates="beni")
     variazioni_catastali = relationship("VariazioneCatastale", back_populates="bene", passive_deletes=True)
     spese_ricorrenti = relationship(
         "SpesaRicorrenteImmobile",

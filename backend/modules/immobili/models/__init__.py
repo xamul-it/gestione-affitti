@@ -14,6 +14,7 @@ if modules_dir not in sys.path:
 from anagrafica_italiana.models import ComuneItalia
 
 # Property entities
+from .raggruppamento import Raggruppamento
 from .bene import Bene
 from .unita_immobiliare import UnitaImmobiliare
 from .condomini import Condominio
@@ -37,6 +38,7 @@ from .collegamento_beni import CollegamentoBeni
 
 __all__ = [
     "Bene",
+    "Raggruppamento",
     "CollegamentoBeni",
     "VariazioneCatastale",
     # Cadastral data
