@@ -89,6 +89,11 @@ manifest = {
         "IMMOBILE": "immobili.services.relazioni_bene:permessi_vista",
         "RAGGRUPPAMENTO": "immobili.services.relazioni_bene:permessi_vista_raggruppamenti",
     },
+    # Relations on a ramo are inherited by every bene below it: writing them needs the edit
+    # permission of each bene type found there (immobile.edit and/or terreno.edit).
+    "object_edit_permissions": {
+        "RAGGRUPPAMENTO": "immobili.services.relazioni_bene:permessi_modifica_raggruppamenti",
+    },
 
     # Campi opzionali
     "author": "Gestione Affitti Team",

@@ -155,6 +155,13 @@ immo_raggruppamenti (id, tipo, nome, padre_id → immo_raggruppamenti nullable,
   bene di oggi). Le relazioni di un ramo seguono le regole di oggi per le
   relazioni dei beni (`soggetto.view` per leggerle, `soggetto.edit` per
   scriverle); chi vede un bene ne vede anche le relazioni ereditate.
+  **Scritture che cambiano ciò che i beni ereditano** (relazioni del ramo,
+  anche dall'API generica `/relazioni`; spostare o cancellare il ramo):
+  serve il permesso di modifica di **ogni** tipo di bene contenuto nel ramo
+  e nei sotto-rami (es. `immobile.edit` e `terreno.edit` per un ramo misto),
+  altrimenti chi ha solo `terreno.edit` cambierebbe l'eredità delle unità.
+  Rinominare o archiviare un ramo non cambia l'eredità: basta uno dei due.
+  (Correzione del 2026-11-27 dopo la revisione di sicurezza.)
 
 ### Collegamenti tra beni (ridotti)
 

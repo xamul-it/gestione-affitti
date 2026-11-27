@@ -76,7 +76,8 @@ def _as(*perms):
 def _register(monkeypatch):
     monkeypatch.setattr(
         object_permissions, "_manifest_hooks",
-        lambda db, tenant_schema: {"CONDOMINIO": f"{__name__}:fake_hook"},
+        lambda db, tenant_schema, chiave="object_permissions": (
+            {"CONDOMINIO": f"{__name__}:fake_hook"} if chiave == "object_permissions" else {}),
     )
 
 
@@ -134,3 +135,17 @@ def test_scrittura_richiede_il_permesso_di_modifica_dell_oggetto(ctx):
     assert http.put(f"/api/v1/relazioni/{a}", json={"note": "ok"}).status_code == 200
     _as("soggetto.view", "soggetto.edit", "y.view", "y.edit")
     assert http.put(f"/api/v1/relazioni/{b}", json={"note": "ok"}).status_code == 200
+
+
+def test_hook_di_scrittura_rotto_blocca(db_session, monkeypatch):
+    """object_edit_permissions that cannot be loaded blocks the writes (fail closed)."""
+    monkeypatch.setattr(
+        object_permissions, "_manifest_hooks",
+        lambda db, tenant_schema, chiave="object_permissions": (
+            {"CONDOMINIO": "modulo.inesistente:hook"} if chiave == "object_edit_permissions" else {}),
+    )
+    richiesti = object_permissions.permessi_modifica_richiesti(
+        db_session, TEST_TENANT, entity_type="CONDOMINIO", entity_id=1)
+    assert richiesti and not richiesti <= {"condominio.edit", "immobile.edit", "terreno.edit"}
+    assert object_permissions.permessi_modifica_richiesti(
+        db_session, TEST_TENANT, entity_type="IMMOBILE", entity_id=1) is None

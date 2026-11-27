@@ -26,7 +26,9 @@ from ..services.raggruppamenti import (
     RamoNonCancellabile, aggiorna_raggruppamento, antenati, cancella_raggruppamento, crea_raggruppamento,
     sposta_raggruppamento,
 )
-from ..services.relazioni_bene import crea_relazione_raggruppamento, relazioni_del_raggruppamento
+from ..services.relazioni_bene import (
+    crea_relazione_raggruppamento, permessi_modifica_ramo, relazioni_del_raggruppamento,
+)
 from .beni import _tipi_visibili
 
 router = APIRouter(prefix="/raggruppamenti", tags=["Raggruppamenti"])
@@ -42,6 +44,15 @@ def _verifica(utente, alternativi, *richiesti) -> None:
     permessi = utente.get_permissions()
     if not any(p in permessi for p in alternativi) or any(p not in permessi for p in richiesti):
         raise HTTPException(status_code=403, detail="Permessi insufficienti")
+
+
+def _verifica_eredita(db: Session, utente, ramo: Raggruppamento) -> None:
+    """Moving or deleting a ramo, or writing its relations, changes what every bene below inherits:
+    the edit permission of each bene type found there is required."""
+    if getattr(utente, "is_superuser", False):
+        return
+    if not permessi_modifica_ramo(db, ramo.id) <= utente.get_permissions():
+        raise HTTPException(status_code=403, detail="Permessi insufficienti sui beni del raggruppamento")
 
 
 def _ramo(db: Session, raggruppamento_id: int) -> Raggruppamento:
@@ -156,6 +167,7 @@ def move_raggruppamento(raggruppamento_id: int, dati: SpostaRaggruppamento, db: 
                         current_user: User = Depends(get_current_active_user)):
     _verifica(current_user, _MODIFICA)
     ramo = _ramo(db, raggruppamento_id)
+    _verifica_eredita(db, current_user, ramo)
     _errori(lambda: sposta_raggruppamento(db, ramo, dati.padre_id))
     db.commit()
     return _dettaglio(db, ramo, current_user)
@@ -167,6 +179,7 @@ def delete_raggruppamento(raggruppamento_id: int, db: Session = Depends(get_db),
     """Only a ramo with no relations nor documents; its children move to its parent."""
     _verifica(current_user, _MODIFICA)
     ramo = _ramo(db, raggruppamento_id)
+    _verifica_eredita(db, current_user, ramo)
     _errori(lambda: cancella_raggruppamento(db, ramo))
     db.commit()
     return Response(status_code=204)
@@ -196,7 +209,7 @@ def create_relazione_raggruppamento(
     current_user: User = Depends(get_current_active_user),
 ):
     _verifica(current_user, _MODIFICA, "soggetto.view", "soggetto.edit")
-    _ramo(db, raggruppamento_id)
+    _verifica_eredita(db, current_user, _ramo(db, raggruppamento_id))
     rel, avvisi = _errori(lambda: crea_relazione_raggruppamento(
         db, tenant_schema, current_user.id, raggruppamento_id, dati.soggetto_id, dati.tipo, quota=dati.quota,
         data_inizio=dati.data_inizio, data_fine=dati.data_fine, note=dati.note, dati=dati.dati,

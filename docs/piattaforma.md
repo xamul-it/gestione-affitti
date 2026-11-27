@@ -187,6 +187,11 @@ Spec: `2026-11-10-relazioni-ruoli-soggetti-design.md`.
   immobili): godimenti e incarichi si agganciano anche a un ramo e valgono
   per i beni che contiene. Il core lo conosce in `TABELLE_OGGETTI` e in
   `EntityType` dei documenti (colonna `varchar`, nessun `ALTER TYPE`).
+- Hook `object_edit_permissions` (manifest, stessa firma di
+  `object_permissions`): permessi **tutti** richiesti, in aggiunta, per
+  scrivere le relazioni di un oggetto; un hook non caricabile blocca la
+  scrittura. Lo usa immobili sui rami (il `.edit` di ogni tipo di bene
+  contenuto).
 
 Limite noto: un'anagrafica con relazioni nascoste da un modulo disattivato
 non si può eliminare.

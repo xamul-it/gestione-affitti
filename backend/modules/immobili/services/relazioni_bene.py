@@ -68,6 +68,35 @@ def permessi_vista_raggruppamenti(db: Session, tenant_schema: Optional[str]) -> 
     ])
 
 
+# bene type -> permission needed to change what its beni inherit.
+PERMESSO_MODIFICA_PER_TIPO = {"UNITA": "immobile.edit", "TERRENO": "terreno.edit"}
+
+# (ramo, edit permission) for every bene type found in the ramo's subtree.
+_MODIFICA_RAMI_SQL = """
+    WITH RECURSIVE giu(radice, id, livello) AS (
+        SELECT id, id, 0 FROM immo_raggruppamenti
+        UNION ALL
+        SELECT giu.radice, r.id, giu.livello + 1
+        FROM immo_raggruppamenti r JOIN giu ON r.padre_id = giu.id
+        WHERE giu.livello < 100
+    )
+    SELECT DISTINCT giu.radice AS entity_id,
+           CASE b.tipo_bene WHEN 'UNITA' THEN 'immobile.edit' WHEN 'TERRENO' THEN 'terreno.edit' END AS permesso
+    FROM giu JOIN immo_beni b ON b.raggruppamento_id = giu.id
+"""
+
+
+def permessi_modifica_raggruppamenti(db: Session, tenant_schema: Optional[str]):
+    """Hook object_edit_permissions for RAGGRUPPAMENTO: all these rows are required to write."""
+    return sa.text(_MODIFICA_RAMI_SQL).columns(entity_id=sa.Integer, permesso=sa.String)
+
+
+def permessi_modifica_ramo(db: Session, raggruppamento_id: int) -> set:
+    """Edit permissions of every bene type below the ramo (empty for a ramo with no beni)."""
+    sub = permessi_modifica_raggruppamenti(db, None).subquery()
+    return {r[0] for r in db.execute(sa.select(sub.c.permesso).where(sub.c.entity_id == raggruppamento_id)) if r[0]}
+
+
 _OGGETTO = {ENTITY_TYPE: "un bene", ENTITY_TYPE_RAMO: "un raggruppamento"}
 
 

@@ -54,6 +54,10 @@ def _verifica_scrittura(user: User, tipo: RuoloDisponibile, db: Optional[Session
     permessi = user.get_permissions()
     per_oggetto = (object_permissions.permessi_modifica(db, _schema(tenant_schema), entity_type=entity_type,
                                                         entity_id=entity_id) if db is not None else None)
+    richiesti = (object_permissions.permessi_modifica_richiesti(db, _schema(tenant_schema), entity_type=entity_type,
+                                                                entity_id=entity_id) if db is not None else None)
+    if richiesti and not richiesti <= permessi:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Non hai accesso a questo oggetto")
     if per_oggetto is not None:
         if not per_oggetto & permessi:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Non hai accesso a questo oggetto")

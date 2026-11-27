@@ -225,3 +225,54 @@ def test_anagrafica_con_relazione_su_ramo_non_eliminabile(ctx):
     _rel_ramo(client, e, a, "manutentore")
     _as("soggetto.view", "soggetto.delete", "soggetto.edit")
     assert client.delete(f"/api/v1/anagrafica/soggetti-v2/{a.id}").status_code == 400
+
+
+# --- writes that change what the beni inherit need the edit permission of every bene type below --------
+
+SOLO_TERRENI = ("terreno.view", "terreno.edit", "soggetto.view", "soggetto.edit")
+
+
+def test_relazione_su_ramo_misto_richiede_tutti_i_tipi(ctx):
+    client, _, c, e, _, _, (a, *_) = ctx
+    _as(*SOLO_TERRENI)
+    assert _rel_ramo(client, e, a, "manutentore").status_code == 403
+    # Through the generic API too.
+    corpo = {"soggetto_id": a.id, "tipo": "manutentore", "entity_type": "RAGGRUPPAMENTO", "entity_id": c.id}
+    assert client.post("/api/v1/relazioni/", json=corpo).status_code == 403
+
+
+def test_relazione_su_ramo_di_soli_terreni(ctx, db_session):
+    client, db, _, _, _, t, (a, *_) = ctx
+    fondo = crea_raggruppamento(db, "FONDO", "Fondo solo terreni")
+    sposta_bene(db, t, fondo.id)
+    _as(*SOLO_TERRENI)
+    assert _rel_ramo(client, fondo, a, "affittuario_agrario").status_code == 201
+    corpo = {"soggetto_id": a.id, "tipo": "manutentore", "entity_type": "RAGGRUPPAMENTO", "entity_id": fondo.id}
+    assert client.post("/api/v1/relazioni/", json=corpo).status_code == 201
+
+
+def test_modifica_relazione_del_ramo_misto(ctx):
+    client, _, _, e, _, _, (a, *_) = ctx
+    rid = _rel_ramo(client, e, a, "manutentore").json()["relazione"]["id"]
+    _as(*SOLO_TERRENI)
+    assert client.put(f"/api/v1/relazioni/{rid}", json={"note": "x"}).status_code == 403
+
+
+def test_sposta_e_cancella_ramo_misto(ctx):
+    client, _, c, e, _, _, _ = ctx
+    _as(*SOLO_TERRENI)
+    assert client.post(f"/api/v1/raggruppamenti/{e.id}/sposta", json={"padre_id": None}).status_code == 403
+    assert client.delete(f"/api/v1/raggruppamenti/{c.id}").status_code == 403
+    # Renaming or archiving does not change what the beni inherit: either edit permission is enough.
+    assert client.put(f"/api/v1/raggruppamenti/{e.id}", json={"nome": "Rinominato"}).status_code == 200
+
+
+def test_permessi_modifica_richiesti_hook(ctx):
+    _, db, c, e, _, _, _ = ctx
+    assert object_permissions.permessi_modifica_richiesti(
+        db, TEST_TENANT, entity_type="RAGGRUPPAMENTO", entity_id=c.id) == {"immobile.edit", "terreno.edit"}
+    vuoto = crea_raggruppamento(db, "ALTRO", "Vuoto")
+    assert object_permissions.permessi_modifica_richiesti(
+        db, TEST_TENANT, entity_type="RAGGRUPPAMENTO", entity_id=vuoto.id) == set()
+    assert object_permissions.permessi_modifica_richiesti(
+        db, TEST_TENANT, entity_type="IMMOBILE", entity_id=1) is None
