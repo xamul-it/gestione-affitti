@@ -5,8 +5,8 @@ Data: 2026-11-10 · aggiornata il 2026-11-12 (collegamenti), il 2026-11-13
 (perimetro ristretto ai beni; relazione unica; raggruppamenti ad albero) e
 aggiornata il 2026-11-25 (fase 3 fatta; decisioni sulla fase 4, divisa in
 4a/4b/4c).
-Stato: fasi 1, 2a, 2b e 3 rilasciate; prossima la fase 4a (raggruppamenti,
-backend).
+Stato: fasi 1, 2a, 2b, 3 e 4a rilasciate (4a il 2026-11-27); prossima la
+fase 4b (documenti sui raggruppamenti, interfaccia completa).
 
 ## Perimetro
 
@@ -421,7 +421,8 @@ Ogni fase si rilascia da sola.
    sezione "Soggetti" della scheda, chi paga cosa dalle relazioni,
    import visure sulle relazioni, documenti sulla relazione.
 4. **Raggruppamenti**, in tre rilasci:
-   - **4a, backend e base**: tabella `immo_raggruppamenti`, albero, sposta,
+   - **4a, backend e base** (fatta il 2026-11-27; piano
+     `docs/superpowers/plans/2026-11-25-beni-fase4a-raggruppamenti.md`): tabella `immo_raggruppamenti`, albero, sposta,
      controllo dei cicli, archivia/cancella, permessi, `RAGGRUPPAMENTO` in
      `TABELLE_OGGETTI` e nell'enum dei documenti, relazioni sui rami,
      `relazioni_effettive` usata da scheda e "chi paga cosa", migrazione
