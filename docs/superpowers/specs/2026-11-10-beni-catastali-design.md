@@ -3,16 +3,18 @@
 Data: 2026-11-10 · aggiornata il 2026-11-12 (collegamenti), il 2026-11-13
 (fase 2a fatta), il 2026-11-25 (fase 2b fatta), **riscritta il 2026-11-25**
 (perimetro ristretto ai beni; relazione unica; raggruppamenti ad albero) e
-aggiornata il 2026-11-25 (fase 3 fatta).
-Stato: fasi 1, 2a, 2b e 3 rilasciate; prossima la fase 4 (raggruppamenti).
+aggiornata il 2026-11-25 (fase 3 fatta; decisioni sulla fase 4, divisa in
+4a/4b/4c).
+Stato: fasi 1, 2a, 2b e 3 rilasciate; prossima la fase 4a (raggruppamenti,
+backend).
 
 ## Perimetro
 
 Questa spec tratta **solo i beni catastali e i loro legami**:
 
 - il **bene** (foglia): unità immobiliare o terreno, coi dati catastali;
-- il **raggruppamento** (ramo): complesso, edificio, abitazione con
-  pertinenze, fondo…, che contiene beni e altri raggruppamenti;
+- il **raggruppamento** (ramo): complesso, edificio, fondo…, che contiene
+  beni e altri raggruppamenti;
 - la **relazione** soggetto ↔ bene o raggruppamento, che dice quale diritto,
   godimento o incarico il soggetto ha;
 - i **documenti** del bene, del raggruppamento e della relazione;
@@ -126,30 +128,47 @@ immo_raggruppamenti (id, tipo, nome, padre_id → immo_raggruppamenti nullable,
 ```
 
 - **Tipi** (elenco estendibile, dichiarato da immobili):
-  `COMPLESSO`, `EDIFICIO`, `ABITAZIONE_CON_PERTINENZE`, `FONDO`, `ALTRO`.
+  `COMPLESSO`, `EDIFICIO`, `FONDO`, `ALTRO`. Niente tipo "abitazione con
+  pertinenze": la pertinenza resta un collegamento tra beni (decisione
+  dell'utente del 2026-11-25), così un box in un altro edificio resta
+  nel suo edificio e collegato all'abitazione.
 - **Albero puro**: un ramo ha al più un padre, un bene al più un ramo
   (`immo_beni.raggruppamento_id`). Il servizio rifiuta i cicli (un ramo non
   può finire dentro un suo discendente).
-- **Controlli per tipo** (avvisi, non blocchi, salvo dove detto):
-  - `ABITAZIONE_CON_PERTINENZE`: contiene solo beni, nessun sotto-ramo
-    (blocco); esattamente un'unità di categoria A (tranne A/10) e unità
-    C/2, C/6, C/7; **avviso** se c'è più di una pertinenza della stessa
-    categoria (IMU abitazione principale: una per categoria, L. 160/2019
-    c. 741).
-  - `FONDO`: avviso se contiene unità che non sono fabbricati rurali.
-- **Cancellare un ramo**: i figli (beni e rami) salgono al padre del ramo
-  cancellato; le relazioni e i documenti del ramo si eliminano come per il
-  bene (i file restano nello storage). Si chiede conferma mostrando cosa
-  sale e cosa si elimina.
+- **Niente date** sull'appartenenza a un ramo (decisione dell'utente del
+  2026-11-25): l'albero è quello di oggi. Limite noto: l'eredità alla data
+  D usa l'albero attuale, quindi spostare un bene o un ramo cambia anche
+  le relazioni ereditate nei periodi passati. La struttura cambia di rado.
+- **Controlli per tipo** (avvisi, non blocchi): `FONDO`, avviso se
+  contiene unità che non sono fabbricati rurali.
+- **Archiviare** è l'azione normale (`attivo = false`): il ramo sparisce
+  dall'albero e dal selettore ma resta con figli, relazioni e documenti;
+  si può riattivare. **Cancellare** è l'eccezione (decisione dell'utente del
+  2026-11-25): si può solo se il ramo non ha relazioni né documenti; i figli
+  (beni e rami) salgono al padre del ramo cancellato. Si chiede conferma
+  mostrando cosa sale.
 - **Spostare** un bene o un ramo = cambiarne il padre (anche "nessuno").
+- **Permessi** (proposta di chi scrive la spec, niente permessi nuovi): un
+  ramo si vede con `immobile.view` o `terreno.view` e si crea, modifica,
+  sposta, archivia con `immobile.edit` o `terreno.edit`. Dentro un ramo si
+  vedono solo i beni che l'utente può vedere (stessi permessi per tipo di
+  bene di oggi). Le relazioni di un ramo seguono le regole di oggi per le
+  relazioni dei beni (`soggetto.view` per leggerle, `soggetto.edit` per
+  scriverle); chi vede un bene ne vede anche le relazioni ereditate.
 
 ### Collegamenti tra beni (ridotti)
 
-`immo_beni_collegamenti` resta solo per il legame che **non è un
-raggruppamento**: `FABBRICATO_SU_PARTICELLA` (particella del catasto terreni
-"ente urbano" o area di corte ↔ unità costruita sopra: lo stesso pezzo di
-terra visto dai due catasti). I tipi `PERTINENZA` e `PARTE_DI_FONDO`
-diventano raggruppamenti (vedi Migrazione).
+`immo_beni_collegamenti` resta per i legami che **non sono un
+raggruppamento**:
+
+- `PERTINENZA` (abitazione → C/2, C/6, C/7), con l'avviso di oggi se c'è più
+  di una pertinenza della stessa categoria (IMU abitazione principale, L.
+  160/2019 c. 741); invariato;
+- `FABBRICATO_SU_PARTICELLA` (particella del catasto terreni "ente urbano" o
+  area di corte ↔ unità costruita sopra: lo stesso pezzo di terra visto dai
+  due catasti).
+
+Solo `PARTE_DI_FONDO` diventa un raggruppamento `FONDO` (vedi Migrazione).
 
 ### Relazione unica
 
@@ -232,6 +251,11 @@ ciascuna. Lo usano la scheda, "chi paga cosa" e il registro costi/ricavi.
 - Se lo stesso tipo è sia sul bene che su un ramo antenato valgono
   entrambe (es. manutentore della caldaia autonoma e manutentore
   dell'ascensore dell'edificio): la scheda le distingue per provenienza.
+- Nessuna regola di precedenza tra relazioni: il godimento nasce da un
+  contratto e i dati non hanno contratti in contrasto. Il riepilogo usa le
+  relazioni effettive come sono.
+- Le relazioni ereditate da un ramo archiviato restano valide fino alla
+  loro data di fine: archiviare il ramo non le chiude.
 
 ### Chi paga cosa
 
@@ -247,11 +271,23 @@ l'Archivio Fiscale il 2026-11-25), lette dalle relazioni effettive:
 | Spese straordinarie | nudo proprietario con usufrutto, uso o abitazione (c.c. artt. 1005, 1026); enfiteuta (art. 960); superficiario (art. 952); altrimenti il proprietario |
 
 Gli incarichi non entrano nel riepilogo. Senza godimento personale il bene
-è condotto dai titolari. **Da verificare con l'esperto prima della fase
-che lo implementa**: reddito agrario e spese ordinarie del comodatario di un
-terreno; comodato di fabbricato (la rendita resta al proprietario). Regola
-provvisoria fino alla verifica: il comodatario si tratta come gli altri
-godimenti personali (tabella sopra).
+è condotto dai titolari. Il comodatario si tratta come gli altri godimenti
+personali (verificato con l'Archivio Fiscale il 2026-11-27, issue #5):
+
+- fabbricato in comodato: la rendita resta al comodante, il comodatario
+  ha un diritto personale di godimento e non possiede il reddito (Ris. Min.
+  Finanze 441/1980); IMU al proprietario (CGT Veneto 248/2024);
+- spese: quelle per servirsi della cosa (ordinarie) restano al comodatario,
+  le straordinarie necessarie e urgenti gli vanno rimborsate (c.c. art.
+  1808), quindi sono del titolare;
+- terreno in comodato: il reddito agrario va a chi conduce il fondo. Il
+  TUIR (art. 33) nomina solo l'affittuario, ma i modelli di dichiarazione
+  usano il codice "conduttore del fondo (diverso dal proprietario) o
+  affittuario" e la giurisprudenza lo attribuisce a chi svolge l'attività
+  agricola (CTR Piemonte 441/2020). Il reddito dominicale resta ai titolari.
+  Nota: per la Cassazione un comodato di fondo rustico può essere
+  riqualificato come affitto agrario (L. 203/1982, richiamata da Ris.
+  Dogane 2/2003); qui si registra il titolo dichiarato.
 
 ### Documenti
 
@@ -336,12 +372,12 @@ del core resta com'è.
 3. Le note di `immo_proprietari.note_proprietario` e `immo_conduttori.note`
    non hanno un bene: finiscono in `dati.note_ruolo` di ciascuna relazione
    migrata di quel ruolo (sono 0-poche righe; la migrazione le conta).
-4. Collegamenti `PERTINENZA` aperti → un ramo
-   `ABITAZIONE_CON_PERTINENZE` per abitazione, nome = codice
-   dell'abitazione, con abitazione e pertinenze dentro. `PARTE_DI_FONDO`
-   aperti → un ramo `FONDO` col terreno principale e le particelle. I
-   collegamenti chiusi (con data di fine) si perdono: la migrazione li
-   elenca nel log e si ferma se ce ne sono, così si decide prima.
+4. (fase 4a) Collegamenti `PARTE_DI_FONDO` aperti → un ramo `FONDO` per
+   terreno principale, nome = codice del terreno, col terreno principale e
+   le particelle dentro. I `PARTE_DI_FONDO` chiusi (con data di fine) si
+   perdono: la migrazione li elenca nel log e si ferma se ce ne sono, così
+   si decide prima. Se una particella è già in un altro ramo la migrazione
+   si ferma e la elenca. I collegamenti `PERTINENZA` restano come sono.
 5. Documenti con `entity_type = PROPRIETARIO` (puntano a
    `immo_proprietari.id`, che sparisce) passano a `SOGGETTO_ANAGRAFICO` con
    l'id del soggetto.
@@ -377,10 +413,22 @@ Ogni fase si rilascia da sola.
    godimento (comodatario, affittuario agrario) e incarichi sui beni,
    sezione "Soggetti" della scheda, chi paga cosa dalle relazioni,
    import visure sulle relazioni, documenti sulla relazione.
-4. **Raggruppamenti**: tabella, albero, scheda del ramo, relazioni e
-   documenti sui rami, eredità, "applica a tutti i beni del ramo" per i
-   diritti reali, migrazione di pertinenze e fondi in rami, selettore unico
-   di beni e rami.
+4. **Raggruppamenti**, in tre rilasci:
+   - **4a, backend e base**: tabella `immo_raggruppamenti`, albero, sposta,
+     controllo dei cicli, archivia/cancella, permessi, `RAGGRUPPAMENTO` in
+     `TABELLE_OGGETTI` e nell'enum dei documenti, relazioni sui rami,
+     `relazioni_effettive` usata da scheda e "chi paga cosa", migrazione
+     di `PARTE_DI_FONDO` in rami `FONDO`; interfaccia minima: albero
+     `/raggruppamenti`, scheda del ramo con figli e relazioni, percorso del
+     ramo e relazioni ereditate sulla scheda del bene.
+   - **4b, interfaccia completa**: documenti sui rami (tipologie per
+     `entity_type`), documenti dei rami antenati sulla scheda del bene,
+     relazioni ereditate sulla scheda del ramo, rifiniture dell'albero.
+   - **4c, selettore e applica a tutti**: selettore unico di beni e rami
+     (paginato); in costi/ricavi, contratti e calcoli si scelgono solo beni,
+     mai rami. "Applica a tutti i beni del ramo" per i diritti reali con
+     anteprima e creazione in un'unica transazione; il controllo "le quote
+     supererebbero l'intero" usa le frazioni esatte della fase 3.
 5. **Import visure dei terreni** e proposta fabbricato ↔ particella.
 
 ## Domande aperte
@@ -399,8 +447,7 @@ Pré-Saint-Didier, Castiglione della Pescaia; esenzione IRPEF CD/IAP dal
 per categoria" anche per prima casa e cedolare secca (qui solo avviso
 IMU); diritto di superficie prima dell'ultimazione della costruzione;
 spese straordinarie in enfiteusi; affitto tra comproprietari del fondo;
-conduttore società di capitali; reddito agrario e spese del comodatario
-di un terreno.
+conduttore società di capitali.
 
 ## Storia: azzeramento della fase 1 (2026-11-12)
 
