@@ -62,7 +62,9 @@ def test_tipi_dei_beni_per_famiglia():
             t = tipi[codice]
             assert t["famiglia"] == famiglia
             assert t["fonte"] == "CORE" and "provider" not in t
-            assert t["entity_types"] == ["IMMOBILE"]
+            # Rights only on beni; tenancies and assignments also on a raggruppamento (phase 4a).
+            atteso = ["IMMOBILE"] if famiglia == "diritti_reali" else ["IMMOBILE", "RAGGRUPPAMENTO"]
+            assert t["entity_types"] == atteso
             assert t["permesso_oggetto"] == "immobile.view"
             assert t.get("ammette_quota", False) is (famiglia == "diritti_reali")
             assert t.get("solo_beni", False) is (famiglia == "diritti_reali")
@@ -70,7 +72,8 @@ def test_tipi_dei_beni_per_famiglia():
 
 def test_hook_permessi_dei_beni():
     assert immobili_manifest["object_permissions"] == {
-        "IMMOBILE": "immobili.services.relazioni_bene:permessi_vista"}
+        "IMMOBILE": "immobili.services.relazioni_bene:permessi_vista",
+        "RAGGRUPPAMENTO": "immobili.services.relazioni_bene:permessi_vista_raggruppamenti"}
 
 
 def test_ruolo_azienda():

@@ -7,6 +7,8 @@ Conforme agli standard di architettura moduli v1.0
 IMMOBILE = ["IMMOBILE"]
 RELAZIONE = ["RELAZIONE"]
 IMMOBILE_E_RELAZIONE = ["IMMOBILE", "RELAZIONE"]
+# Tenancies and assignments also go on a raggruppamento (inherited by its beni); rights only on beni.
+BENE_O_RAMO = ["IMMOBILE", "RAGGRUPPAMENTO"]
 
 # Relation types on beni (units and land parcels), by family: (codice, nome, descrizione).
 DIRITTI_REALI = [
@@ -60,12 +62,12 @@ manifest = {
             for c, n, d in DIRITTI_REALI
         ],
         *[
-            {"codice": c, "nome": n, "descrizione": d, "entity_types": IMMOBILE, "fonte": "CORE",
+            {"codice": c, "nome": n, "descrizione": d, "entity_types": BENE_O_RAMO, "fonte": "CORE",
              "permesso_oggetto": "immobile.view", "famiglia": "godimento"}
             for c, n, d in GODIMENTO
         ],
         *[
-            {"codice": c, "nome": n, "descrizione": d, "entity_types": IMMOBILE, "fonte": "CORE",
+            {"codice": c, "nome": n, "descrizione": d, "entity_types": BENE_O_RAMO, "fonte": "CORE",
              "permesso_oggetto": "immobile.view", "famiglia": "incarichi"}
             for c, n, d in INCARICHI
         ],
@@ -82,7 +84,11 @@ manifest = {
     ],
 
     # Per-object visibility of the relations on beni: the permission depends on the bene type.
-    "object_permissions": {"IMMOBILE": "immobili.services.relazioni_bene:permessi_vista"},
+    # A raggruppamento is seen with immobile.view or terreno.view (one row each).
+    "object_permissions": {
+        "IMMOBILE": "immobili.services.relazioni_bene:permessi_vista",
+        "RAGGRUPPAMENTO": "immobili.services.relazioni_bene:permessi_vista_raggruppamenti",
+    },
 
     # Campi opzionali
     "author": "Gestione Affitti Team",

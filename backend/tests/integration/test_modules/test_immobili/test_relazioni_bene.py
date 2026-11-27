@@ -65,8 +65,11 @@ def _post(client, bene, soggetto, tipo, **extra):
 def test_manifest_dichiara_famiglie(db_session):
     tipi = {t["codice"]: t for t in manifest["relation_types"] if t["codice"] != "amministratore_condominio"}
     assert len(tipi) == 17
-    assert all(t["famiglia"] in FAMIGLIE and t["fonte"] == "CORE" and t["entity_types"] == ["IMMOBILE"]
-               and t["permesso_oggetto"] == "immobile.view" for t in tipi.values())
+    assert all(t["famiglia"] in FAMIGLIE and t["fonte"] == "CORE" and t["permesso_oggetto"] == "immobile.view"
+               for t in tipi.values())
+    # Rights only on beni; tenancies and assignments also on a raggruppamento (phase 4a).
+    assert all(t["entity_types"] == (["IMMOBILE"] if t["famiglia"] == "diritti_reali" else ["IMMOBILE", "RAGGRUPPAMENTO"])
+               for t in tipi.values())
     reali = [t for t in tipi.values() if t["famiglia"] == "diritti_reali"]
     assert len(reali) == 8 and all(t["ammette_quota"] and t["solo_beni"] for t in reali)
     assert not any(t.get("ammette_quota") or t.get("solo_beni") for t in tipi.values() if t["famiglia"] != "diritti_reali")

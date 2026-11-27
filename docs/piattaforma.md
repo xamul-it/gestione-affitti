@@ -183,6 +183,10 @@ Spec: `2026-11-10-relazioni-ruoli-soggetti-design.md`.
 - Oggetto `IMMOBILE` = **bene** (unità o terreno, `immo_beni`): descrizione
   "indirizzo, comune", o "codice · comune" se il bene non ha indirizzo
   (spesso un terreno); il link porta a `/beni/:id`.
+- Oggetto `RAGGRUPPAMENTO` = **ramo** di beni (`immo_raggruppamenti`, modulo
+  immobili): godimenti e incarichi si agganciano anche a un ramo e valgono
+  per i beni che contiene. Il core lo conosce in `TABELLE_OGGETTI` e in
+  `EntityType` dei documenti (colonna `varchar`, nessun `ALTER TYPE`).
 
 Limite noto: un'anagrafica con relazioni nascoste da un modulo disattivato
 non si può eliminare.

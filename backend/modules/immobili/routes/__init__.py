@@ -4,6 +4,7 @@ Routes for immobili module
 from .categorie_catastali import router as categorie_catastali_router
 from .terreni import router as terreni_router
 from .beni import router as beni_router
+from .raggruppamenti import router as raggruppamenti_router
 from .tipologie_terreno import router as tipologie_terreno_router
 from .visura_import import router as visura_import_router
 from .caricamento_documenti import router as caricamento_documenti_router
@@ -18,6 +19,7 @@ __all__ = [
     "categorie_catastali_router",
     "terreni_router",
     "beni_router",
+    "raggruppamenti_router",
     "tipologie_terreno_router",
     "visura_import_router",
     "caricamento_documenti_router",

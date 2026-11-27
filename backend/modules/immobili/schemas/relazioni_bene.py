@@ -15,6 +15,13 @@ class RelazioneBeneCreate(BaseModel):
     dati: Optional[Dict[str, Any]] = None
 
 
+class Provenienza(BaseModel):
+    """The ramo an inherited relation comes from."""
+    raggruppamento_id: int
+    nome: str
+    tipo: str
+
+
 class RelazioneBeneOut(BaseModel):
     id: int
     tipo: str
@@ -28,6 +35,7 @@ class RelazioneBeneOut(BaseModel):
     data_fine: Optional[date] = None
     note: Optional[str] = None
     dati: Optional[Dict[str, Any]] = None
+    provenienza: Optional[Provenienza] = None  # None = the object's own relation
 
 
 class RelazioniBeneResponse(BaseModel):

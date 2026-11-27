@@ -1,7 +1,14 @@
 """Common view of a bene (unit or land parcel) for listings and pickers."""
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
+
+
+class PassoPercorso(BaseModel):
+    """One ramo on the path from the root down to the bene's ramo."""
+    id: int
+    nome: str
+    tipo: str
 
 
 class BeneResponse(BaseModel):
@@ -17,5 +24,11 @@ class BeneResponse(BaseModel):
     subalterno: Optional[str] = None
     descrizione: Optional[str] = None
     attivo: bool
+    raggruppamento_id: Optional[int] = None
+    percorso: List[PassoPercorso] = []  # filled on the detail only
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SpostaBene(BaseModel):
+    raggruppamento_id: Optional[int] = None

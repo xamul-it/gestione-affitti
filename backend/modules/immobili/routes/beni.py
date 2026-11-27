@@ -16,7 +16,7 @@ from app.core.auth.models import User
 from app.core.database import get_db, get_tenant_schema
 
 from ..models import Bene, CollegamentoBeni, VariazioneCatastale
-from ..schemas.bene import BeneResponse
+from ..schemas.bene import BeneResponse, SpostaBene
 from ..schemas.collegamento_beni import (
     CollegamentiBeneResponse, CollegamentoCreate, CollegamentoOut, CollegamentoUpdate,
 )
@@ -28,6 +28,7 @@ from ..schemas.relazioni_bene import (
     RelazioneBeneCreata, RelazioneBeneCreate, RelazioniBeneResponse,
 )
 from ..services.relazioni_bene import PERMESSO_PER_TIPO, crea_relazione_bene, relazioni_del_bene
+from ..services.raggruppamenti import antenati, sposta_bene
 from ..services.ruoli_bene import riepilogo_bene
 from ..schemas.immobili import VariazioneCatastaleResponse
 from ..schemas.riepilogo_bene import RiepilogoBeneResponse
@@ -102,7 +103,35 @@ def get_bene(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    return _bene_visibile(db, bene_id, current_user)
+    return _con_percorso(db, _bene_visibile(db, bene_id, current_user))
+
+
+def _con_percorso(db: Session, bene: Bene) -> BeneResponse:
+    out = BeneResponse.model_validate(bene)
+    if bene.raggruppamento_id:
+        out.percorso = [{"id": r.id, "nome": r.nome, "tipo": r.tipo} for r in antenati(db, bene.raggruppamento_id)]
+    return out
+
+
+@router.patch("/{bene_id}/raggruppamento", response_model=BeneResponse)
+def move_bene(
+    bene_id: int,
+    dati: SpostaBene,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Moves the bene into a ramo (or out of any, with null). Needs the edit permission of the bene type."""
+    bene = _bene_visibile(db, bene_id, current_user)
+    _puo_modificare(current_user, bene)
+    try:
+        sposta_bene(db, bene, dati.raggruppamento_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    db.commit()
+    db.refresh(bene)
+    return _con_percorso(db, bene)
 
 
 @router.get("/{bene_id}/variazioni-catastali", response_model=List[VariazioneCatastaleResponse])
