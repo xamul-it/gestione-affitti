@@ -29,6 +29,8 @@ _DESCRIZIONI_CORE = {
     # A bene without address (often a land parcel): code and comune.
     "IMMOBILE": ("immo_beni", "CASE WHEN COALESCE(o.indirizzo, '') = '' THEN concat_ws(' · ', o.codice, o.comune) "
                               "ELSE concat_ws(', ', o.indirizzo, o.comune) END"),
+    # Raggruppamento (ramo) of beni of the immobili module: its name.
+    "RAGGRUPPAMENTO": ("immo_raggruppamenti", "o.nome"),
     "SOGGETTO_ANAGRAFICO": (
         "anag_soggetti_anagrafici",
         "COALESCE(NULLIF(o.ragione_sociale, ''), concat_ws(' ', o.cognome, o.nome))",

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import RaggruppamentoScheda from './RaggruppamentoScheda';
 import { raggruppamentiAPI } from '../../services/immobiliAPI';
+import { subscribeToToasts } from '../../../../core/hooks/useToast';
 
 vi.mock('../../services/immobiliAPI', () => ({
   raggruppamentiAPI: {
@@ -54,20 +55,27 @@ describe('RaggruppamentoScheda', () => {
     expect(screen.getByText('Soggetti del ramo godimento,incarichi')).toBeInTheDocument();
   });
 
-  it('archives the ramo', async () => {
+  it('archives the ramo once, even on a double click, and confirms it', async () => {
+    const toasts = [];
+    const stop = subscribeToToasts((t) => toasts.push(t));
     renderScheda();
     await screen.findByRole('heading', { name: 'Edificio A', level: 2 });
-    fireEvent.click(screen.getByRole('button', { name: 'Archivia' }));
-    await waitFor(() => expect(raggruppamentiAPI.update).toHaveBeenCalledWith(2, { attivo: false }));
+    const archivia = screen.getByRole('button', { name: 'Archivia' });
+    fireEvent.click(archivia);
+    fireEvent.click(archivia);
+    await waitFor(() => expect(toasts.map((t) => t.message)).toContain('Raggruppamento archiviato'));
+    expect(raggruppamentiAPI.update).toHaveBeenCalledTimes(1);
+    expect(raggruppamentiAPI.update).toHaveBeenCalledWith(2, { attivo: false });
+    stop?.();
   });
 
   it('moves the ramo, without itself and its sub-rami among the choices', async () => {
     renderScheda();
     await screen.findByRole('heading', { name: 'Edificio A', level: 2 });
     fireEvent.click(screen.getByRole('button', { name: 'Sposta' }));
-    const scelta = await screen.findByLabelText('Nuovo ramo superiore');
+    const scelta = await screen.findByLabelText('Raggruppamento superiore');
     const opzioni = Array.from(scelta.querySelectorAll('option')).map((o) => o.textContent);
-    expect(opzioni).toEqual(['Nessuno (in cima)', 'Complesso Forlì', 'Complesso Forlì › Edificio B']);
+    expect(opzioni).toEqual(['Nessuno (livello più alto)', 'Complesso Forlì', 'Complesso Forlì › Edificio B']);
     fireEvent.change(scelta, { target: { value: '4' } });
     fireEvent.click(screen.getByRole('button', { name: 'Conferma spostamento' }));
     await waitFor(() => expect(raggruppamentiAPI.sposta).toHaveBeenCalledWith(2, 4));
@@ -77,7 +85,7 @@ describe('RaggruppamentoScheda', () => {
     renderScheda();
     await screen.findByRole('heading', { name: 'Edificio A', level: 2 });
     fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
-    expect(screen.getByText(/1 sotto-ramo e 2 beni salgono in Complesso Forlì/)).toBeInTheDocument();
+    expect(screen.getByText(/1 sottoraggruppamento e 2 beni salgono in Complesso Forlì/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Elimina definitivamente' }));
     await waitFor(() => expect(raggruppamentiAPI.delete).toHaveBeenCalledWith(2));
     expect(await screen.findByText('Albero')).toBeInTheDocument();
@@ -85,12 +93,12 @@ describe('RaggruppamentoScheda', () => {
 
   it('shows the server message when the ramo cannot be deleted', async () => {
     raggruppamentiAPI.delete.mockRejectedValue({
-      response: { status: 409, data: { detail: 'Il ramo ha relazioni o documenti: archivialo' } },
+      response: { status: 409, data: { detail: 'Il raggruppamento ha relazioni o documenti: archivialo' } },
     });
     renderScheda();
     await screen.findByRole('heading', { name: 'Edificio A', level: 2 });
     fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
     fireEvent.click(screen.getByRole('button', { name: 'Elimina definitivamente' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Il ramo ha relazioni o documenti: archivialo');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Il raggruppamento ha relazioni o documenti: archivialo');
   });
 });

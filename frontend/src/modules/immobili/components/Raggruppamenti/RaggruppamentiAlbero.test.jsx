@@ -43,8 +43,8 @@ describe('RaggruppamentiAlbero', () => {
   it('creates a root ramo', async () => {
     renderAlbero();
     await screen.findByText('Complesso Forlì');
-    fireEvent.click(screen.getByRole('button', { name: /nuovo ramo/i }));
-    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Fondo Bertinoro' } });
+    fireEvent.click(screen.getByRole('button', { name: /nuovo raggruppamento/i }));
+    fireEvent.change(screen.getByLabelText(/^Nome/), { target: { value: 'Fondo Bertinoro' } });
     fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'FONDO' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salva' }));
     await waitFor(() => expect(raggruppamentiAPI.create).toHaveBeenCalledWith({

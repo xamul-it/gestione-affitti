@@ -142,7 +142,7 @@ export default function SoggettiSection({
                             {chiusa && <span className="scheda-muted"> (chiusa)</span>}
                             {ramo && (
                               <div className="soggetti-bene__provenienza">
-                                <Link to={`/raggruppamenti/${ramo.raggruppamento_id}`}>dal ramo {ramo.nome}</Link>
+                                <Link to={`/raggruppamenti/${ramo.raggruppamento_id}`}>dal raggruppamento {ramo.nome}</Link>
                               </div>
                             )}
                           </td>
@@ -151,7 +151,9 @@ export default function SoggettiSection({
                           <td data-label="Periodo">{periodo(r)}</td>
                           <td data-label="Azioni">
                             {ramo ? (
-                              <span className="scheda-muted">Ereditata</span>
+                              <span className="scheda-muted" title="Ereditata dal raggruppamento: si modifica dalla sua scheda">
+                                Ereditata<span className="sr-only"> dal raggruppamento: si modifica dalla sua scheda</span>
+                              </span>
                             ) : chiusura?.id === r.id ? (
                               <form className="collegamenti__chiusura" onSubmit={chiudi}>
                                 <label htmlFor={`${uid}-fine-${r.id}`}>Fino al</label>

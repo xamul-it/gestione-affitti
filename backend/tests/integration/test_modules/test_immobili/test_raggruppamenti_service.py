@@ -18,7 +18,7 @@ from immobili.services.raggruppamenti import (
 
 pytestmark = pytest.mark.integration
 
-CICLO = "Un ramo non può stare dentro se stesso o un suo sotto-ramo"
+CICLO = "Un raggruppamento non può stare dentro se stesso o un suo sottoraggruppamento"
 
 
 @pytest.fixture
@@ -97,12 +97,12 @@ def test_sposta_bene(albero):
 def test_dentro_ramo_archiviato(albero):
     db, c, e, a, u = albero
     aggiorna_raggruppamento(db, e, attivo=False)
-    with pytest.raises(ValueError, match="Il ramo è archiviato"):
+    with pytest.raises(ValueError, match="Il raggruppamento è archiviato"):
         crea_raggruppamento(db, "ALTRO", "x", padre_id=e.id)
-    with pytest.raises(ValueError, match="Il ramo è archiviato"):
+    with pytest.raises(ValueError, match="Il raggruppamento è archiviato"):
         sposta_bene(db, u, e.id)
     altro = crea_raggruppamento(db, "ALTRO", "y")
-    with pytest.raises(ValueError, match="Il ramo è archiviato"):
+    with pytest.raises(ValueError, match="Il raggruppamento è archiviato"):
         sposta_raggruppamento(db, altro, e.id)
 
 

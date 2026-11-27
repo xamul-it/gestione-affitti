@@ -125,10 +125,11 @@ describe('BeneScheda', () => {
       { id: 2, nome: 'Edificio A', figli: [] }, { id: 4, nome: 'Edificio B', figli: [] }] }] });
     beniAPI.spostaInRamo.mockResolvedValue({ data: { id: 5, raggruppamento_id: 4, percorso: [] } });
     renderAt('/beni/5');
-    const percorso = await screen.findByRole('navigation', { name: 'Raggruppamento' });
+    const percorso = await screen.findByRole('navigation', { name: 'Percorso del raggruppamento' });
     expect(within(percorso).getByRole('link', { name: 'Edificio A' })).toHaveAttribute('href', '/raggruppamenti/2');
-    fireEvent.click(screen.getByRole('button', { name: 'Sposta in un ramo' }));
-    const scelta = await screen.findByLabelText('Ramo');
+    fireEvent.click(screen.getByRole('button', { name: 'Sposta in un raggruppamento' }));
+    const scelta = await screen.findByLabelText('Raggruppamento');
+    await vi.waitFor(() => expect(scelta).toHaveFocus());
     fireEvent.change(scelta, { target: { value: '4' } });
     fireEvent.click(screen.getByRole('button', { name: 'Conferma spostamento' }));
     await vi.waitFor(() => expect(beniAPI.spostaInRamo).toHaveBeenCalledWith(5, 4));
@@ -136,7 +137,16 @@ describe('BeneScheda', () => {
 
   it('a bene outside any ramo says so', async () => {
     renderAt('/beni/5');
-    const percorso = await screen.findByRole('navigation', { name: 'Raggruppamento' });
+    const percorso = await screen.findByRole('navigation', { name: 'Percorso del raggruppamento' });
     expect(within(percorso).getByText('Nessun raggruppamento')).toBeInTheDocument();
+  });
+
+  it('gives the focus back to the move button when cancelling', async () => {
+    raggruppamentiAPI.getAll.mockResolvedValue({ data: [] });
+    renderAt('/beni/5');
+    const sposta = await screen.findByRole('button', { name: 'Sposta in un raggruppamento' });
+    fireEvent.click(sposta);
+    fireEvent.click(await screen.findByRole('button', { name: 'Annulla' }));
+    expect(sposta).toHaveFocus();
   });
 });

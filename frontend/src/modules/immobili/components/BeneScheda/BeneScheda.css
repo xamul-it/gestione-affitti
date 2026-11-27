@@ -461,3 +461,31 @@
 .immobile-scheda .soggetti-bene__provenienza {
   font-size: var(--font-size-small);
 }
+
+.immobile-scheda .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.immobile-scheda .percorso-ramo ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.immobile-scheda .percorso-ramo li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}

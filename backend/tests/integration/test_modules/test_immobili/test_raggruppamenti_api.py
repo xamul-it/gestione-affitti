@@ -166,7 +166,7 @@ def test_delete_ramo_con_relazioni(ctx):
     _rel_ramo(client, e, a, "manutentore")
     res = client.delete(f"/api/v1/raggruppamenti/{e.id}")
     assert res.status_code == 409
-    assert res.json()["detail"] == "Il ramo ha relazioni o documenti: archivialo"
+    assert res.json()["detail"] == "Il raggruppamento ha relazioni o documenti: archivialo"
 
 
 def test_delete_ramo_vuoto(ctx):
@@ -276,3 +276,12 @@ def test_permessi_modifica_richiesti_hook(ctx):
         db, TEST_TENANT, entity_type="RAGGRUPPAMENTO", entity_id=vuoto.id) == set()
     assert object_permissions.permessi_modifica_richiesti(
         db, TEST_TENANT, entity_type="IMMOBILE", entity_id=1) is None
+
+
+def test_descrizione_del_ramo_nelle_relazioni_dell_anagrafica(ctx):
+    """The cross-module relation list (soggetto page) names the ramo."""
+    client, _, _, e, _, _, (a, *_) = ctx
+    _rel_ramo(client, e, a, "manutentore")
+    righe = [r for r in client.get(f"/api/v1/relazioni/?soggetto_id={a.id}").json()
+             if r["entity_type"] == "RAGGRUPPAMENTO"]
+    assert [r["descrizione"] for r in righe] == [e.nome]

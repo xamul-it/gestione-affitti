@@ -48,7 +48,7 @@ export default function RaggruppamentoForm({ ramo, padreId = null, onClose }) {
           </select>
         </div>
         <div className="collegamento-form__campo">
-          <label htmlFor={`${uid}-nome`}>Nome</label>
+          <label htmlFor={`${uid}-nome`}>Nome <span aria-hidden="true">*</span></label>
           <input id={`${uid}-nome`} type="text" value={nome} required
             aria-invalid={manca ? true : undefined} aria-describedby={manca ? `${uid}-errnome` : undefined}
             onChange={(e) => { setNome(e.target.value); setManca(false); }} />

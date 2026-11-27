@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Pencil, Plus } from 'lucide-react';
 import { Button } from '../../../../components/UI';
@@ -7,6 +7,7 @@ import { EmptyState } from '../../../../core/components/common/EmptyState';
 import { LoadingSpinner } from '../../../../core/components/common/LoadingSpinner';
 import { raggruppamentiAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
+import { useToast } from '../../../../core/hooks/useToast';
 import SoggettiSection from '../BeneScheda/SoggettiSection';
 import PercorsoRamo from './PercorsoRamo';
 import RaggruppamentoForm from './RaggruppamentoForm';
@@ -18,10 +19,12 @@ import './Raggruppamenti.css';
 const FAMIGLIE_RAMO = ['godimento', 'incarichi']; // rights in rem stay on the beni
 
 function cosaSale(ramo) {
-  const rami = ramo.figli.length === 1 ? '1 sotto-ramo' : `${ramo.figli.length} sotto-rami`;
+  const rami = ramo.figli.length === 1 ? '1 sottoraggruppamento' : `${ramo.figli.length} sottoraggruppamenti`;
   const beni = ramo.beni.length === 1 ? '1 bene' : `${ramo.beni.length} beni`;
-  const dove = ramo.percorso.length > 1 ? ramo.percorso[ramo.percorso.length - 2].nome : 'cima all’albero';
-  return `${rami} e ${beni} salgono in ${dove}. Si può eliminare solo un ramo senza relazioni né documenti: altrimenti archivialo.`;
+  const dove = ramo.percorso.length > 1
+    ? `salgono in ${ramo.percorso[ramo.percorso.length - 2].nome}`
+    : 'restano al livello più alto';
+  return `${rami} e ${beni} ${dove}. Se il raggruppamento ha relazioni o documenti non si può eliminare: archivialo.`;
 }
 
 /** /raggruppamenti/:id: path, sub-rami, beni and the ramo's own relations (inherited by its beni). */
@@ -36,6 +39,10 @@ export default function RaggruppamentoScheda() {
   const [nuovoFiglio, setNuovoFiglio] = useState(false);
   const [sposta, setSposta] = useState(false);
   const [elimina, setElimina] = useState(false);
+  const [occupato, setOccupato] = useState(false);
+  const occupatoRef = useRef(false); // blocks a double click before the re-render
+  const spostaRef = useRef(null);
+  const toast = useToast();
 
   const carica = useCallback(async () => {
     try {
@@ -52,12 +59,19 @@ export default function RaggruppamentoScheda() {
   const caricaRelazioni = useCallback((opzioni) => raggruppamentiAPI.getRelazioni(ramoId, opzioni), [ramoId]);
   const creaRelazione = useCallback((dati) => raggruppamentiAPI.createRelazione(ramoId, dati), [ramoId]);
 
-  const esegui = async (azione) => {
+  const esegui = async (azione, messaggio) => {
+    if (occupatoRef.current) return;
+    occupatoRef.current = true;
+    setOccupato(true);
     setAzioneErr(null);
     try {
       await azione();
+      if (messaggio) toast.success(messaggio);
     } catch (err) {
       setAzioneErr(formatApiError(err));
+    } finally {
+      occupatoRef.current = false;
+      setOccupato(false);
     }
   };
 
@@ -84,35 +98,38 @@ export default function RaggruppamentoScheda() {
           <PercorsoRamo percorso={ramo.percorso} ultimoLink={false} />
         </div>
         <div className="raggruppamento__azioni">
-          <Button variant="secondary" onClick={() => setModifica(true)}><Pencil size={16} aria-hidden="true" /> Modifica</Button>
-          <Button variant="ghost" onClick={() => setSposta(true)}>Sposta</Button>
+          <Button onClick={() => setModifica(true)} disabled={occupato}><Pencil size={16} aria-hidden="true" /> Modifica</Button>
+          <Button ref={spostaRef} variant="secondary" aria-expanded={sposta} disabled={occupato}
+            onClick={() => setSposta((v) => !v)}>Sposta</Button>
           {ramo.attivo ? (
-            <Button variant="ghost" onClick={() => esegui(async () => {
+            <Button variant="secondary" disabled={occupato} onClick={() => esegui(async () => {
               const r = await raggruppamentiAPI.update(ramoId, { attivo: false });
               setRamo(r.data);
-            })}>Archivia</Button>
+            }, 'Raggruppamento archiviato')}>Archivia</Button>
           ) : (
-            <Button variant="ghost" onClick={() => esegui(async () => {
+            <Button variant="secondary" disabled={occupato} onClick={() => esegui(async () => {
               const r = await raggruppamentiAPI.update(ramoId, { attivo: true });
               setRamo(r.data);
-            })}>Riattiva</Button>
+            }, 'Raggruppamento riattivato')}>Riattiva</Button>
           )}
-          <Button variant="ghost" onClick={() => setElimina(true)}>Elimina</Button>
+          <Button variant="danger" disabled={occupato} onClick={() => setElimina(true)}>Elimina</Button>
         </div>
       </header>
 
       {azioneErr && <div className="scheda-error" role="alert">{azioneErr}</div>}
       {sposta && (
         <SceltaRamo
-          label="Nuovo ramo superiore"
-          vuoto="Nessuno (in cima)"
+          label="Raggruppamento superiore"
+          vuoto="Nessuno (livello più alto)"
           attuale={ramo.padre_id}
           escludiId={ramoId}
-          onAnnulla={() => setSposta(false)}
+          onAnnulla={() => { setSposta(false); spostaRef.current?.focus(); }}
           onConferma={async (padreId) => {
             const r = await raggruppamentiAPI.sposta(ramoId, padreId);
             setRamo(r.data);
             setSposta(false);
+            spostaRef.current?.focus();
+            toast.success('Raggruppamento spostato: le relazioni ereditate dai suoi beni sono cambiate');
           }}
         />
       )}
@@ -123,13 +140,13 @@ export default function RaggruppamentoScheda() {
           <h3 id="ramo-contenuto" className="scheda-card__title">Contenuto</h3>
           {ramo.attivo && (
             <Button variant="secondary" size="sm" onClick={() => setNuovoFiglio(true)}>
-              <Plus size={16} aria-hidden="true" /> Sotto-ramo
+              <Plus size={16} aria-hidden="true" /> Sottoraggruppamento
             </Button>
           )}
         </div>
         {ramo.figli.length === 0 && ramo.beni.length === 0 ? (
           <EmptyState variant="compact" title="Vuoto"
-            description="Aggiungi un sotto-ramo, o sposta qui un bene dalla sua scheda." />
+            description="Aggiungi un sottoraggruppamento, o sposta qui un bene dalla sua scheda." />
         ) : (
           <ul className="raggruppamento__contenuto">
             {ramo.figli.map((f) => (
@@ -157,14 +174,20 @@ export default function RaggruppamentoScheda() {
           entityType="RAGGRUPPAMENTO"
           famiglie={FAMIGLIE_RAMO}
         />
-        <p className="scheda-muted">Godimenti e incarichi del ramo valgono per tutti i beni che contiene.</p>
+        <p className="scheda-muted">Godimenti e incarichi del raggruppamento valgono per tutti i beni che contiene.</p>
       </div>
 
       {modifica && (
-        <RaggruppamentoForm ramo={ramo} onClose={(salvato) => { setModifica(false); if (salvato) carica(); }} />
+        <RaggruppamentoForm ramo={ramo} onClose={(salvato) => {
+          setModifica(false);
+          if (salvato) { toast.success('Raggruppamento salvato'); carica(); }
+        }} />
       )}
       {nuovoFiglio && (
-        <RaggruppamentoForm padreId={ramoId} onClose={(salvato) => { setNuovoFiglio(false); if (salvato) carica(); }} />
+        <RaggruppamentoForm padreId={ramoId} onClose={(salvato) => {
+          setNuovoFiglio(false);
+          if (salvato) { toast.success('Sottoraggruppamento creato'); carica(); }
+        }} />
       )}
       <ConfirmDialog
         isOpen={elimina}
@@ -178,7 +201,7 @@ export default function RaggruppamentoScheda() {
           esegui(async () => {
             await raggruppamentiAPI.delete(ramoId);
             navigate('/raggruppamenti');
-          });
+          }, 'Raggruppamento eliminato');
         }}
         onCancel={() => setElimina(false)}
       />

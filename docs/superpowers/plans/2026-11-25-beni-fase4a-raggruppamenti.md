@@ -15,9 +15,9 @@
 - **Fuori dalla 4a** (4b/4c): documenti sui rami e tipologie per `RAGGRUPPAMENTO`, documenti dei rami antenati sulla scheda del bene, relazioni ereditate sulla scheda del ramo, selettore unico paginato `/beni/cerca?rami=true`, "applica a tutti i beni del ramo". Nella 4a il ramo si sceglie da una tendina con la lista piatta dei rami.
 - **Tipi di ramo**, esattamente: `COMPLESSO` "Complesso", `EDIFICIO` "Edificio", `FONDO` "Fondo", `ALTRO` "Altro". Elenco in codice (`TIPI_RAGGRUPPAMENTO` in `services/raggruppamenti.py`), non CHECK a DB, come `TIPI_COLLEGAMENTO`.
 - **Niente date** sull'appartenenza: l'albero è quello attuale. `relazioni_effettive(…, d)` filtra le relazioni per data, non l'appartenenza. Limite noto, scritto nella spec.
-- **Albero puro**: un ramo ha al più un padre, un bene al più un ramo. Niente cicli (un ramo non va sotto se stesso né sotto un suo discendente) → `ValueError` "Un ramo non può stare dentro se stesso o un suo sotto-ramo".
-- **Archiviare** = `attivo = false`, reversibile; il ramo resta con figli e relazioni, sparisce dall'albero e dalla tendina salvo `includi_archiviati=true`. Non si crea un figlio né si sposta qualcosa dentro un ramo archiviato (400 "Il ramo è archiviato"). Le relazioni ereditate da un ramo archiviato restano valide.
-- **Cancellare**: solo se il ramo non ha **nessuna** relazione (anche chiusa) né documenti → altrimenti 409 "Il ramo ha relazioni o documenti: archivialo". I figli (rami e beni) salgono al padre del ramo cancellato (o alla radice).
+- **Albero puro**: un ramo ha al più un padre, un bene al più un ramo. Niente cicli (un ramo non va sotto se stesso né sotto un suo discendente) → `ValueError` "Un raggruppamento non può stare dentro se stesso o un suo sottoraggruppamento".
+- **Archiviare** = `attivo = false`, reversibile; il ramo resta con figli e relazioni, sparisce dall'albero e dalla tendina salvo `includi_archiviati=true`. Non si crea un figlio né si sposta qualcosa dentro un ramo archiviato (400 "Il raggruppamento è archiviato"). Le relazioni ereditate da un ramo archiviato restano valide.
+- **Cancellare**: solo se il ramo non ha **nessuna** relazione (anche chiusa) né documenti → altrimenti 409 "Il raggruppamento ha relazioni o documenti: archivialo". I figli (rami e beni) salgono al padre del ramo cancellato (o alla radice).
 - **Tipi di relazione sui rami**: famiglie `godimento` e `incarichi` hanno `entity_types: ["IMMOBILE", "RAGGRUPPAMENTO"]`; i `diritti_reali` restano `["IMMOBILE"]` (`solo_beni: true`), quindi un diritto reale su un ramo è rifiutato da `RelazioneService._verifica_oggetto` già oggi. `amministratore_condominio` invariato.
 - **Nessuna regola di precedenza** tra relazioni del bene ed ereditate: si usano tutte così come sono (decisione dell'utente del 2026-11-25).
 - **Permessi** (nessun permesso nuovo): ramo visibile con `immobile.view` **o** `terreno.view`; creare, modificare, spostare, archiviare, cancellare con `immobile.edit` **o** `terreno.edit`. Dentro un ramo si elencano solo i beni dei tipi visibili all'utente (`_tipi_visibili` di `routes/beni.py`). Relazioni del ramo: lettura con vista del ramo + `soggetto.view`, scrittura con edit del ramo + `soggetto.edit`. Spostare un bene richiede l'edit del bene e l'edit del ramo di destinazione.
@@ -107,7 +107,7 @@ Frontend (`frontend/src/modules/immobili/`)
   - `test_antenati_dalla_radice`: complesso › edificio › altro → `[complesso, edificio, altro]`;
   - `test_sposta_sotto_se_stesso` e `test_sposta_sotto_discendente` (Review Focus 1) → `ValueError` col testo dei Global Constraints, `padre_id` invariato;
   - `test_sposta_alla_radice` (`padre_id=None`);
-  - `test_dentro_ramo_archiviato`: creare un figlio, spostare un ramo o un bene dentro un ramo con `attivo=False` → `ValueError("Il ramo è archiviato")`;
+  - `test_dentro_ramo_archiviato`: creare un figlio, spostare un ramo o un bene dentro un ramo con `attivo=False` → `ValueError("Il raggruppamento è archiviato")`;
   - `test_archivia_e_riattiva`: figli e beni restano dove sono;
   - `test_cancella_figli_salgono` (Review Focus 3): C › E › {bene B, ramo F}; cancellare E → F e B hanno padre C, risultato `{"rami_saliti": 1, "beni_saliti": 1}`; cancellare C (radice) → figli alla radice;
   - `test_cancella_con_relazione_chiusa` → `RamoNonCancellabile`, ramo presente; `test_cancella_con_documento` idem.

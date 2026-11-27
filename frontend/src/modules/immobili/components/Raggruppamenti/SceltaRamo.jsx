@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '../../../../components/UI';
 import { raggruppamentiAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
@@ -14,6 +14,7 @@ export default function SceltaRamo({ label, vuoto, attuale = null, escludiId = n
   const [scelta, setScelta] = useState(attuale == null ? '' : String(attuale));
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const selectRef = useRef(null);
 
   useEffect(() => {
     let attivo = true;
@@ -22,6 +23,9 @@ export default function SceltaRamo({ label, vuoto, attuale = null, escludiId = n
       .catch((err) => { if (attivo) setError(formatApiError(err)); });
     return () => { attivo = false; };
   }, [escludiId]);
+
+  // The choice gets the focus as soon as it can be used.
+  useEffect(() => { if (opzioni) selectRef.current?.focus(); }, [opzioni]);
 
   const conferma = async (e) => {
     e.preventDefault();
@@ -39,8 +43,9 @@ export default function SceltaRamo({ label, vuoto, attuale = null, escludiId = n
     <form className="scelta-ramo" onSubmit={conferma}>
       {error && <div className="scheda-error" role="alert">{error}</div>}
       <label htmlFor={`${uid}-ramo`}>{label}</label>
-      <select id={`${uid}-ramo`} value={scelta} disabled={!opzioni} onChange={(e) => setScelta(e.target.value)}>
-        <option value="">{vuoto}</option>
+      <select id={`${uid}-ramo`} ref={selectRef} value={scelta} disabled={!opzioni}
+        onChange={(e) => setScelta(e.target.value)}>
+        <option value="">{opzioni ? vuoto : 'Caricamento…'}</option>
         {(opzioni || []).map((o) => <option key={o.id} value={o.id}>{o.percorso}</option>)}
       </select>
       <Button type="submit" size="sm" disabled={saving || !opzioni}>Conferma spostamento</Button>

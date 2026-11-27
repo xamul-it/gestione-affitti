@@ -28,9 +28,9 @@ TIPI_RAGGRUPPAMENTO: dict[str, str] = {
     "ALTRO": "Altro",
 }
 
-CICLO = "Un ramo non può stare dentro se stesso o un suo sotto-ramo"
-ARCHIVIATO = "Il ramo è archiviato"
-NON_CANCELLABILE = "Il ramo ha relazioni o documenti: archivialo"
+CICLO = "Un raggruppamento non può stare dentro se stesso o un suo sottoraggruppamento"
+ARCHIVIATO = "Il raggruppamento è archiviato"
+NON_CANCELLABILE = "Il raggruppamento ha relazioni o documenti: archivialo"
 
 
 class RamoNonCancellabile(ValueError):

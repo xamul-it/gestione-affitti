@@ -214,7 +214,7 @@ describe('SoggettiSection - edit', () => {
     renderSezione();
     const incarichi = await screen.findByRole('region', { name: 'Incarichi' });
     expect(await within(incarichi).findByText('Caldaie Srl')).toBeInTheDocument();
-    expect(within(incarichi).getByRole('link', { name: 'dal ramo Edificio A' })).toHaveAttribute('href', '/raggruppamenti/2');
+    expect(within(incarichi).getByRole('link', { name: 'dal raggruppamento Edificio A' })).toHaveAttribute('href', '/raggruppamenti/2');
     expect(within(incarichi).queryByRole('button', { name: /Caldaie Srl/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Chiudi la relazione di Anna Bianchi' })).toBeInTheDocument();
   });

@@ -7,6 +7,7 @@ import { ErrorMessage } from '../../../../core/components/common/ErrorMessage';
 import { LoadingSpinner } from '../../../../core/components/common/LoadingSpinner';
 import { raggruppamentiAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
+import { useToast } from '../../../../core/hooks/useToast';
 import RaggruppamentoForm from './RaggruppamentoForm';
 import { etichettaTipo } from './rami';
 import '../BeneScheda/BeneScheda.css';
@@ -26,7 +27,7 @@ function Nodo({ ramo }) {
           {ramo.beni.map((b) => (
             <li key={`b-${b.id}`} className="albero-rami__bene">
               <Link to={`/beni/${b.id}`}>{b.codice}{b.descrizione ? ` · ${b.descrizione}` : ''}</Link>
-              <span className="scheda-muted">{b.tipo_bene === 'TERRENO' ? 'Terreno' : 'Unità'}</span>
+              <span className="scheda-muted">{b.tipo_bene === 'TERRENO' ? 'Terreno' : 'Unità immobiliare'}</span>
             </li>
           ))}
         </ul>
@@ -43,6 +44,7 @@ export default function RaggruppamentiAlbero() {
   const [caricato, setCaricato] = useState(false);
   const [error, setError] = useState(null);
   const [nuovo, setNuovo] = useState(false);
+  const toast = useToast();
 
   const carica = useCallback(async () => {
     setLoading(true);
@@ -67,7 +69,7 @@ export default function RaggruppamentiAlbero() {
           <h2>Raggruppamenti</h2>
           <p className="scheda-muted">Complessi, edifici e fondi con i beni che contengono.</p>
         </div>
-        <Button onClick={() => setNuovo(true)}><Plus size={16} aria-hidden="true" /> Nuovo ramo</Button>
+        <Button onClick={() => setNuovo(true)}><Plus size={16} aria-hidden="true" /> Nuovo raggruppamento</Button>
       </header>
       <div className="scheda-card">
         <label className="collegamenti__storico">
@@ -88,7 +90,10 @@ export default function RaggruppamentiAlbero() {
         )}
       </div>
       {nuovo && (
-        <RaggruppamentoForm onClose={(salvato) => { setNuovo(false); if (salvato) carica(); }} />
+        <RaggruppamentoForm onClose={(salvato) => {
+          setNuovo(false);
+          if (salvato) { toast.success('Raggruppamento creato'); carica(); }
+        }} />
       )}
     </div>
   );

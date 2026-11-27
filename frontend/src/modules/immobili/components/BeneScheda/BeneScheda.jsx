@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import { beniAPI, terreniAPI, unitaImmobiliariAPI } from '../../services/immobiliAPI';
 import { formatApiError } from '../../../../utils/errorHandling';
+import { useToast } from '../../../../core/hooks/useToast';
 import { LoadingSpinner } from '../../../../core/components/common/LoadingSpinner';
 import { ExtensionPoint } from '../../../../core/modules/ExtensionPoint';
 import { Button } from '../../../../components/UI';
@@ -74,6 +75,8 @@ export default function BeneScheda() {
   const [versione, setVersione] = useState(0);
   const [ramo, setRamo] = useState({ id: null, percorso: [] });
   const [sposta, setSposta] = useState(false);
+  const spostaRef = useRef(null);
+  const toast = useToast();
 
   const carica = useCallback(async () => {
     setLoading(true);
@@ -121,21 +124,25 @@ export default function BeneScheda() {
           <p className="scheda-muted">{indirizzo}</p>
           <div className="scheda-ramo">
             <PercorsoRamo percorso={ramo.percorso} />
-            {!sposta && (
-              <Button variant="ghost" size="sm" onClick={() => setSposta(true)}>Sposta in un ramo</Button>
-            )}
+            <Button ref={spostaRef} variant="ghost" size="sm" aria-expanded={sposta}
+              onClick={() => setSposta((v) => !v)}>Sposta in un raggruppamento</Button>
           </div>
           {sposta && (
             <SceltaRamo
-              label="Ramo"
-              vuoto="Nessun ramo"
+              label="Raggruppamento"
+              vuoto="Nessun raggruppamento"
               attuale={ramo.id}
-              onAnnulla={() => setSposta(false)}
-              onConferma={async (id) => {
-                const r = await beniAPI.spostaInRamo(beneId, id);
-                setRamo({ id: r.data.raggruppamento_id ?? null, percorso: r.data.percorso || [] });
+              onAnnulla={() => { setSposta(false); spostaRef.current?.focus(); }}
+              onConferma={async (ramoScelto) => {
+                const r = await beniAPI.spostaInRamo(beneId, ramoScelto);
+                const percorso = r.data.percorso || [];
+                setRamo({ id: r.data.raggruppamento_id ?? null, percorso });
                 setSposta(false);
+                spostaRef.current?.focus();
                 setVersione((v) => v + 1);
+                toast.success(percorso.length
+                  ? `Bene spostato in ${percorso[percorso.length - 1].nome}: le relazioni ereditate sono cambiate`
+                  : 'Bene tolto dal raggruppamento');
               }}
             />
           )}
